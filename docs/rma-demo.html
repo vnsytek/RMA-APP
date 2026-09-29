@@ -1,0 +1,1564 @@
+<title>RMA Portal Demo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&family=Tinos:wght@400;700&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root {
+    --bg: #f2f4f1; --surface: #ffffff; --surface-2: #f7f8f6; --text: #16211c; --muted: #5b6a62;
+    --border: #d8dfda; --accent: #1f4a3d; --accent-ink: #ffffff; --accent-soft: #e2ede7;
+    --side: #173a30; --side-text: #d5e4dc; --side-muted: #86a497; --side-active: #24574a;
+    --st-received: #2d5f8a; --st-received-bg: #e3edf6;
+    --st-repairing: #8a5a00; --st-repairing-bg: #fbf0d9;
+    --st-center: #5a3f8f; --st-center-bg: #ece6f7;
+    --st-quoted: #a4480f; --st-quoted-bg: #fbe5d6;
+    --st-completed: #1f6b45; --st-completed-bg: #dcf1e5;
+    --st-returned: #4b5751; --st-returned-bg: #e7ebe9;
+    --st-cancelled: #9a3030; --st-cancelled-bg: #f7e1e1;
+    --danger: #a33030; --danger-bg: #f9e4e4;
+    --font: "Be Vietnam Pro", system-ui, "Segoe UI", sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --bg: #0f1412; --surface: #171e1b; --surface-2: #1c2521; --text: #e2e9e5; --muted: #95a59c;
+      --border: #2a3530; --accent: #6fbf9d; --accent-ink: #0f1412; --accent-soft: #1d2f28;
+      --side: #0b100e; --side-text: #cfdcd5; --side-muted: #7d9488; --side-active: #1d3a31;
+      --st-received: #8fbfe6; --st-received-bg: #1a2a38;
+      --st-repairing: #f0c26a; --st-repairing-bg: #332812;
+      --st-center: #c2a8f0; --st-center-bg: #2a2140;
+      --st-quoted: #f5a877; --st-quoted-bg: #3a2416;
+      --st-completed: #7fd3a4; --st-completed-bg: #173226;
+      --st-returned: #b3c0b9; --st-returned-bg: #252d29;
+      --st-cancelled: #ef9a9a; --st-cancelled-bg: #3a1c1c;
+      --danger: #ef9a9a; --danger-bg: #3a1c1c;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #0f1412; --surface: #171e1b; --surface-2: #1c2521; --text: #e2e9e5; --muted: #95a59c;
+    --border: #2a3530; --accent: #6fbf9d; --accent-ink: #0f1412; --accent-soft: #1d2f28;
+    --side: #0b100e; --side-text: #cfdcd5; --side-muted: #7d9488; --side-active: #1d3a31;
+    --st-received: #8fbfe6; --st-received-bg: #1a2a38;
+    --st-repairing: #f0c26a; --st-repairing-bg: #332812;
+    --st-center: #c2a8f0; --st-center-bg: #2a2140;
+    --st-quoted: #f5a877; --st-quoted-bg: #3a2416;
+    --st-completed: #7fd3a4; --st-completed-bg: #173226;
+    --st-returned: #b3c0b9; --st-returned-bg: #252d29;
+    --st-cancelled: #ef9a9a; --st-cancelled-bg: #3a1c1c;
+    --danger: #ef9a9a; --danger-bg: #3a1c1c;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.5 var(--font); }
+  button, input, select, textarea { font: inherit; color: inherit; }
+  .app { display: grid; grid-template-columns: 236px 1fr; min-height: 100%; }
+  aside { background: var(--side); color: var(--side-text); padding: 24px 14px; display: flex; flex-direction: column; gap: 22px; }
+  .brand { display: flex; align-items: center; gap: 10px; padding: 0 8px; }
+  .brand .logo { width: 34px; height: 34px; border: 1px solid var(--side-muted); display: grid; place-items: center; font-weight: 700; font-size: 13px; }
+  .brand b { letter-spacing: .2em; font-size: 13px; }
+  .brand small { display: block; color: var(--side-muted); font-size: 11px; letter-spacing: .04em; }
+  nav { display: flex; flex-direction: column; gap: 2px; }
+  .nav-label { color: var(--side-muted); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; padding: 12px 10px 4px; }
+  nav button { background: none; border: 0; text-align: left; padding: 8px 10px; border-radius: 6px; cursor: pointer; color: var(--side-text); display: flex; justify-content: space-between; gap: 8px; }
+  nav button:hover { background: var(--side-active); }
+  nav button[aria-current="true"] { background: var(--side-active); color: #fff; font-weight: 600; }
+  nav button code { font: 11px var(--mono); color: var(--side-muted); }
+  .side-foot { margin-top: auto; font-size: 12px; color: var(--side-muted); padding: 0 8px; display: grid; gap: 8px; }
+  .side-foot button { background: none; border: 1px solid var(--side-muted); color: var(--side-text); border-radius: 6px; padding: 6px 10px; cursor: pointer; }
+  main { min-width: 0; padding-block: 24px 64px; padding-inline: 28px; }
+  header.top { display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: flex-end; justify-content: space-between; margin-bottom: 20px; }
+  h1 { font-size: 22px; margin: 0; text-wrap: balance; }
+  h1 + p { margin: 2px 0 0; color: var(--muted); }
+  h2 { font-size: 15px; margin: 0 0 10px; }
+  .ctx { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; }
+  .ctx label { display: grid; gap: 2px; font-size: 11px; color: var(--muted); letter-spacing: .06em; text-transform: uppercase; }
+  input, select, textarea { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 7px 10px; min-width: 0; }
+  textarea { resize: vertical; min-height: 60px; }
+  input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .btn { background: var(--accent); color: var(--accent-ink); border: 1px solid var(--accent); border-radius: 6px; padding: 7px 14px; font-weight: 600; cursor: pointer; }
+  .btn.ghost { background: var(--surface); color: var(--text); border-color: var(--border); font-weight: 500; }
+  .btn.danger { background: var(--surface); color: var(--danger); border-color: var(--danger); }
+  .btn.sm { padding: 3px 10px; font-size: 13px; }
+  .btn[aria-pressed="true"] { outline: 2px solid var(--accent); outline-offset: 2px; }
+  [hidden] { display: none !important; }
+  .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; }
+  .panel-pad { padding: 16px; }
+  .tbl { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+  th { text-align: left; font-weight: 600; color: var(--muted); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; background: var(--surface-2); }
+  th, td { padding: 8px 12px; border-bottom: 1px solid var(--border); white-space: nowrap; vertical-align: top; }
+  td.wrap { white-space: normal; min-width: 180px; }
+  td.num, th.num { text-align: right; }
+  tbody tr.click { cursor: pointer; }
+  tbody tr.click:hover { background: var(--accent-soft); }
+  .mono { font-family: var(--mono); font-size: 12.5px; }
+  .tno { font-family: var(--mono); font-weight: 600; color: var(--accent); }
+  .muted { color: var(--muted); }
+  .null { color: var(--muted); font-style: italic; font-size: 12px; }
+  .pill { display: inline-block; padding: 1px 9px; border-radius: 999px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+  .st-received { color: var(--st-received); background: var(--st-received-bg); }
+  .st-repairing { color: var(--st-repairing); background: var(--st-repairing-bg); }
+  .st-center { color: var(--st-center); background: var(--st-center-bg); }
+  .st-quoted { color: var(--st-quoted); background: var(--st-quoted-bg); }
+  .st-completed { color: var(--st-completed); background: var(--st-completed-bg); }
+  .st-returned { color: var(--st-returned); background: var(--st-returned-bg); }
+  .st-cancelled { color: var(--st-cancelled); background: var(--st-cancelled-bg); }
+  .tag { display: inline-block; font-size: 11px; font-weight: 600; padding: 0 7px; border-radius: 4px; border: 1px solid var(--border); color: var(--muted); white-space: nowrap; }
+  .tag.fee { border-color: var(--st-quoted); color: var(--st-quoted); }
+  .tag.k-onsite { border-color: var(--st-center); color: var(--st-center); }
+  .tag.k-carry_in { border-color: var(--st-received); color: var(--st-received); }
+  .tag.k-repair { border-color: var(--st-repairing); color: var(--st-repairing); }
+  .tag.k-onsite_sangy { border-color: var(--st-center); color: var(--st-center); background: var(--st-center-bg); }
+  .seg button:disabled { opacity: .4; cursor: not-allowed; }
+  .wcell { display: grid; gap: 3px; justify-items: start; min-width: 190px; white-space: normal; }
+  .wbar { display: block; width: 160px; height: 6px; border-radius: 3px; background: var(--accent-soft); overflow: hidden; }
+  .wbar i { display: block; height: 100%; border-radius: 3px; background: var(--st-completed); }
+  .wbar-expiring i { background: var(--st-repairing); }
+  .toolbar select { max-width: 240px; }
+  .toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; }
+  .toolbar .grow { flex: 1 1 240px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+  .chip { border: 1px solid var(--border); background: var(--surface); border-radius: 8px; padding: 7px 12px; cursor: pointer; display: grid; min-width: 96px; text-align: left; }
+  .chip b { font-size: 17px; font-variant-numeric: tabular-nums; }
+  .chip span { font-size: 12px; color: var(--muted); }
+  .chip[aria-pressed="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+  .seg { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: var(--surface); }
+  .seg button { border: 0; background: none; padding: 7px 14px; cursor: pointer; border-right: 1px solid var(--border); }
+  .seg button:last-child { border-right: 0; }
+  .seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); font-weight: 600; }
+  .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; align-items: start; }
+  .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 14px; }
+  .form-grid .full { grid-column: 1 / -1; }
+  .field { display: grid; gap: 4px; align-content: start; }
+  .field > span { font-size: 12px; font-weight: 600; }
+  .field > span i { font-style: normal; font-weight: 400; color: var(--muted); }
+  .hint { font-size: 12px; color: var(--muted); }
+  .hint.warn { color: var(--st-repairing); }
+  .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .inline-form { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  .inline-form > * { flex: 1 1 110px; }
+  .inline-form > .btn { flex: 0 0 auto; }
+  .err { background: var(--danger-bg); color: var(--danger); border-radius: 6px; padding: 8px 12px; font-size: 13px; }
+  .err:empty { display: none; }
+  .section-title { font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin: 20px 0 8px; font-weight: 600; }
+  dialog { border: 1px solid var(--border); border-radius: 10px; padding: 0; width: min(820px, calc(100% - 32px)); background: var(--surface); color: var(--text); }
+  dialog::backdrop { background: rgb(10 20 16 / .5); }
+  .dlg-head { display: flex; justify-content: space-between; align-items: start; gap: 12px; padding: 16px 20px; border-bottom: 1px solid var(--border); }
+  .dlg-head h2 { margin: 0; font-size: 17px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .dlg-body { padding: 14px 20px 20px; max-height: 72vh; overflow-y: auto; }
+  .dlg-foot { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; padding: 12px 20px; border-top: 1px solid var(--border); background: var(--surface-2); border-radius: 0 0 10px 10px; }
+  .dlg-foot .spacer { flex: 1; }
+  .x { background: none; border: 0; font-size: 22px; line-height: 1; cursor: pointer; color: var(--muted); }
+  .kv { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px 16px; margin: 0; }
+  .kv div { display: grid; }
+  .kv dt { font-size: 11px; color: var(--muted); letter-spacing: .06em; text-transform: uppercase; }
+  .kv dd { margin: 0; font-weight: 500; }
+  .timeline { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+  .timeline li { display: grid; grid-template-columns: 14px 1fr; gap: 10px; }
+  .timeline li::before { content: ""; width: 10px; height: 10px; border-radius: 50%; background: var(--accent); margin-top: 6px; }
+  .box { border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; background: var(--surface-2); }
+  .action-box { border: 1px solid var(--accent); border-radius: 8px; padding: 12px 14px; margin-top: 10px; }
+  .toast { position: fixed; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); background: var(--accent); color: var(--accent-ink); padding: 10px 16px; border-radius: 8px; font-weight: 600; z-index: 10; }
+  .demo-note { font-size: 12px; color: var(--muted); margin-top: 10px; }
+  .flow { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 6px 0; }
+  .flow .step { background: var(--surface-2); border: 1px solid var(--border); border-radius: 6px; padding: 5px 10px; }
+  .flow .arrow { color: var(--muted); }
+  .flow .end { border-color: var(--accent); color: var(--accent); font-weight: 600; }
+  .flow .branch { font-size: 12px; color: var(--muted); }
+  /* báo cáo */
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin-bottom: 16px; }
+  .kpi { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; display: grid; gap: 2px; align-content: start; }
+  .kpi .lbl { font-size: 12px; color: var(--muted); }
+  .kpi .val { font-size: 24px; font-weight: 600; line-height: 1.25; }
+  .kpi .sub { font-size: 12px; color: var(--muted); }
+  .rep-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 16px; align-items: start; margin-top: 16px; }
+  .rep-grid .wide { grid-column: 1 / -1; }
+  .rep-head { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: baseline; justify-content: space-between; padding: 14px 16px 8px; }
+  .rep-head h2 { margin: 0; }
+  .rep-head p { margin: 0; font-size: 12px; color: var(--muted); }
+  tr.total td { font-weight: 600; background: var(--surface-2); }
+  .meter { display: inline-block; width: 90px; height: 8px; border-radius: 4px; background: var(--accent-soft); vertical-align: middle; margin-right: 8px; overflow: hidden; }
+  .meter i { display: block; height: 100%; background: var(--accent); border-radius: 4px; }
+  .sev { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+  .sev::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+  .sev-ok { color: var(--st-completed); } .sev-warn { color: var(--st-repairing); } .sev-bad { color: var(--st-cancelled); }
+  .chart-wrap { position: relative; padding: 0 16px 12px; }
+  .chart-wrap svg { width: 100%; height: auto; display: block; overflow: visible; }
+  .chart-wrap .hit { cursor: default; outline: none; }
+  .chart-wrap .hit:focus-visible { stroke: var(--accent); stroke-width: 1; }
+  .tip { position: absolute; pointer-events: none; background: var(--text); color: var(--bg); font-size: 12px; padding: 6px 9px; border-radius: 6px; transform: translate(-50%, calc(-100% - 8px)); white-space: nowrap; }
+  .tip b { font-weight: 600; }
+  details.tbl-view { padding: 0 16px 14px; font-size: 13px; }
+  details.tbl-view summary { cursor: pointer; color: var(--muted); }
+  /* chứng từ, báo giá, bảo hành */
+  .attach-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 8px; }
+  .attach { display: grid; grid-template-columns: 56px 1fr auto; gap: 10px; align-items: center; border: 1px solid var(--border); border-radius: 8px; padding: 8px; background: var(--surface-2); min-width: 0; }
+  .attach .meta { display: grid; min-width: 0; font-size: 12px; }
+  .attach .meta span { overflow-wrap: anywhere; }
+  .thumb { width: 56px; height: 56px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface); padding: 0; overflow: hidden; cursor: zoom-in; }
+  .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .thumb.file { display: grid; place-items: center; font: 600 11px var(--mono); color: var(--muted); cursor: default; }
+  .x.sm { font-size: 16px; padding: 2px 6px; border-radius: 4px; }
+  .x.armed { font-size: 12px; color: var(--danger); border: 1px solid var(--danger); }
+  .quote { border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; margin-bottom: 8px; display: grid; gap: 8px; }
+  .quote.old { opacity: .7; }
+  .w-head { display: flex; flex-wrap: wrap; gap: 12px 24px; justify-content: space-between; align-items: flex-start; }
+  .w-state { display: grid; gap: 6px; justify-items: start; max-width: 340px; }
+  .w-state .pill { font-size: 14px; padding: 3px 12px; }
+  #dlg2 { width: min(900px, calc(100% - 32px)); }
+  /* phiếu in */
+  .slip-wrap { background: #e9ece9; padding: 16px; border-radius: 8px; overflow-x: auto; }
+  .slip { background: #fff; color: #111; font: 14px/1.45 "Tinos", "Times New Roman", serif; padding: 28px 32px; width: 720px; max-width: none; margin: 0 auto; box-shadow: 0 1px 4px rgb(0 0 0 / .15); }
+  .slip .head { display: flex; gap: 16px; align-items: center; border-bottom: 1.5px solid #111; padding-bottom: 10px; }
+  .slip .logo { width: 64px; height: 64px; border: 2px solid #1f4a3d; border-radius: 50%; display: grid; place-items: center; font: 700 15px/1 "Be Vietnam Pro", sans-serif; color: #1f4a3d; letter-spacing: .04em; flex: none; }
+  .slip .co b { font-size: 16px; text-transform: uppercase; }
+  .slip .co div { font-size: 13px; }
+  .slip h3 { text-align: center; font-size: 20px; margin: 16px 0 2px; text-transform: uppercase; letter-spacing: .02em; }
+  .slip .meta-c { text-align: center; font-size: 13px; margin-bottom: 12px; }
+  .slip .meta { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 20px; margin-bottom: 10px; }
+  .slip table { font-size: 13px; margin-top: 6px; }
+  .slip th, .slip td { border: 1px solid #111; padding: 5px 7px; white-space: normal; color: #111; background: #fff; text-transform: none; letter-spacing: 0; font-size: 13px; }
+  .slip th { font-weight: 700; text-align: center; }
+  .slip .total td { font-weight: 700; }
+  .slip .sign { display: grid; grid-template-columns: 1fr 1fr; text-align: center; margin-top: 22px; min-height: 110px; }
+  .slip .sign b { display: block; text-transform: uppercase; }
+  .slip .sign i { font-size: 12px; }
+  .slip .sign .name { margin-top: 56px; font-weight: 700; }
+  .slip .foot { font-size: 12px; font-style: italic; margin-top: 10px; }
+  #print-area { display: none; }
+  @media print {
+    body { background: #fff; }
+    .app, dialog, .toast { display: none !important; }
+    #print-area { display: block !important; }
+    #print-area .slip { box-shadow: none; width: auto; padding: 0; }
+    @page { size: A4; margin: 14mm; }
+  }
+  @media (max-width: 820px) {
+    .app { grid-template-columns: 1fr; }
+    aside { padding: 12px 16px; gap: 10px; }
+    nav { flex-direction: row; overflow-x: auto; }
+    nav button { white-space: nowrap; }
+    nav button code, .nav-label, .side-foot small { display: none; }
+    .side-foot { flex-direction: row; display: flex; padding: 0; }
+    main { padding-inline: 16px; }
+    .form-grid { grid-template-columns: 1fr; }
+  }
+</style>
+
+<div class="app">
+  <aside>
+    <div class="brand"><div class="logo">SY</div><div><b>RMA</b><small>Sang Y · bản demo</small></div></div>
+    <nav id="nav"></nav>
+    <div class="side-foot">
+      <small>Dữ liệu demo lưu trong trình duyệt của bạn.</small>
+      <button type="button" id="reset-btn">Khôi phục dữ liệu mẫu</button>
+    </div>
+  </aside>
+  <main>
+    <header class="top">
+      <div><h1 id="page-title"></h1><p id="page-sub"></p></div>
+      <div class="ctx">
+        <label for="ctx-user">Đang đăng nhập<select id="ctx-user"></select></label>
+        <label for="ctx-date">Ngày hệ thống<input type="date" id="ctx-date"></label>
+      </div>
+    </header>
+    <div id="view"></div>
+  </main>
+</div>
+<dialog id="dlg"><div id="dlg-inner"></div></dialog>
+<dialog id="dlg2"><div id="dlg2-inner"></div></dialog>
+<div id="print-area"></div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+const STORE_KEY = 'rma-demo-v10';
+const COMPANY = { name: 'Công ty TNHH Dịch Vụ và Kỹ Thuật Sang Y', short: 'SANG Y', address: 'Số 303 Lê Duẩn, Kiến An, Hải Phòng', phone: '……………', email: '……………' };
+const MAX_FILE = 1.5 * 1024 * 1024;
+
+const KIND = {
+  onsite:       { label: 'Hãng BH tại nhà khách', short: 'BH tại nhà khách', hint: 'Hãng cử người đến tận nhà khách. Không mang máy về, không in phiếu nhận/trả.' },
+  onsite_sangy: { label: 'Hãng BH tại Sang Y', short: 'BH tại Sang Y', hint: 'Mang máy về Sang Y, hẹn hãng đến Sang Y bảo hành, xong Sang Y trả máy cho khách.' },
+  carry_in:     { label: 'Nhận về gửi TTBH', short: 'BH gửi TTBH', hint: 'IT mang máy về, kiểm tra, gửi trung tâm bảo hành nếu cần, rồi trả khách.' },
+  repair:       { label: 'Sửa chữa', short: 'Sửa chữa', hint: 'IT kiểm tra lỗi: miễn phí, báo giá, hoặc báo phế. Sửa xong nhập thời gian bảo hành sau sửa.' },
+};
+const WARRANTY = { in_warranty: 'Còn bảo hành', out_of_warranty: 'Hết bảo hành' };
+const STATUS = {
+  scheduled:  { label: 'Chờ hãng đến', cls: 'received' },
+  received:   { label: 'Đã nhận máy', cls: 'received' },
+  inspecting: { label: 'IT kiểm tra', cls: 'repairing' },
+  at_center:  { label: 'Đang ở TTBH', cls: 'center' },
+  quoted:     { label: 'Chờ duyệt báo giá', cls: 'quoted' },
+  repairing:  { label: 'Đang sửa', cls: 'repairing' },
+  ready:      { label: 'Chờ trả khách', cls: 'completed' },
+  done:       { label: 'Hoàn tất', cls: 'returned' },
+  returned:   { label: 'Đã trả', cls: 'returned' },
+  cancelled:  { label: 'Đã hủy', cls: 'cancelled' },
+};
+const RESULT = {
+  onsite_done: 'Hãng đã bảo hành',
+  warranty_center: 'Đã bảo hành qua TTBH',
+  warranty_inhouse: 'IT xử lý xong (bảo hành)',
+  free: 'Lỗi đơn giản – Miễn phí',
+  repaired: 'Đã sửa – Có tính phí',
+  quote_rejected: 'Khách không đồng ý báo giá – Không sửa',
+  scrap: 'Báo phế – Không sửa được',
+};
+const OUTCOME = { pending: ['Đang ở TTBH', 'center'], repaired: ['Đã sửa', 'completed'], replaced: ['Đổi mới', 'completed'], rejected: ['Từ chối BH', 'cancelled'], cancelled: ['Hủy theo phiếu', 'returned'] };
+const QSTATUS = { sent: ['Chờ khách duyệt', 'quoted'], accepted: ['Khách đồng ý – sửa', 'completed'], rejected: ['Khách không đồng ý – không sửa', 'cancelled'] };
+const DOCTYPE = { invoice: 'Hoá đơn', warranty_card: 'Phiếu bảo hành', vendor_note: 'Phiếu của hãng', center_return: 'Phiếu trả TTBH', scrap_record: 'Biên bản báo phế', photo: 'Ảnh máy', other: 'Khác' };
+const ALL = ['onsite', 'onsite_sangy', 'carry_in', 'repair'];
+const kindOf = (t) => t.service_type === 'onsite' ? (t.onsite_location === 'sangy' ? 'onsite_sangy' : 'onsite') : t.service_type;
+const printsSlips = (t) => kindOf(t) !== 'onsite';
+
+// ---------- dữ liệu mẫu ----------
+function seed() {
+  const db = {
+    today: '2026-09-29', currentUserId: 1,
+    users: [
+      { id: 1, name: 'Vũ Bảo Long', email: 'long.vu@sangy.vn', role: 'it', is_active: true },
+      { id: 2, name: 'Phạm Minh Tuấn', email: 'tuan.pham@sangy.vn', role: 'it', is_active: true },
+    ],
+    customers: [
+      { id: 1, name: 'Branch of Pixelz Co., Ltd', contact_name: 'Chị Thu Anh', phone: '0901 234 567', address: 'Số 303 Lê Duẩn, Kiến An, Hải Phòng', note: null },
+      { id: 2, name: 'Phạm Quốc Dũng', contact_name: null, phone: '0903 123 456', address: 'Lạch Tray, Ngô Quyền, Hải Phòng', note: null },
+      { id: 3, name: 'Võ Thị Hạnh', contact_name: null, phone: '0987 654 321', address: null, note: null },
+      { id: 4, name: 'Công ty CP Cảng Xanh', contact_name: 'Anh Hoàng (IT)', phone: '0225 3845 566', address: 'Đình Vũ, Hải An, Hải Phòng', note: null },
+    ],
+    device_types: [
+      { id: 1, code: 'MONITOR', name: 'Màn hình', is_active: true }, { id: 2, code: 'LAPTOP', name: 'Máy tính xách tay', is_active: true },
+      { id: 3, code: 'PC', name: 'Máy tính để bàn', is_active: true }, { id: 4, code: 'PRINTER', name: 'Máy in', is_active: true },
+      { id: 5, code: 'PSU', name: 'Bộ nguồn', is_active: true }, { id: 6, code: 'TV', name: 'Tivi', is_active: true },
+    ],
+    brands: ['DELL', 'VSP', 'ASUS', 'EPSON', 'TCL', 'CANON', 'HP'].map((name, i) => ({ id: i + 1, name, is_active: true })),
+    product_models: [
+      { id: 1, brand_id: 1, device_type_id: 1, code: 'U3223QE', name: 'UltraSharp 32 4K', is_active: true },
+      { id: 2, brand_id: 2, device_type_id: 5, code: 'E550W', name: 'Nguồn VSP 550W', is_active: true },
+      { id: 3, brand_id: 3, device_type_id: 2, code: 'P500MV', name: 'ExpertBook P5', is_active: true },
+      { id: 4, brand_id: 4, device_type_id: 4, code: 'LQ310', name: 'Máy in kim LQ-310', is_active: true },
+      { id: 5, brand_id: 5, device_type_id: 6, code: '55P735', name: 'Google TV 55 inch', is_active: true },
+      { id: 6, brand_id: 6, device_type_id: 4, code: 'LBP2900', name: 'Máy in laser', is_active: true },
+      { id: 7, brand_id: 7, device_type_id: 3, code: 'ProDesk 400 G7', name: null, is_active: true },
+      { id: 8, brand_id: 1, device_type_id: 2, code: 'Latitude 5440', name: null, is_active: true },
+    ],
+    devices: [
+      { id: 1, product_model_id: 1, serial_number: 'D6R49P3', replaced_from_device_id: null },
+      { id: 2, product_model_id: 1, serial_number: '2CRDF34', replaced_from_device_id: 1 },
+      { id: 3, product_model_id: 2, serial_number: '0W00102IZ052500335', replaced_from_device_id: null },
+      { id: 4, product_model_id: 2, serial_number: 'P550W40102107250414', replaced_from_device_id: 3 },
+      { id: 5, product_model_id: 3, serial_number: 'R7NRKD012345', replaced_from_device_id: null },
+      { id: 6, product_model_id: 4, serial_number: 'X3GY104522', replaced_from_device_id: null },
+      { id: 7, product_model_id: 5, serial_number: 'TCL55P7A90871', replaced_from_device_id: null },
+      { id: 8, product_model_id: 6, serial_number: 'LBP-2231907', replaced_from_device_id: null },
+      { id: 9, product_model_id: 7, serial_number: '8CG1234XYZ', replaced_from_device_id: null },
+      { id: 10, product_model_id: 8, serial_number: '5440HX77Q', replaced_from_device_id: null },
+      { id: 11, product_model_id: 8, serial_number: '7HKQ2V3', replaced_from_device_id: null },
+    ],
+    service_centers: [
+      { id: 1, name: 'Dell Technologies Việt Nam', brands: 'DELL', phone: null, address: 'Hãng cử kỹ thuật đến tận nơi', is_active: true },
+      { id: 2, name: 'Tin học Lâm Hiếu', brands: 'VSP, nguồn, linh kiện', phone: '0313.513689', address: 'Số 539 Thiên Lôi, Vĩnh Niệm, Lê Chân, Hải Phòng', is_active: true },
+      { id: 3, name: 'TTBH ASUS Hải Phòng', brands: 'ASUS', phone: null, address: 'Hải Phòng', is_active: true },
+    ],
+    rma_tickets: [], rma_center_shipments: [], rma_quote_items: [],
+    rma_replaced_parts: [], rma_ticket_status_logs: [], ticket_sequences: [], attachments: [], nextId: {},
+  };
+  const at = (d) => d + ' 09:00:00';
+  const T = (o) => ({ service_type: 'repair', original_service_type: o.service_type || 'repair', onsite_location: null,
+    warranty_status: (o.service_type || 'repair') === 'repair' ? 'out_of_warranty' : 'in_warranty', repair_warranty_months: null,
+    returned_device_id: null, technician_id: 1, accessories: null,
+    returned_date: null, result: null, scrap_reason: null, is_chargeable: false, charge_amount: null, quote_status: null, quoted_at: null, quote_decided_at: null,
+    erp_receipt_no: null, erp_return_no: null, note: null, deleted_at: null, ...o, created_by: o.technician_id ?? 1,
+    created_at: at(o.received_date), updated_at: at(o.returned_date || o.received_date) });
+  let sid = 0, qiid = 0, pid = 0, lid = 0;
+  const S = (tid, center, sent, back, outcome, extra = {}) => { const id = ++sid; db.rma_center_shipments.push({ id, rma_ticket_id: tid, service_center_id: center, vendor_case_no: null, appointment_date: null, sent_date: sent, back_date: back, center_return_no: null, outcome, note: null, created_by: 1, ...extra }); return id; };
+  const Q = (tid, status, items, sent, decided) => {
+    items.forEach(([description, quantity, unit_price]) => db.rma_quote_items.push({ id: ++qiid, rma_ticket_id: tid, description, quantity, unit_price }));
+    return { quote_status: status, quoted_at: at(sent), quote_decided_at: decided ? at(decided) : null }; };
+  const P = (tid, shipment, part_code, description, quantity) => db.rma_replaced_parts.push({ id: ++pid, rma_ticket_id: tid, rma_center_shipment_id: shipment, part_code, description, quantity });
+  const L = (tid, steps) => { let prev = null; for (const [to, d, uid, note] of steps) { db.rma_ticket_status_logs.push({ id: ++lid, rma_ticket_id: tid, from_status: prev, to_status: to, user_id: uid, note: note || null, created_at: at(d) }); prev = to; } };
+
+  db.rma_tickets.push(
+    T({ id: 1, ticket_no: '26090001', service_type: 'onsite', onsite_location: 'customer', customer_id: 1, device_id: 1, returned_device_id: 2, fault_description: 'Chân đế màn hình gãy khớp, màn không đứng được', received_date: '2026-09-02', returned_date: '2026-09-05', status: 'done', result: 'onsite_done' }),
+    T({ id: 2, ticket_no: '26090002', service_type: 'carry_in', customer_id: 1, device_id: 3, returned_device_id: 4, technician_id: 2, fault_description: 'Bộ nguồn không lên, quạt không quay', accessories: 'Dây nguồn', received_date: '2026-09-08', status: 'ready', result: 'warranty_center' }),
+    T({ id: 3, ticket_no: '26090003', service_type: 'carry_in', customer_id: 2, device_id: 5, fault_description: 'Không nhận sạc, pin không vào', accessories: 'Sạc zin', received_date: '2026-09-15', status: 'at_center' }),
+    T({ id: 4, ticket_no: '26090004', customer_id: 4, device_id: 6, technician_id: 2, fault_description: 'In mờ, mất nét đầu kim', received_date: '2026-09-18', status: 'quoted' }),
+    T({ id: 5, ticket_no: '26090005', customer_id: 3, device_id: 7, fault_description: 'Màn hình sọc ngang, có tiếng không có hình', accessories: 'Remote', received_date: '2026-09-10', status: 'repairing', is_chargeable: true, charge_amount: 3200000, erp_receipt_no: 'V223-000455' }),
+    T({ id: 6, ticket_no: '26090006', customer_id: 4, device_id: 8, technician_id: 2, fault_description: 'Kẹt giấy liên tục', received_date: '2026-09-22', status: 'ready', result: 'free', repair_warranty_months: 1 }),
+    T({ id: 7, ticket_no: '26090007', customer_id: 2, device_id: 9, fault_description: 'Không lên hình, nghi hỏng mainboard', received_date: '2026-09-19', status: 'ready', result: 'scrap', scrap_reason: 'Mainboard hỏng, hãng đã ngừng cung cấp linh kiện thay thế' }),
+    T({ id: 8, ticket_no: '26090008', customer_id: 1, device_id: 10, technician_id: 2, fault_description: 'Liệt một số phím bàn phím', accessories: 'Sạc', received_date: '2026-09-29', status: 'received' }),
+    T({ id: 10, ticket_no: '26090009', service_type: 'onsite', onsite_location: 'sangy', customer_id: 4, device_id: 11, technician_id: 2, fault_description: 'Màn hình laptop chập chờn, sọc ngang khi mở gập', accessories: 'Sạc, túi chống sốc', received_date: '2026-09-29', status: 'scheduled' }),
+    T({ id: 9, ticket_no: '26080001', customer_id: 2, device_id: 5, fault_description: 'Máy nóng, tự tắt khi chạy nặng', received_date: '2026-08-20', returned_date: '2026-08-27', status: 'returned', result: 'repaired', repair_warranty_months: 3, is_chargeable: true, charge_amount: 350000, erp_receipt_no: 'V223-000418', erp_return_no: 'V233-000392' }),
+  );
+  const s1 = S(1, 1, '2026-09-02', '2026-09-05', 'replaced', { vendor_case_no: '92460267312', appointment_date: '2026-09-05' });
+  const s2 = S(2, 2, '2026-09-09', '2026-09-20', 'replaced', { center_return_no: 'LH-0912' });
+  S(3, 3, '2026-09-16', null, 'pending', { vendor_case_no: 'ASUS-HP-778812' });
+  S(10, 1, '2026-09-29', null, 'pending', { vendor_case_no: '92471133580', appointment_date: '2026-10-01' });
+  P(1, s1, '5JKJK', 'ASSY,BASE,DIS,U3223QE,ANZ', 1);
+  P(2, s2, null, 'Đổi mới bộ nguồn VSP E550W', 1);
+  Object.assign(db.rma_tickets[3], Q(4, 'sent', [['Đầu kim LQ-310', 1, 850000], ['Công thay và căn chỉnh', 1, 150000]], '2026-09-19', null));
+  Object.assign(db.rma_tickets[4], Q(5, 'accepted', [['Panel 55 inch', 1, 2900000], ['Công thay panel', 1, 300000]], '2026-09-11', '2026-09-12'));
+  Object.assign(db.rma_tickets[8], Q(9, 'accepted', [['Vệ sinh, thay keo tản nhiệt', 1, 350000]], '2026-08-21', '2026-08-21'));
+  L(1, [['scheduled', '2026-09-02', 1, 'Đã mở case với Dell, hẹn 05/09'], ['done', '2026-09-05', 1, 'Dell thay chân đế, đổi máy mới SRV. Tag 2CRDF34']]);
+  L(2, [['received', '2026-09-08', 2], ['inspecting', '2026-09-08', 2], ['at_center', '2026-09-09', 2], ['ready', '2026-09-20', 2, 'Lâm Hiếu đổi nguồn mới']]);
+  L(3, [['received', '2026-09-15', 1], ['inspecting', '2026-09-15', 1], ['at_center', '2026-09-16', 1]]);
+  L(4, [['received', '2026-09-18', 2], ['inspecting', '2026-09-18', 2], ['quoted', '2026-09-19', 2, 'Đã báo giá qua điện thoại']]);
+  L(5, [['received', '2026-09-10', 1], ['inspecting', '2026-09-10', 1], ['quoted', '2026-09-11', 1], ['repairing', '2026-09-12', 1, 'Khách đồng ý báo giá']]);
+  L(6, [['received', '2026-09-22', 2], ['inspecting', '2026-09-22', 2], ['ready', '2026-09-23', 2, 'Vệ sinh bao lụa, hết kẹt giấy']]);
+  L(7, [['received', '2026-09-19', 1], ['inspecting', '2026-09-19', 1], ['ready', '2026-09-21', 1, 'Mainboard hỏng, hãng đã ngừng cung cấp linh kiện thay thế']]);
+  L(8, [['received', '2026-09-29', 2]]);
+  L(10, [['scheduled', '2026-09-29', 2, 'Nhận máy về Sang Y, đã mở case Dell, hẹn 01/10']]);
+  L(9, [['received', '2026-08-20', 1], ['inspecting', '2026-08-20', 1], ['quoted', '2026-08-21', 1], ['repairing', '2026-08-21', 1], ['ready', '2026-08-26', 1], ['returned', '2026-08-27', 1]]);
+  db.attachments.push(
+    { id: 1, rma_ticket_id: 1, doc_type: 'vendor_note', file_name: 'Dell_Delivery_Note_92460267312.jpg', mime_type: 'image/jpeg', size_bytes: 412000, data_url: null, uploaded_by: 1, created_at: at('2026-09-05') },
+    { id: 2, rma_ticket_id: 2, doc_type: 'center_return', file_name: 'LamHieu_PhieuTra_LH-0912.jpg', mime_type: 'image/jpeg', size_bytes: 388000, data_url: null, uploaded_by: 2, created_at: at('2026-09-20') },
+  );
+
+  // lịch sử tháng 4 – 8/2026 (phiếu đã đóng) để báo cáo có số liệu
+  let rs = 7; const rnd = () => (rs = (rs * 16807) % 2147483647) / 2147483647;
+  const pick = (a) => a[Math.floor(rnd() * a.length)];
+  const FAULTS = { repair: ['Không lên nguồn', 'Máy chạy chậm, hay treo', 'Kẹt giấy', 'Màn hình nhấp nháy', 'Không nhận USB', 'Quạt kêu to, máy nóng'],
+                   carry_in: ['Nguồn chập chờn', 'Ổ cứng lỗi bad sector', 'Màn hình có điểm chết', 'Không sạc được pin'],
+                   onsite: ['Màn hình không lên hình', 'Lỗi mainboard', 'Hỏng bàn phím, touchpad'] };
+  const OWNER = { 1: 1, 2: 1, 3: 1, 4: 1, 5: 2, 6: 4, 7: 3, 8: 4, 9: 2, 10: 1, 11: 4 };
+  const seqNo = { '2608': 1 }; let tid = 11; let erpN = 300;
+  for (const [ym, n] of [['2026-04', 5], ['2026-05', 7], ['2026-06', 6], ['2026-07', 8], ['2026-08', 5]]) {
+    const period = ym.slice(2, 4) + ym.slice(5, 7);
+    const days = Array.from({ length: n }, () => 1 + Math.floor(rnd() * 26)).sort((a, b) => a - b);
+    for (const d of days) {
+      seqNo[period] = (seqNo[period] || 0) + 1;
+      const kind = pick(['repair', 'repair', 'repair', 'carry_in', 'carry_in', 'onsite']);
+      const location = kind === 'onsite' ? (rnd() < .5 ? 'sangy' : 'customer') : null;
+      const received = ym + '-' + String(d).padStart(2, '0');
+      const tech = rnd() < .5 ? 1 : 2;
+      const dur = kind === 'onsite' ? 1 + Math.floor(rnd() * 3) : kind === 'carry_in' ? 6 + Math.floor(rnd() * 14) : 1 + Math.floor(rnd() * 6);
+      const returned = addDays(received, dur);
+      const o = { id: tid, ticket_no: period + String(seqNo[period]).padStart(4, '0'), service_type: kind, customer_id: null, device_id: 1 + Math.floor(rnd() * 10),
+                  technician_id: tech, fault_description: pick(FAULTS[kind]), received_date: received, returned_date: returned, onsite_location: location, status: location === 'customer' ? 'done' : 'returned' };
+      o.customer_id = OWNER[o.device_id];
+      if (kind === 'onsite') { o.result = 'onsite_done'; S(tid, 1, received, returned, 'repaired', { vendor_case_no: String(92460000000 + Math.floor(rnd() * 999999)), appointment_date: returned }); }
+      else if (kind === 'carry_in') {
+        o.result = rnd() < .8 ? 'warranty_center' : 'warranty_inhouse';
+        if (o.result === 'warranty_center') {
+          const outcome = rnd() < .3 ? 'replaced' : 'repaired';
+          if (outcome === 'replaced') {
+            const old = db.devices.find(d => d.id === o.device_id);
+            const replacement = { id: db.devices.length + 1, product_model_id: old.product_model_id, serial_number: old.serial_number.slice(0, 5) + 'R' + String(100000 + Math.floor(rnd() * 899999)), replaced_from_device_id: old.id };
+            db.devices.push(replacement); o.returned_device_id = replacement.id;
+          }
+          S(tid, rnd() < .6 ? 2 : 3, addDays(received, 1), addDays(returned, -1), outcome);
+        }
+      } else {
+        const x = rnd(); o.result = x < .35 ? 'free' : x < .75 ? 'repaired' : x < .88 ? 'quote_rejected' : 'scrap';
+        if (o.result === 'repaired') o.repair_warranty_months = pick([1, 3, 3, 6]);
+        if (o.result === 'free' && rnd() < .5) o.repair_warranty_months = 1;
+        if (o.result === 'repaired' || o.result === 'quote_rejected') {
+          const amt = pick([250000, 350000, 450000, 650000, 900000, 1200000, 1800000]);
+          Object.assign(o, Q(tid, o.result === 'repaired' ? 'accepted' : 'rejected', [['Linh kiện và công sửa chữa', 1, amt]], addDays(received, 1), addDays(received, 1)));
+          if (o.result === 'repaired') { erpN++; Object.assign(o, { is_chargeable: true, charge_amount: amt, erp_receipt_no: 'V223-000' + erpN, erp_return_no: 'V233-000' + (erpN - 20) }); }
+        }
+        if (o.result === 'scrap') o.scrap_reason = 'Hết linh kiện thay thế';
+      }
+      db.rma_tickets.push(T(o));
+      L(tid, location === 'sangy'
+        ? [['scheduled', received, tech], ['ready', addDays(returned, -1), tech, RESULT[o.result]], ['returned', returned, tech]]
+        : [[kind === 'onsite' ? 'scheduled' : 'received', received, tech], [o.status, returned, tech, RESULT[o.result]]]);
+      tid++;
+    }
+  }
+  for (const t of db.rma_tickets) {
+    const period = t.ticket_no.slice(0, 4); const n = Number(t.ticket_no.slice(4));
+    const seq = db.ticket_sequences.find(x => x.period === period);
+    if (seq) seq.last_number = Math.max(seq.last_number, n); else db.ticket_sequences.push({ ticket_type: 'RMA', period, last_number: n });
+  }
+  for (const t of TABLES) if (t !== 'ticket_sequences') db.nextId[t] = Math.max(0, ...db[t].map(r => r.id)) + 1;
+  return db;
+}
+const TABLES = ['rma_tickets', 'rma_center_shipments', 'rma_quote_items', 'rma_replaced_parts', 'rma_ticket_status_logs', 'customers', 'devices',
+  'attachments', 'service_centers', 'product_models', 'brands', 'device_types', 'users', 'ticket_sequences'];
+
+let db;
+function load() { try { const raw = localStorage.getItem(STORE_KEY); if (raw) { db = JSON.parse(raw); return; } } catch (e) {} db = seed(); }
+function save() { try { localStorage.setItem(STORE_KEY, JSON.stringify(db)); return true; } catch (e) { return false; } }
+function insert(table, row) { const id = db.nextId[table]++; const r = { id, ...row }; db[table].push(r); return r; }
+const nowTs = () => db.today + ' ' + new Date().toTimeString().slice(0, 8);
+
+const $ = (s, el = document) => el.querySelector(s);
+const $$ = (s, el = document) => [...el.querySelectorAll(s)];
+const esc = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const byId = (t, id) => db[t].find(r => r.id === Number(id));
+const money = (n) => n == null ? '' : Number(n).toLocaleString('vi-VN') + ' ₫';
+const dmy = (d) => d ? d.slice(0, 10).split('-').reverse().join('/') : '';
+const pill = (s) => `<span class="pill st-${STATUS[s].cls}">${STATUS[s].label}</span>`;
+const pillOf = ([label, cls]) => `<span class="pill st-${cls}">${label}</span>`;
+const kindTag = (t) => `<span class="tag k-${kindOf(t)}">${KIND[kindOf(t)].short}</span>`;
+const dash = '<span class="muted">—</span>';
+function toast(msg) { const t = $('#toast'); t.textContent = msg; t.hidden = false; clearTimeout(toast._t); toast._t = setTimeout(() => t.hidden = true, 2600); }
+function addDays(d, n) { const x = new Date(d + 'T00:00:00Z'); x.setUTCDate(x.getUTCDate() + n); return x.toISOString().slice(0, 10); }
+function addMonths(d, n) { const [y, m, dd] = d.split('-').map(Number); return new Date(Date.UTC(y, m - 1 + n, dd)).toISOString().slice(0, 10); }
+const daysBetween = (a, b) => Math.round((Date.parse(b.slice(0, 10)) - Date.parse(a.slice(0, 10))) / 86400000);
+const fileSize = (b) => b >= 1048576 ? (b / 1048576).toFixed(1).replace('.', ',') + ' MB' : Math.round(b / 1024) + ' KB';
+
+function modelInfo(modelId) { const m = byId('product_models', modelId); if (!m) return {}; return { m, b: byId('brands', m.brand_id), t: byId('device_types', m.device_type_id) }; }
+function deviceInfo(deviceId) { const d = byId('devices', deviceId); return { d, ...modelInfo(d?.product_model_id) }; }
+const productName = (i) => `${i.t?.name ?? ''} ${i.b?.name ?? ''} ${i.m?.code ?? ''}`.trim();
+const isClosed = (t) => ['returned', 'done', 'cancelled'].includes(t.status);
+const techs = () => db.users.filter(u => u.is_active);
+const shipmentsOf = (t) => db.rma_center_shipments.filter(s => s.rma_ticket_id === t.id).sort((a, b) => a.id - b.id);
+const pendingShipment = (t) => shipmentsOf(t).find(s => s.outcome === 'pending');
+const lastShipment = (t) => shipmentsOf(t).slice(-1)[0];
+const itemsOf = (t) => db.rma_quote_items.filter(i => i.rma_ticket_id === t.id);
+const itemsTotal = (t) => itemsOf(t).reduce((s, i) => s + i.quantity * i.unit_price, 0);
+const clearQuote = (t) => { db.rma_quote_items = db.rma_quote_items.filter(i => i.rma_ticket_id !== t.id); };
+const partsOf = (t) => db.rma_replaced_parts.filter(p => p.rma_ticket_id === t.id);
+const attachmentsOf = (ticketId) => db.attachments.filter(a => a.rma_ticket_id === Number(ticketId));
+
+// ---------- bảo hành sau sửa chữa ----------
+function deviceChain(deviceId) {
+  const chain = []; let d = byId('devices', deviceId);
+  while (d && !chain.includes(d)) { chain.push(d); d = byId('devices', d.replaced_from_device_id); }
+  return chain;
+}
+const repairWarrantyEnd = (t) => t.repair_warranty_months && t.returned_date ? addMonths(t.returned_date, t.repair_warranty_months) : null;
+const warrantyLabel = (t) => t.repair_warranty_months ? `${t.repair_warranty_months} tháng${repairWarrantyEnd(t) ? ' · đến ' + dmy(repairWarrantyEnd(t)) : ' · tính từ ngày trả'}` : 'Không bảo hành';
+/** Phiếu sửa chữa gần nhất của máy còn trong thời gian bảo hành sau sửa (chỉ để nhắc, không tự quyết định loại phiếu). */
+function activeRepairWarranty(deviceId) {
+  const ids = deviceChain(deviceId).map(d => d.id);
+  return db.rma_tickets.filter(t => (ids.includes(t.device_id) || ids.includes(t.returned_device_id)) && repairWarrantyEnd(t) && repairWarrantyEnd(t) >= db.today)
+    .sort((a, b) => repairWarrantyEnd(b).localeCompare(repairWarrantyEnd(a)))[0] || null;
+}
+
+// ---------- cấp số phiếu ----------
+const periodNow = () => db.today.slice(2, 4) + db.today.slice(5, 7);
+function peekTicketNo() { const seq = db.ticket_sequences.find(s => s.period === periodNow()); return periodNow() + String((seq ? seq.last_number : 0) + 1).padStart(4, '0'); }
+function takeTicketNo() {
+  const period = periodNow();
+  let seq = db.ticket_sequences.find(s => s.ticket_type === 'RMA' && s.period === period);
+  if (!seq) { seq = { ticket_type: 'RMA', period, last_number: 0 }; db.ticket_sequences.push(seq); }
+  if (seq.last_number >= 9999) throw new Error('Đã hết số phiếu của tháng ' + period + ' (tối đa 9999).');
+  seq.last_number++;
+  return period + String(seq.last_number).padStart(4, '0');
+}
+function findOrCreateDevice(modelId, serial, replacedFrom = null) {
+  const d = db.devices.find(x => x.product_model_id === Number(modelId) && x.serial_number.toLowerCase() === serial.toLowerCase());
+  return d || insert('devices', { product_model_id: Number(modelId), serial_number: serial, replaced_from_device_id: replacedFrom });
+}
+function swapSerial(t, serial, modelId) {
+  serial = (serial || '').trim(); if (!serial) return false;
+  const cur = byId('devices', t.device_id);
+  const model = Number(modelId) || cur.product_model_id;
+  if (model === cur.product_model_id && serial.toLowerCase() === cur.serial_number.toLowerCase()) return false;
+  t.returned_device_id = findOrCreateDevice(model, serial, cur.id).id;
+  return true;
+}
+/** Hãng đổi sang sản phẩm khác thì bắt buộc phải có serial của máy mới. */
+const swapErrors = (v) => v.new_model_id && !v.new_serial ? ['Đã chọn model máy đổi thì phải nhập serial của máy mới.'] : [];
+const isDifferentProduct = (t) => { const a = byId('devices', t.device_id); const b = byId('devices', t.returned_device_id); return !!b && a.product_model_id !== b.product_model_id; };
+
+// ---------- quy trình ----------
+const F = {
+  note: (label = 'Ghi chú', required = false) => ({ key: 'note', label, type: 'text', required }),
+  date: (key, label) => ({ key, label, type: 'date', required: true, def: () => db.today }),
+  text: (key, label, def) => ({ key, label, type: 'text', required: false, def }),
+  center: { key: 'service_center_id', label: 'Trung tâm bảo hành', type: 'center', required: true },
+  newSerial: { key: 'new_serial', label: 'Serial máy trả (nếu hãng đổi máy)', type: 'text', required: false },
+  newModel: { key: 'new_model_id', label: 'Model máy trả (nếu hãng đổi sang sản phẩm khác)', type: 'model', required: false },
+  months: { key: 'warranty_months', label: 'Thời gian bảo hành sau sửa (tháng) – để trống nếu không bảo hành', type: 'number', required: false },
+};
+const validMonths = (v) => v.warranty_months && !(Number.isInteger(Number(v.warranty_months)) && Number(v.warranty_months) >= 1 && Number(v.warranty_months) <= 60)
+  ? ['Thời gian bảo hành sau sửa phải là số tháng từ 1 đến 60, hoặc để trống.'] : [];
+const setMonths = (t, v) => { t.repair_warranty_months = v.warranty_months ? Number(v.warranty_months) : null; };
+const sendCenter = (t, v) => insert('rma_center_shipments', { rma_ticket_id: t.id, service_center_id: Number(v.service_center_id), vendor_case_no: v.vendor_case_no || null, appointment_date: null,
+  sent_date: v.sent_date, back_date: null, center_return_no: null, outcome: 'pending', note: v.note || null, created_by: db.currentUserId });
+const ACTIONS = [
+  { id: 'inspect', label: 'Bắt đầu kiểm tra', kinds: ['carry_in', 'repair'], from: ['received'], to: 'inspecting', fields: [F.note()] },
+  { id: 'send_center', label: 'Gửi TTBH', kinds: ['carry_in'], from: ['inspecting'], to: 'at_center',
+    fields: [F.center, F.date('sent_date', 'Ngày gửi TTBH'), F.text('vendor_case_no', 'Mã hồ sơ của hãng/TTBH'), F.note()], apply: sendCenter },
+  { id: 'inhouse', label: 'IT tự xử lý xong', kinds: ['carry_in'], from: ['inspecting'], to: 'ready', fields: [F.note('Đã xử lý gì')], apply: (t) => { t.result = 'warranty_inhouse'; } },
+  { id: 'back_center', label: 'Nhận lại từ TTBH', kinds: ['carry_in'], from: ['at_center'], to: 'ready',
+    fields: [F.date('back_date', 'Ngày nhận về công ty'), F.text('center_return_no', 'Số phiếu trả của TTBH'), F.newSerial, F.newModel, F.note()],
+    validate: (t, v) => [...swapErrors(v), ...(v.back_date < pendingShipment(t).sent_date ? ['Ngày nhận về không được trước ngày gửi TTBH (' + dmy(pendingShipment(t).sent_date) + ').'] : [])],
+    apply: (t, v) => { const s = pendingShipment(t); const swapped = swapSerial(t, v.new_serial, v.new_model_id);
+      Object.assign(s, { back_date: v.back_date, center_return_no: v.center_return_no || null, outcome: swapped ? 'replaced' : 'repaired' }); t.result = 'warranty_center'; } },
+  { id: 'center_reject', label: 'TTBH từ chối BH → chuyển sửa chữa', kinds: ['carry_in'], from: ['at_center'], to: 'inspecting', style: 'ghost',
+    fields: [F.date('back_date', 'Ngày nhận về công ty'), F.note('Lý do TTBH từ chối', true)],
+    apply: (t, v) => { Object.assign(pendingShipment(t), { back_date: v.back_date, outcome: 'rejected', note: v.note }); t.service_type = 'repair'; t.result = null; } },
+  { id: 'resend', label: 'Vẫn lỗi – gửi TTBH lại', kinds: ['carry_in'], from: ['ready'], to: 'at_center', style: 'ghost', when: (t) => t.result === 'warranty_center',
+    fields: [F.center, F.date('sent_date', 'Ngày gửi lại'), F.text('vendor_case_no', 'Mã hồ sơ của hãng/TTBH', t => lastShipment(t)?.vendor_case_no), F.note('Lỗi gì còn lại', true)],
+    apply: (t, v) => { sendCenter(t, v); t.result = null; } },
+  { id: 'free', label: 'Lỗi đơn giản – Miễn phí', kinds: ['repair'], from: ['inspecting'], to: 'ready', fields: [F.months, F.note('Đã xử lý gì')], validate: (t, v) => validMonths(v),
+    apply: (t, v) => { clearQuote(t); t.result = 'free'; setMonths(t, v); } },
+  { id: 'quote_send', label: 'Gửi báo giá cho khách', kinds: ['repair'], from: ['inspecting'], to: 'quoted', fields: [F.note()],
+    validate: (t) => itemsOf(t).length ? [] : ['Thêm ít nhất một dòng vào bảng báo giá trước khi gửi.'],
+    apply: (t) => Object.assign(t, { quote_status: 'sent', quoted_at: nowTs() }) },
+  { id: 'scrap', label: 'Báo phế', kinds: ['repair'], from: ['inspecting'], to: 'ready', style: 'ghost', fields: [F.note('Lý do báo phế', true)],
+    apply: (t, v) => { clearQuote(t); Object.assign(t, { result: 'scrap', scrap_reason: v.note }); } },
+  { id: 'accept', label: 'Khách đồng ý báo giá', kinds: ['repair'], from: ['quoted'], to: 'repairing', fields: [F.note()],
+    apply: (t) => Object.assign(t, { quote_status: 'accepted', quote_decided_at: nowTs(), is_chargeable: true, charge_amount: itemsTotal(t) }) },
+  { id: 'reject', label: 'Khách không đồng ý', kinds: ['repair'], from: ['quoted'], to: 'ready', style: 'ghost', fields: [F.note()],
+    apply: (t) => Object.assign(t, { quote_status: 'rejected', quote_decided_at: nowTs(), result: 'quote_rejected' }) },
+  { id: 'repaired', label: 'Sửa xong', kinds: ['repair'], from: ['repairing'], to: 'ready', fields: [F.months, F.note('Đã sửa gì')], validate: (t, v) => validMonths(v),
+    apply: (t, v) => { t.result = 'repaired'; setMonths(t, v); } },
+  { id: 'return', label: 'Trả khách', kinds: ['onsite_sangy', 'carry_in', 'repair'], from: ['ready'], to: 'returned', fields: [F.date('returned_date', 'Ngày trả khách'), F.note()],
+    validate: (t, v) => { const e = []; if (v.returned_date < t.received_date) e.push('Ngày trả không được trước ngày nhận (' + dmy(t.received_date) + ').');
+      if (t.is_chargeable) { if (!t.erp_receipt_no) e.push('Phiếu có phí: cần lưu số chứng từ V223 trước khi trả.'); if (!t.erp_return_no) e.push('Phiếu có phí: cần lưu số chứng từ V233 trước khi trả.'); }
+      return e; },
+    apply: (t, v) => { t.returned_date = v.returned_date; } },
+  { id: 'sangy_vendor_done', label: 'Hãng đã xử lý xong', kinds: ['onsite_sangy'], from: ['scheduled'], to: 'ready',
+    fields: [F.date('back_date', 'Ngày hãng xử lý xong'), F.text('vendor_case_no', 'Mã hồ sơ của hãng', t => pendingShipment(t)?.vendor_case_no), F.newSerial, F.newModel, F.note('Hãng đã làm gì')],
+    validate: (t, v) => [...swapErrors(v), ...(v.back_date < t.received_date ? ['Ngày hãng xử lý xong không được trước ngày nhận máy (' + dmy(t.received_date) + ').'] : [])],
+    apply: (t, v) => { const s = pendingShipment(t); const swapped = swapSerial(t, v.new_serial, v.new_model_id);
+      if (s) Object.assign(s, { back_date: v.back_date, vendor_case_no: v.vendor_case_no || s.vendor_case_no, outcome: swapped ? 'replaced' : 'repaired' });
+      t.result = 'onsite_done'; } },
+  { id: 'onsite_done', label: 'Hãng đã xử lý xong', kinds: ['onsite'], from: ['scheduled'], to: 'done', validate: (t, v) => swapErrors(v),
+    fields: [F.date('returned_date', 'Ngày hoàn tất'), F.text('vendor_case_no', 'Mã hồ sơ của hãng', t => pendingShipment(t)?.vendor_case_no), F.newSerial, F.newModel, F.note('Hãng đã làm gì')],
+    apply: (t, v) => { const s = pendingShipment(t); const swapped = swapSerial(t, v.new_serial, v.new_model_id);
+      if (s) Object.assign(s, { back_date: v.returned_date, vendor_case_no: v.vendor_case_no || s.vendor_case_no, outcome: swapped ? 'replaced' : 'repaired' });
+      Object.assign(t, { returned_date: v.returned_date, result: 'onsite_done' }); } },
+  { id: 'cancel', label: 'Hủy phiếu', kinds: ALL, from: ['scheduled', 'received', 'inspecting', 'quoted'], to: 'cancelled', style: 'danger', fields: [F.note('Lý do hủy', true)],
+    apply: (t) => { const s = pendingShipment(t); if (s) s.outcome = 'cancelled'; } },
+];
+const actionsFor = (t) => ACTIONS.filter(a => a.kinds.includes(kindOf(t)) && a.from.includes(t.status) && (!a.when || a.when(t)));
+
+// ---------- điều hướng ----------
+const PAGES = [
+  { group: 'Nghiệp vụ' },
+  { id: 'tickets', label: 'Phiếu RMA', table: 'rma_tickets', sub: 'Lập phiếu, xử lý theo quy trình, in phiếu nhận / phiếu trả' },
+  { id: 'reports', label: 'Báo cáo', table: 'tổng hợp', sub: 'Thống kê theo kỳ, phiếu tồn, TTBH, IT, doanh thu và đối soát ERP' },
+  { id: 'flows', label: 'Quy trình', table: '4 loại', sub: 'Hãng BH tại nhà khách · Hãng BH tại Sang Y · Nhận về gửi TTBH · Sửa chữa' },
+  { group: 'Dữ liệu' },
+  { id: 'customers', label: 'Khách hàng', table: 'customers', sub: 'Người gửi máy' },
+  { id: 'devices', label: 'Thiết bị', table: 'devices', sub: 'Máy đang ở khách nào, lịch sử gửi, và thời hạn bảo hành sau sửa chữa' },
+  { id: 'centers', label: 'Hãng / TTBH', table: 'service_centers', sub: 'Nơi bảo hành: hãng đến tận nơi hoặc trung tâm nhận máy' },
+  { id: 'catalog', label: 'Loại · Hãng · Model', table: '3 bảng', sub: 'device_types, brands, product_models' },
+  { id: 'users', label: 'Người dùng', table: 'users', sub: 'IT phụ trách' },
+  { group: 'Hệ thống' },
+  { id: 'sequences', label: 'Bộ đếm số phiếu', table: 'ticket_sequences', sub: 'Số thứ tự đã cấp theo từng tháng' },
+  { id: 'raw', label: 'Dữ liệu thô', table: '14 bảng', sub: 'Xem trực tiếp các dòng trong từng bảng CSDL' },
+];
+let page = 'tickets';
+let filter = { kind: '', status: '', q: '' };
+let devFilter = { q: '', chip: '', customer: '', sort: 'recent' };
+const EXPIRING_DAYS = 15;
+
+/** Everything the device page needs about one machine, derived from its tickets. */
+function deviceSummary(d) {
+  const ids = deviceChain(d.id).map(x => x.id);
+  const tickets = db.rma_tickets.filter(t => ids.includes(t.device_id) || ids.includes(t.returned_device_id))
+    .sort((a, b) => b.received_date.localeCompare(a.received_date) || b.ticket_no.localeCompare(a.ticket_no));
+  const last = tickets[0] || null;
+  const customerIds = [...new Set(tickets.map(t => t.customer_id))];
+  const replacements = db.devices.filter(x => x.replaced_from_device_id === d.id);
+  return {
+    d, i: modelInfo(d.product_model_id), tickets, last,
+    customer: last ? byId('customers', last.customer_id) : null, customerIds,
+    open: tickets.find(t => !isClosed(t)) || null,
+    rw: repairWarrantyState(tickets),
+    replacedFrom: byId('devices', d.replaced_from_device_id), replacements,
+  };
+}
+/** Bảo hành sau sửa của lần sửa gần nhất có nhập thời gian bảo hành. */
+function repairWarrantyState(tickets) {
+  const t = tickets.filter(x => x.service_type === 'repair' && x.repair_warranty_months && x.returned_date)
+    .sort((a, b) => repairWarrantyEnd(b).localeCompare(repairWarrantyEnd(a)))[0];
+  if (!t) return { level: 'none', label: 'Chưa có', cls: 'returned' };
+  const end = repairWarrantyEnd(t); const left = daysBetween(db.today, end); const total = daysBetween(t.returned_date, end);
+  if (left < 0) return { level: 'expired', label: 'Đã hết', cls: 'cancelled', t, end, left, total };
+  if (left <= EXPIRING_DAYS) return { level: 'expiring', label: `Sắp hết · còn ${left} ngày`, cls: 'repairing', t, end, left, total };
+  return { level: 'active', label: `Còn ${left} ngày`, cls: 'completed', t, end, left, total };
+}
+function warrantyCell(rw) {
+  if (rw.level === 'none') return '<span class="muted">Chưa có BH sửa chữa</span>';
+  const pct = rw.level === 'expired' ? 0 : Math.max(4, Math.round(rw.left / Math.max(1, rw.total) * 100));
+  return `<div class="wcell"><span class="pill st-${rw.cls}">${rw.label}</span>
+    ${rw.level === 'expired' ? '' : `<span class="wbar wbar-${rw.level}"><i style="width:${pct}%"></i></span>`}
+    <span class="hint">${rw.t.repair_warranty_months} tháng · ${rw.level === 'expired' ? 'hết' : 'đến'} ${dmy(rw.end)}</span><span class="hint">theo phiếu <span class="tno">${rw.t.ticket_no}</span></span></div>`;
+}
+
+function render() {
+  $('#nav').innerHTML = PAGES.map(p => p.group ? `<div class="nav-label">${p.group}</div>` :
+    `<button type="button" data-page="${p.id}" aria-current="${p.id === page}">${p.label}<code>${p.table}</code></button>`).join('');
+  $('#ctx-user').innerHTML = db.users.filter(u => u.is_active).map(u => `<option value="${u.id}" ${u.id === db.currentUserId ? 'selected' : ''}>${esc(u.name)}</option>`).join('');
+  $('#ctx-date').value = db.today;
+  const p = PAGES.find(x => x.id === page);
+  $('#page-title').textContent = p.label; $('#page-sub').textContent = p.sub;
+  VIEWS[page]();
+}
+
+// ---------- chứng từ ----------
+function attachBox(ticketId) {
+  const list = attachmentsOf(ticketId);
+  return `<div class="attach-grid">${list.map(a => `
+      <div class="attach">
+        ${a.data_url && a.mime_type.startsWith('image/') ? `<button type="button" class="thumb" data-view="${a.id}" aria-label="Xem ${esc(a.file_name)}"><img src="${a.data_url}" alt=""></button>`
+          : `<div class="thumb file">${a.mime_type === 'application/pdf' ? 'PDF' : 'ẢNH'}</div>`}
+        <div class="meta"><b>${esc(DOCTYPE[a.doc_type])}</b><span class="mono">${esc(a.file_name)}</span>
+          <span class="muted">${fileSize(a.size_bytes)} · ${esc(byId('users', a.uploaded_by)?.name)} · ${dmy(a.created_at)}${a.data_url ? '' : ' · tệp mẫu'}</span></div>
+        <button type="button" class="x sm" data-delattach="${a.id}" aria-label="Xoá chứng từ">×</button>
+      </div>`).join('') || '<p class="muted" style="margin:0">Chưa có chứng từ.</p>'}</div>
+    <form class="inline-form" data-attach="${ticketId}">
+      <select name="doc_type" aria-label="Loại chứng từ">${Object.entries(DOCTYPE).map(([k, l]) => `<option value="${k}">${l}</option>`).join('')}</select>
+      <input type="file" name="file" accept="image/*,application/pdf" required style="flex-basis:220px">
+      <button class="btn ghost">Tải lên</button>
+    </form>`;
+}
+function wireAttachments(root, after) {
+  $$('[data-attach]', root).forEach(f => f.addEventListener('submit', (e) => {
+    e.preventDefault(); const ticketId = Number(f.dataset.attach); const file = f.file.files[0]; if (!file) return;
+    if (file.size > MAX_FILE) { toast('Bản demo chỉ nhận tệp tối đa 1,5 MB. Hệ thống thật cho tới 10 MB.'); return; }
+    const rd = new FileReader();
+    rd.onload = () => {
+      const a = insert('attachments', { rma_ticket_id: ticketId, doc_type: f.doc_type.value, file_name: file.name, mime_type: file.type || 'application/octet-stream',
+        size_bytes: file.size, data_url: rd.result, uploaded_by: db.currentUserId, created_at: nowTs() });
+      if (!save()) { db.attachments = db.attachments.filter(x => x !== a); toast('Bộ nhớ trình duyệt đã đầy, không lưu được tệp. Xoá bớt chứng từ cũ rồi thử lại.'); return; }
+      toast('Đã tải lên ' + file.name); after();
+    };
+    rd.readAsDataURL(file);
+  }));
+  $$('[data-delattach]', root).forEach(b => b.addEventListener('click', () => {
+    if (!b.dataset.armed) { b.dataset.armed = '1'; b.textContent = 'Xoá?'; b.classList.add('armed'); return; }
+    db.attachments = db.attachments.filter(a => a.id !== Number(b.dataset.delattach)); save(); after();
+  }));
+  $$('[data-view]', root).forEach(b => b.addEventListener('click', () => {
+    const a = byId('attachments', b.dataset.view);
+    $('#dlg2-inner').innerHTML = `<div class="dlg-head"><div><h2>${esc(DOCTYPE[a.doc_type])}</h2><div class="muted mono">${esc(a.file_name)}</div></div><button type="button" class="x" data-close2 aria-label="Đóng">×</button></div>
+      <div class="dlg-body" style="text-align:center"><img src="${a.data_url}" alt="${esc(a.file_name)}" style="max-width:100%"></div>`;
+    $('#dlg2').showModal();
+  }));
+}
+
+// ---------- các trang ----------
+const VIEWS = {
+  tickets() {
+    const inKind = db.rma_tickets.filter(t => !filter.kind || kindOf(t) === filter.kind);
+    const counts = {}; inKind.forEach(t => counts[t.status] = (counts[t.status] || 0) + 1);
+    const q = filter.q.trim().toLowerCase();
+    const rows = inKind.filter(t => !filter.status || t.status === filter.status).filter(t => {
+      if (!q) return true;
+      const c = byId('customers', t.customer_id); const i = deviceInfo(t.device_id); const r = deviceInfo(t.returned_device_id);
+      return [t.ticket_no, c?.name, c?.contact_name, c?.phone, i.d?.serial_number, r.d?.serial_number, i.m?.code, i.b?.name, t.erp_receipt_no, t.erp_return_no,
+        ...shipmentsOf(t).map(s => s.vendor_case_no)].join(' ').toLowerCase().includes(q);
+    }).sort((a, b) => b.ticket_no.localeCompare(a.ticket_no));
+    const kinds = [['', 'Tất cả', db.rma_tickets.length], ...ALL.map(k => [k, KIND[k].label, db.rma_tickets.filter(t => kindOf(t) === k).length])];
+    $('#view').innerHTML = `
+      <div class="toolbar"><div class="seg">${kinds.map(([k, l, n]) => `<button type="button" data-kind="${k}" aria-pressed="${filter.kind === k}">${l} <span class="muted">${n}</span></button>`).join('')}</div></div>
+      <div class="chips">
+        <button type="button" class="chip" data-status="" aria-pressed="${!filter.status}"><b>${inKind.length}</b><span>Mọi trạng thái</span></button>
+        ${Object.keys(STATUS).filter(s => counts[s]).map(s => `<button type="button" class="chip" data-status="${s}" aria-pressed="${filter.status === s}"><b>${counts[s]}</b><span>${STATUS[s].label}</span></button>`).join('')}
+      </div>
+      <div class="toolbar">
+        <input class="grow" id="t-search" type="search" placeholder="Tìm số phiếu, khách, SĐT, serial, model, mã hồ sơ hãng, số V223/V233…" value="${esc(filter.q)}">
+        <button type="button" class="btn" id="new-ticket">+ Lập phiếu mới</button>
+      </div>
+      <div class="panel tbl"><table>
+        <thead><tr><th>Số phiếu</th><th>Loại</th><th>Khách hàng</th><th>Thiết bị</th><th>Serial</th><th>IT phụ trách</th><th>Ngày nhận</th><th>Kết quả / Phí</th><th>Trạng thái</th></tr></thead>
+        <tbody>${rows.map(t => { const c = byId('customers', t.customer_id); const i = deviceInfo(t.device_id); const r = deviceInfo(t.returned_device_id);
+          const res = t.is_chargeable ? `<span class="tag fee">Có phí</span> ${money(t.charge_amount)}` : t.status === 'quoted' ? `<span class="tag fee">Báo giá</span> ${money(itemsTotal(t))}` : t.result ? esc(RESULT[t.result]) : dash;
+          return `<tr class="click" data-ticket="${t.id}">
+            <td class="tno">${t.ticket_no}</td><td>${kindTag(t)}<div class="hint">${WARRANTY[t.warranty_status]}${t.original_service_type !== t.service_type ? ` · từ ${KIND[t.original_service_type].short}` : ''}</div></td>
+            <td>${esc(c?.name)}<div class="muted mono">${esc(c?.phone)}</div></td>
+            <td>${esc(i.t?.name)}<div class="muted">${esc(i.b?.name)} ${esc(i.m?.code)}</div></td>
+            <td class="mono">${esc(i.d?.serial_number)}${r.d ? `<div class="muted">→ ${esc(r.d.serial_number)}${isDifferentProduct(t) ? ` <span class="tag">${esc(r.b.name)} ${esc(r.m.code)}</span>` : ''}</div>` : ''}</td>
+            <td>${esc(byId('users', t.technician_id)?.name) || dash}</td>
+            <td>${dmy(t.received_date)}</td><td class="wrap">${res}</td><td>${pill(t.status)}</td></tr>`; }).join('') || '<tr><td colspan="9" class="muted">Không có phiếu nào khớp.</td></tr>'}</tbody>
+      </table></div>
+      <p class="demo-note">Gợi ý: <span class="tno">26090009</span> máy đã mang về Sang Y, chờ hãng Dell đến · <span class="tno">26090001</span> hãng đến nhà khách · <span class="tno">26090002</span> TTBH đổi nguồn mới, chờ trả khách · <span class="tno">26090004</span> chờ khách duyệt báo giá · <span class="tno">26090005</span> khách đồng ý báo giá, đang sửa · <span class="tno">26090003</span> đang ở TTBH.</p>`;
+  },
+
+  flows() {
+    const step = (s, cls = '') => `<span class="step ${cls}">${s}</span>`;
+    const ar = '<span class="arrow">→</span>';
+    $('#view').innerHTML = `
+      <div class="grid-2">
+        <div class="panel panel-pad"><h2>1a. Hãng BH tại nhà khách <span class="tag k-onsite">${KIND.onsite.short}</span></h2>
+          <div class="flow">${step('Lập phiếu, mở case với hãng')}${ar}${step('Chờ hãng đến nhà khách')}${ar}${step('Hãng xử lý xong', 'end')}</div>
+          <p class="hint">Không mang máy về nên không in phiếu nhận/trả. Ghi hãng, mã hồ sơ, ngày hẹn, linh kiện thay, serial mới nếu hãng đổi máy.</p></div>
+        <div class="panel panel-pad"><h2>1b. Hãng BH tại Sang Y <span class="tag k-onsite_sangy">${KIND.onsite_sangy.short}</span></h2>
+          <div class="flow">${step('Nhận máy về Sang Y, hẹn hãng')}${ar}${step('Chờ hãng đến Sang Y')}${ar}${step('Hãng xử lý xong')}${ar}${step('Chờ trả khách')}${ar}${step('Trả khách', 'end')}</div>
+          <p class="hint">Có in phiếu nhận khi nhận máy và phiếu trả khi trả máy. Hãng đổi máy thì ghi serial mới, phiếu trả in cả Seri lỗi và Seri trả.</p></div>
+        <div class="panel panel-pad"><h2>1c. Nhận về gửi TTBH <span class="tag k-carry_in">${KIND.carry_in.short}</span></h2>
+          <div class="flow">${step('IT nhận máy')}${ar}${step('IT kiểm tra')}${ar}${step('Gửi TTBH')}${ar}${step('Nhận về công ty')}${ar}${step('Trả khách', 'end')}</div>
+          <p class="branch">• IT tự xử lý được thì bỏ qua TTBH.<br>• Nhận về mà vẫn lỗi: gửi TTBH lại, mỗi lần gửi được lưu riêng.<br>• TTBH từ chối bảo hành: phiếu chuyển sang <b>Sửa chữa</b>, giữ nguyên số phiếu.</p></div>
+        <div class="panel panel-pad"><h2>2. Sửa chữa <span class="tag k-repair">Sửa chữa</span></h2>
+          <div class="flow">${step('IT nhận máy')}${ar}${step('IT kiểm tra lỗi')}${ar}<span class="branch">3 kết quả:</span></div>
+          <div class="flow">${ar}${step('Lỗi đơn giản → Miễn phí')}${ar}${step('Trả khách', 'end')}</div>
+          <div class="flow">${ar}${step('Báo giá')}${ar}${step('Khách đồng ý → Sửa')}${ar}${step('Trả khách + ERP V223/V233', 'end')}</div>
+          <div class="flow"><span class="arrow" style="visibility:hidden">→</span><span class="branch">Báo giá một lần: khách không đồng ý → trả máy không sửa, không thu phí</span></div>
+          <div class="flow">${ar}${step('Báo phế (hết linh kiện / không sửa được)')}${ar}${step('Trả khách', 'end')}</div>
+          <p class="hint">Khi bấm "Sửa xong" hoặc "Miễn phí", IT <b>nhập thời gian bảo hành sau sửa</b> (số tháng, để trống nếu không bảo hành). Hạn được tính từ ngày trả máy và in lên phiếu trả.</p></div>
+        <div class="panel panel-pad"><h2>Tình trạng bảo hành</h2>
+          <p style="margin:0 0 6px">Khi lập phiếu, nhân viên <b>tự chọn "Còn bảo hành" hoặc "Hết bảo hành"</b>. Hệ thống không tự tra hạn bảo hành của sản phẩm.</p>
+          <p style="margin:0 0 6px">Còn bảo hành: chọn một trong 3 hình thức bảo hành, hoặc Sửa chữa nếu lỗi không thuộc bảo hành. Hết bảo hành: chỉ lập được phiếu Sửa chữa.</p>
+          <p class="hint">Nếu máy đang trong thời gian bảo hành sau sửa của Sang Y, form lập phiếu sẽ nhắc để nhân viên tự quyết định.</p></div>
+      </div>`;
+  },
+
+  customers() {
+    const devicesOf = (c) => db.devices.filter(d => deviceSummary(d).customer?.id === c.id);
+    $('#view').innerHTML = `
+      <div class="panel tbl"><table>
+        <thead><tr><th>Tên khách / công ty</th><th>Người liên hệ</th><th>SĐT</th><th>Địa chỉ</th><th class="num">Phiếu</th><th class="num">Đang xử lý</th><th class="num">Thiết bị</th><th class="num">Còn BH sau sửa</th><th></th></tr></thead>
+        <tbody>${db.customers.map(c => { const ts = db.rma_tickets.filter(t => t.customer_id === c.id); const ds = devicesOf(c).map(deviceSummary);
+          return `<tr><td>${esc(c.name)}</td><td>${esc(c.contact_name) || dash}</td><td class="mono">${esc(c.phone)}</td>
+          <td class="wrap">${esc(c.address) || dash}</td><td class="num">${ts.length}</td><td class="num">${ts.filter(t => !isClosed(t)).length || dash}</td>
+          <td class="num">${ds.length}</td><td class="num">${ds.filter(x => ['active', 'expiring'].includes(x.rw.level)).length || dash}</td>
+          <td><button type="button" class="btn ghost sm" data-cust-devices="${c.id}">Xem thiết bị</button></td></tr>`; }).join('')}</tbody>
+      </table></div>
+      <div class="panel panel-pad" style="margin-top:16px"><h2>Thêm khách hàng</h2>
+        <form id="f-customer" class="inline-form">
+          <input id="c-name" placeholder="Tên khách / công ty *" required><input id="c-contact" placeholder="Người liên hệ"><input id="c-phone" placeholder="Số điện thoại *" required>
+          <input id="c-address" placeholder="Địa chỉ"><button class="btn">Thêm</button>
+        </form></div>`;
+  },
+  devices() {
+    const all = db.devices.map(deviceSummary);
+    const CHIPS = [
+      ['', 'Tất cả thiết bị', () => true],
+      ['active', 'Còn BH sau sửa', x => x.rw.level === 'active' || x.rw.level === 'expiring'],
+      ['expiring', `Sắp hết BH (≤ ${EXPIRING_DAYS} ngày)`, x => x.rw.level === 'expiring'],
+      ['expired', 'Đã hết BH sau sửa', x => x.rw.level === 'expired'],
+      ['open', 'Đang xử lý', x => !!x.open],
+      ['multi', 'Gửi từ 2 lần', x => x.tickets.length >= 2],
+      ['swapped', 'Máy hãng đổi', x => !!x.replacedFrom || x.replacements.length > 0],
+    ];
+    const chip = CHIPS.find(c => c[0] === devFilter.chip) || CHIPS[0];
+    const q = devFilter.q.trim().toLowerCase();
+    let rows = all.filter(chip[2])
+      .filter(x => !devFilter.customer || x.customerIds.includes(Number(devFilter.customer)))
+      .filter(x => !q || [x.d.serial_number, x.i.m?.code, x.i.b?.name, x.i.t?.name, ...x.customerIds.map(id => { const c = byId('customers', id); return c.name + ' ' + c.phone + ' ' + (c.contact_name || ''); })]
+        .join(' ').toLowerCase().includes(q));
+    const byRecent = (a, b) => (b.last?.received_date || '').localeCompare(a.last?.received_date || '');
+    rows.sort(devFilter.sort === 'expiring'
+      ? (a, b) => { const rank = (x) => x.rw.level === 'expiring' ? 0 : x.rw.level === 'active' ? 1 : 2; return rank(a) - rank(b) || (a.rw.left ?? 1e9) - (b.rw.left ?? 1e9) || byRecent(a, b); }
+      : devFilter.sort === 'most' ? (a, b) => b.tickets.length - a.tickets.length || byRecent(a, b) : byRecent);
+    const custOptions = db.customers.filter(c => all.some(x => x.customerIds.includes(c.id)));
+    $('#view').innerHTML = `
+      <div class="chips">${CHIPS.map(([key, label, test]) => `<button type="button" class="chip" data-devchip="${key}" aria-pressed="${devFilter.chip === key}"><b>${all.filter(test).length}</b><span>${label}</span></button>`).join('')}</div>
+      <div class="toolbar">
+        <input class="grow" id="dv-search" type="search" placeholder="Tìm serial, model, hãng, tên khách, SĐT…" value="${esc(devFilter.q)}">
+        <select id="dv-customer" aria-label="Lọc theo khách hàng"><option value="">Mọi khách hàng</option>${custOptions.map(c => `<option value="${c.id}" ${String(c.id) === String(devFilter.customer) ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}</select>
+        <select id="dv-sort" aria-label="Sắp xếp">${[['recent', 'Gửi gần đây nhất'], ['expiring', 'BH sau sửa sắp hết trước'], ['most', 'Gửi nhiều lần nhất']].map(([k, l]) => `<option value="${k}" ${devFilter.sort === k ? 'selected' : ''}>${l}</option>`).join('')}</select>
+      </div>
+      <div class="panel tbl"><table>
+        <thead><tr><th>Thiết bị</th><th>Khách hàng</th><th>Phiếu gần nhất</th><th class="num">Lần gửi</th><th>Bảo hành sau sửa chữa</th></tr></thead>
+        <tbody>${rows.map(x => `<tr class="click" data-dev="${x.d.id}">
+          <td><div>${esc(x.i.t?.name)} <b>${esc(x.i.b?.name)} ${esc(x.i.m?.code)}</b></div><div class="mono">${esc(x.d.serial_number)}</div>
+            ${x.replacedFrom ? `<div class="hint">Hãng đổi từ <span class="mono">${esc(x.replacedFrom.serial_number)}</span></div>` : ''}
+            ${x.replacements.length ? `<div class="hint warn">Đã đổi sang <span class="mono">${x.replacements.map(r => esc(r.serial_number)).join(', ')}</span> · khách không còn giữ máy này</div>` : ''}</td>
+          <td>${x.customer ? `${esc(x.customer.name)}<div class="muted mono">${esc(x.customer.phone)}</div>${x.customerIds.length > 1 ? `<div class="hint">+${x.customerIds.length - 1} khách khác từng gửi</div>` : ''}` : dash}</td>
+          <td>${x.last ? `<span class="tno">${x.last.ticket_no}</span> ${kindTag(x.last)}<div class="row" style="gap:6px;margin-top:2px">${pill(x.last.status)}<span class="hint">${dmy(x.last.received_date)}</span></div>` : dash}</td>
+          <td class="num">${x.tickets.length > 1 ? `<span class="pill st-repairing">${x.tickets.length} lần</span>` : x.tickets.length}</td>
+          <td>${warrantyCell(x.rw)}</td></tr>`).join('') || '<tr><td colspan="5" class="muted">Không có thiết bị nào khớp.</td></tr>'}</tbody>
+      </table></div>
+      <p class="demo-note">Bấm vào một máy để xem toàn bộ lịch sử và lập phiếu mới. Chỉ theo dõi bảo hành sau sửa chữa của Sang Y; bảo hành hãng do nhân viên tự chọn khi lập phiếu.</p>`;
+  },
+  centers() {
+    $('#view').innerHTML = `
+      <div class="panel tbl"><table>
+        <thead><tr><th>id</th><th>Tên</th><th>Nhận bảo hành</th><th>SĐT</th><th>Địa chỉ</th><th class="num">Lần gửi</th><th class="num">Đang giữ</th><th></th></tr></thead>
+        <tbody>${db.service_centers.map(s => { const ss = db.rma_center_shipments.filter(x => x.service_center_id === s.id);
+          return `<tr><td class="mono">${s.id}</td><td>${esc(s.name)}${s.is_active ? '' : ' <span class="tag">đã ẩn</span>'}</td><td>${esc(s.brands) || dash}</td>
+          <td class="mono">${esc(s.phone) || dash}</td><td class="wrap">${esc(s.address) || dash}</td><td class="num">${ss.length}</td><td class="num">${ss.filter(x => x.outcome === 'pending').length}</td>
+          <td><button type="button" class="btn ghost sm" data-toggle="service_centers:${s.id}">${s.is_active ? 'Ẩn' : 'Hiện lại'}</button></td></tr>`; }).join('')}</tbody>
+      </table></div>
+      <div class="panel panel-pad" style="margin-top:16px"><h2>Thêm hãng / TTBH</h2>
+        <form id="f-center" class="inline-form">
+          <input id="sc-name" placeholder="Tên *" required><input id="sc-brands" placeholder="Nhận hãng nào (VD: DELL, HP)">
+          <input id="sc-phone" placeholder="SĐT"><input id="sc-address" placeholder="Địa chỉ"><button class="btn">Thêm</button>
+        </form></div>`;
+  },
+  catalog() {
+    const toggle = (table, r) => `<button type="button" class="btn ghost sm" data-toggle="${table}:${r.id}">${r.is_active ? 'Ẩn' : 'Hiện lại'}</button>`;
+    const act = (r) => r.is_active ? '' : ' <span class="tag">đã ẩn</span>';
+    $('#view').innerHTML = `
+      <div class="grid-2">
+        <div class="panel panel-pad"><h2>Loại thiết bị <code class="muted mono">device_types</code></h2>
+          <div class="tbl"><table><thead><tr><th>Mã</th><th>Tên</th><th></th></tr></thead><tbody>
+          ${db.device_types.map(r => `<tr><td class="mono">${esc(r.code)}</td><td>${esc(r.name)}${act(r)}</td><td>${toggle('device_types', r)}</td></tr>`).join('')}</tbody></table></div>
+          <form id="f-type" class="inline-form"><input id="dt-code" placeholder="Mã (VD: RAM)" required><input id="dt-name" placeholder="Tên (VD: Bộ nhớ RAM)" required><button class="btn">Thêm</button></form></div>
+        <div class="panel panel-pad"><h2>Thương hiệu <code class="muted mono">brands</code></h2>
+          <div class="tbl"><table><thead><tr><th>Tên</th><th>Số model</th><th></th></tr></thead><tbody>
+          ${db.brands.map(r => `<tr><td>${esc(r.name)}${act(r)}</td><td>${db.product_models.filter(m => m.brand_id === r.id).length}</td><td>${toggle('brands', r)}</td></tr>`).join('')}</tbody></table></div>
+          <form id="f-brand" class="inline-form"><input id="b-name" placeholder="Tên hãng (VD: LENOVO)" required><button class="btn">Thêm</button></form></div>
+      </div>
+      <div class="panel panel-pad" style="margin-top:16px"><h2>Model sản phẩm <code class="muted mono">product_models</code></h2>
+        <div class="tbl"><table><thead><tr><th>Mã model</th><th>Hãng</th><th>Loại</th><th>Tên</th><th></th></tr></thead><tbody>
+        ${db.product_models.map(r => { const i = modelInfo(r.id); return `<tr><td class="mono">${esc(r.code)}</td><td>${esc(i.b?.name)}</td><td>${esc(i.t?.name)}</td><td>${esc(r.name) || dash}${act(r)}</td><td>${toggle('product_models', r)}</td></tr>`; }).join('')}</tbody></table></div>
+        <form id="f-model" class="inline-form">
+          <select id="m-type" required><option value="">Loại *</option>${db.device_types.filter(t => t.is_active).map(t => `<option value="${t.id}">${esc(t.name)}</option>`).join('')}</select>
+          <select id="m-brand" required><option value="">Hãng *</option>${db.brands.filter(b => b.is_active).map(b => `<option value="${b.id}">${esc(b.name)}</option>`).join('')}</select>
+          <input id="m-code" placeholder="Mã model *" required><input id="m-name" placeholder="Tên (tuỳ chọn)"><button class="btn">Thêm</button>
+        </form></div>
+      <div class="err" id="cat-err" style="margin-top:12px"></div>
+      <p class="demo-note">Danh mục không xoá, chỉ ẩn khỏi danh sách chọn, để phiếu cũ vẫn hiển thị đúng.</p>`;
+  },
+  users() {
+    $('#view').innerHTML = `
+      <div class="panel tbl"><table>
+        <thead><tr><th>id</th><th>Tên</th><th>Email</th><th>Vai trò</th><th class="num">Phiếu phụ trách</th><th class="num">Đang giữ</th><th></th></tr></thead>
+        <tbody>${db.users.map(u => `<tr><td class="mono">${u.id}</td><td>${esc(u.name)}</td><td class="mono">${esc(u.email)}</td><td><span class="tag">IT</span></td>
+          <td class="num">${db.rma_tickets.filter(t => t.technician_id === u.id).length}</td><td class="num">${db.rma_tickets.filter(t => t.technician_id === u.id && !isClosed(t)).length}</td>
+          <td>${u.id === db.currentUserId ? '<span class="muted">đang đăng nhập</span>' : `<button type="button" class="btn ghost sm" data-toggle="users:${u.id}">${u.is_active ? 'Khoá' : 'Mở khoá'}</button>`}</td></tr>`).join('')}</tbody>
+      </table></div>`;
+  },
+  sequences() {
+    const seqs = [...db.ticket_sequences].sort((a, b) => b.period.localeCompare(a.period));
+    $('#view').innerHTML = `
+      <div class="grid-2">
+        <div class="panel tbl"><table>
+          <thead><tr><th>ticket_type</th><th>period</th><th class="num">last_number</th><th>Số phiếu cuối</th></tr></thead>
+          <tbody>${seqs.map(s => `<tr><td class="mono">${s.ticket_type}</td><td class="mono">${s.period}</td><td class="num mono">${s.last_number}</td><td class="tno">${s.period}${String(s.last_number).padStart(4, '0')}</td></tr>`).join('')}</tbody>
+        </table></div>
+        <div class="panel panel-pad"><h2>Số phiếu tiếp theo</h2>
+          <p style="margin:0 0 8px"><span class="tno" style="font-size:22px">${peekTicketNo()}</span></p>
+          <p class="hint">Bảo hành và sửa chữa dùng chung một dãy số. Đổi "Ngày hệ thống" sang tháng 10/2026 rồi lập phiếu: số quay về <span class="tno">26100001</span>.</p></div>
+      </div>`;
+  },
+  raw() {
+    const cur = VIEWS.raw.cur || 'rma_tickets';
+    const rows = db[cur]; const cols = rows.length ? Object.keys(rows[0]) : [];
+    const cell = (c, v) => v === null || v === undefined ? '<span class="null">null</span>' : c === 'data_url' ? '<span class="null">(nội dung tệp)</span>' : `<span class="mono">${esc(v)}</span>`;
+    $('#view').innerHTML = `
+      <div class="toolbar">${TABLES.map(t => `<button type="button" class="btn ${t === cur ? '' : 'ghost'} sm" data-raw="${t}">${t} <span class="${t === cur ? '' : 'muted'}">(${db[t].length})</span></button>`).join('')}</div>
+      <div class="panel tbl"><table><thead><tr>${cols.map(c => `<th style="text-transform:none">${c}</th>`).join('')}</tr></thead>
+      <tbody>${rows.map(r => `<tr>${cols.map(c => `<td>${cell(c, r[c])}</td>`).join('')}</tr>`).join('')}</tbody></table></div>
+      <p class="demo-note">Dữ liệu thật đang nằm trong từng bảng của bản demo. Cột <span class="mono">data_url</span> chỉ có trong demo; hệ thống thật lưu tệp trên ổ đĩa và CSDL chỉ giữ <span class="mono">file_path</span>.</p>`;
+  },
+};
+
+// ---------- báo cáo ----------
+const rep = { from: null, to: null, kind: '', preset: 'this' };
+const PRESETS = [['this', 'Tháng này'], ['last', 'Tháng trước'], ['q', '3 tháng gần nhất'], ['year', 'Năm nay']];
+function setPreset(p) {
+  const [y, m] = db.today.split('-').map(Number);
+  const ms = (yy, mm) => new Date(Date.UTC(yy, mm - 1, 1)).toISOString().slice(0, 10);
+  const me = (yy, mm) => new Date(Date.UTC(yy, mm, 0)).toISOString().slice(0, 10);
+  const r = { this: [ms(y, m), me(y, m)], last: [ms(y, m - 1), me(y, m - 1)], q: [ms(y, m - 2), me(y, m)], year: [y + '-01-01', y + '-12-31'] }[p];
+  [rep.from, rep.to] = r; rep.preset = p;
+}
+const inRange = (d) => !!d && d.slice(0, 10) >= rep.from && d.slice(0, 10) <= rep.to;
+const avg = (arr) => arr.length ? arr.reduce((s, x) => s + x, 0) / arr.length : null;
+const isFinished = (t) => ['returned', 'done'].includes(t.status);
+const sev = (level, label) => ({ level, label });
+
+function buildReport() {
+  const T = db.rma_tickets.filter(t => !rep.kind || kindOf(t) === rep.kind);
+  const ids = new Set(T.map(t => t.id));
+  const received = T.filter(t => inRange(t.received_date));
+  const finished = T.filter(t => isFinished(t) && inRange(t.returned_date));
+  const open = T.filter(t => !isClosed(t));
+  const stat = (list) => {
+    const fin = list.filter(t => isFinished(t) && inRange(t.returned_date));
+    return { recv: list.filter(t => inRange(t.received_date)).length, fin: fin.length, open: list.filter(t => !isClosed(t)).length,
+      avg: avg(fin.map(t => daysBetween(t.received_date, t.returned_date))), rev: fin.filter(t => t.is_chargeable).reduce((s, t) => s + (t.charge_amount || 0), 0),
+      conv: list.filter(t => inRange(t.received_date) && t.original_service_type !== t.service_type).length };
+  };
+  const all = stat(T);
+  const overdue = open.filter(t => daysBetween(t.received_date, db.today) > 7).length;
+  const kpis = [
+    { lbl: 'Phiếu nhận trong kỳ', val: all.recv, sub: ALL.map(k => `${KIND[k].short} ${received.filter(t => kindOf(t) === k).length}`).join(' · ') },
+    { lbl: 'Hoàn tất trong kỳ', val: all.fin, sub: 'Đã trả khách hoặc hãng xử lý xong' },
+    { lbl: 'Đang xử lý', val: open.length, sub: overdue ? `${overdue} phiếu quá 7 ngày` : 'Không có phiếu quá 7 ngày' },
+    { lbl: 'Doanh thu sửa chữa', val: money(all.rev), sub: `${finished.filter(t => t.is_chargeable).length} phiếu có phí đã trả` },
+    { lbl: 'Thời gian xử lý TB', val: all.avg == null ? '—' : all.avg.toFixed(1).replace('.', ',') + ' ngày', sub: 'Từ ngày nhận đến ngày trả' },
+  ];
+  const [ty, tm] = rep.to.split('-').map(Number);
+  const months = Array.from({ length: 6 }, (_, n) => {
+    const ym = new Date(Date.UTC(ty, tm - 6 + n, 1)).toISOString().slice(0, 7);
+    const list = T.filter(t => t.received_date.startsWith(ym));
+    return { ym, label: 'T' + Number(ym.slice(5)) + '/' + ym.slice(2, 4), total: list.length, byKind: ALL.map(k => [KIND[k].short, list.filter(t => kindOf(t) === k).length]), inPeriod: ym + '-31' >= rep.from && ym + '-01' <= rep.to };
+  });
+  const sections = [];
+  sections.push({ id: 'kind', title: 'Theo loại phiếu', note: 'Nhận, hoàn tất trong kỳ; đang xử lý tính đến hôm nay',
+    cols: [['Loại phiếu', 'text'], ['Nhận', 'num'], ['Hoàn tất', 'num'], ['Đang xử lý', 'num'], ['TB xử lý', 'days'], ['Doanh thu', 'money']],
+    rows: [...ALL.filter(k => !rep.kind || k === rep.kind).map(k => { const s = stat(T.filter(t => kindOf(t) === k)); return { cells: [KIND[k].label + (k === 'repair' && s.conv ? ` (gồm ${s.conv} phiếu BH bị từ chối)` : ''), s.recv, s.fin, s.open, s.avg, s.rev] }; }),
+           { total: true, cells: ['Tổng', all.recv, all.fin, all.open, all.avg, all.rev] }] });
+  const cancelled = T.filter(t => t.status === 'cancelled' && db.rma_ticket_status_logs.some(l => l.rma_ticket_id === t.id && l.to_status === 'cancelled' && inRange(l.created_at)));
+  const resCount = {}; finished.forEach(t => { if (t.result) resCount[t.result] = (resCount[t.result] || 0) + 1; });
+  const resTotal = finished.length + cancelled.length;
+  sections.push({ id: 'result', title: 'Kết quả xử lý', note: 'Phiếu hoàn tất hoặc bị hủy trong kỳ',
+    cols: [['Kết quả', 'text'], ['Số phiếu', 'num'], ['Tỷ lệ', 'pct']],
+    rows: [...Object.entries(resCount).sort((a, b) => b[1] - a[1]).map(([r, n]) => ({ cells: [RESULT[r], n, n / resTotal] })),
+           ...(cancelled.length ? [{ cells: ['Đã hủy phiếu', cancelled.length, cancelled.length / resTotal] }] : []), { total: true, cells: ['Tổng', resTotal, resTotal ? 1 : 0] }] });
+  sections.push({ id: 'backlog', title: 'Phiếu tồn', note: 'Phiếu chưa đóng, tính đến ngày ' + dmy(db.today) + ' · bấm dòng để mở phiếu', wide: true,
+    cols: [['Số phiếu', 'tno'], ['Loại', 'kind'], ['Khách hàng', 'text'], ['Thiết bị', 'text'], ['Trạng thái', 'status'], ['IT phụ trách', 'text'], ['Ngày nhận', 'date'], ['Số ngày', 'num'], ['Tình trạng', 'sev'], ['Ghi chú', 'text']],
+    rows: open.map(t => ({ t, age: daysBetween(t.received_date, db.today) })).sort((a, b) => b.age - a.age).map(({ t, age }) => { const ps = pendingShipment(t); return { id: t.id, cells: [
+      t.ticket_no, kindOf(t), byId('customers', t.customer_id)?.name, productName(deviceInfo(t.device_id)), t.status, byId('users', t.technician_id)?.name || '', t.received_date, age,
+      age <= 3 ? sev('ok', 'Trong hạn') : age <= 7 ? sev('warn', 'Cần theo dõi') : sev('bad', 'Quá 7 ngày'),
+      t.status === 'at_center' && ps ? `Ở ${byId('service_centers', ps.service_center_id)?.name} ${daysBetween(ps.sent_date, db.today)} ngày` : t.status === 'quoted' ? `Chờ khách duyệt báo giá: ${money(itemsTotal(t))}` : t.status === 'ready' ? 'Báo khách đến lấy máy' : '' ] }; }) });
+  const ships = db.rma_center_shipments.filter(s => ids.has(s.rma_ticket_id));
+  sections.push({ id: 'center', title: 'Theo hãng / TTBH', note: 'Lần gửi và nhận về trong kỳ; "Đang giữ" tính đến hôm nay',
+    cols: [['Hãng / TTBH', 'text'], ['Gửi', 'num'], ['Đang giữ', 'num'], ['Đã xong', 'num'], ['Đổi mới', 'num'], ['Từ chối BH', 'num'], ['TB ngày', 'days']],
+    rows: db.service_centers.map(c => { const ss = ships.filter(s => s.service_center_id === c.id); const back = ss.filter(s => s.outcome !== 'pending' && inRange(s.back_date));
+      const ok = back.filter(s => s.outcome !== 'rejected');
+      return { cells: [c.name, ss.filter(s => inRange(s.sent_date)).length, ss.filter(s => s.outcome === 'pending').length, ok.length, ok.filter(s => s.outcome === 'replaced').length,
+        back.filter(s => s.outcome === 'rejected').length, avg(ok.map(s => daysBetween(s.sent_date, s.back_date)))] }; }) });
+  sections.push({ id: 'tech', title: 'Theo IT phụ trách', note: 'Nhận, hoàn tất trong kỳ; "Đang giữ" tính đến hôm nay',
+    cols: [['IT', 'text'], ['Nhận', 'num'], ['Hoàn tất', 'num'], ['Đang giữ', 'num'], ['TB xử lý', 'days'], ['Doanh thu', 'money']],
+    rows: db.users.map(u => { const s = stat(T.filter(t => t.technician_id === u.id)); return { cells: [u.name, s.recv, s.fin, s.open, s.avg, s.rev] }; }) });
+  const paid = T.filter(t => t.is_chargeable && (inRange(t.received_date) || inRange(t.returned_date))).sort((a, b) => a.ticket_no.localeCompare(b.ticket_no));
+  sections.push({ id: 'erp', title: 'Doanh thu và đối soát ERP', note: 'Phiếu có phí nhận hoặc trả trong kỳ · bấm dòng để mở phiếu', wide: true,
+    cols: [['Số phiếu', 'tno'], ['Khách hàng', 'text'], ['Ngày nhận', 'date'], ['Ngày trả', 'date'], ['Trạng thái', 'status'], ['Số tiền', 'money'], ['V223', 'text'], ['V233', 'text'], ['Chứng từ', 'sev']],
+    rows: [...paid.map(t => ({ id: t.id, cells: [t.ticket_no, byId('customers', t.customer_id)?.name, t.received_date, t.returned_date, t.status, t.charge_amount, t.erp_receipt_no || '', t.erp_return_no || '',
+      t.erp_receipt_no && t.erp_return_no ? sev('ok', 'Đủ chứng từ') : !t.erp_receipt_no ? sev('bad', 'Thiếu V223') : sev('warn', 'Chưa có V233')] })),
+      { total: true, cells: ['Tổng', paid.length + ' phiếu', '', '', '', paid.reduce((s, t) => s + (t.charge_amount || 0), 0), '', '', ''] }] });
+  const byBrand = {};
+  received.forEach(t => { const i = deviceInfo(t.device_id); const key = i.b.name + '|' + i.t.name;
+    byBrand[key] ||= { b: i.b.name, ty: i.t.name, n: 0, w: 0, r: 0 }; byBrand[key].n++; t.service_type === 'repair' ? byBrand[key].r++ : byBrand[key].w++; });
+  sections.push({ id: 'brand', title: 'Theo hãng và loại thiết bị', note: 'Phiếu nhận trong kỳ',
+    cols: [['Hãng', 'text'], ['Loại thiết bị', 'text'], ['Số phiếu', 'num'], ['Bảo hành', 'num'], ['Sửa chữa', 'num']],
+    rows: Object.values(byBrand).sort((a, b) => b.n - a.n).map(x => ({ cells: [x.b, x.ty, x.n, x.w, x.r] })) });
+  const rw = T.filter(t => t.service_type === 'repair' && repairWarrantyEnd(t) && repairWarrantyEnd(t) >= db.today).sort((a, b) => repairWarrantyEnd(a).localeCompare(repairWarrantyEnd(b)));
+  sections.push({ id: 'repair_warranty', title: 'Máy đang trong bảo hành sau sửa', note: 'Tính đến ngày ' + dmy(db.today) + ', không theo kỳ · bấm dòng để mở phiếu',
+    cols: [['Số phiếu', 'tno'], ['Khách hàng', 'text'], ['Serial', 'mono'], ['Ngày trả', 'date'], ['Số tháng', 'num'], ['Hết hạn', 'date']],
+    rows: rw.map(t => ({ id: t.id, cells: [t.ticket_no, byId('customers', t.customer_id)?.name, (deviceInfo(t.returned_device_id).d || deviceInfo(t.device_id).d).serial_number, t.returned_date, t.repair_warranty_months, repairWarrantyEnd(t)] })) });
+  const repeat = db.devices.map(d => ({ d, list: T.filter(t => t.device_id === d.id).sort((a, b) => a.received_date.localeCompare(b.received_date)) })).filter(x => x.list.length >= 2).sort((a, b) => b.list.length - a.list.length);
+  sections.push({ id: 'repeat', title: 'Máy gửi nhiều lần', note: 'Toàn bộ dữ liệu, không theo kỳ',
+    cols: [['Serial', 'mono'], ['Thiết bị', 'text'], ['Số lần', 'num'], ['Lần gần nhất', 'date'], ['Các phiếu', 'text']],
+    rows: repeat.map(x => ({ cells: [x.d.serial_number, productName(modelInfo(x.d.product_model_id)), x.list.length, x.list[x.list.length - 1].received_date, x.list.map(t => t.ticket_no).join(', ')] })) });
+  return { kpis, months, sections, received };
+}
+function cellHtml(type, v) {
+  if (v === null || v === undefined || v === '') return type === 'money' ? money(0) : dash;
+  switch (type) {
+    case 'money': return typeof v === 'number' ? money(v) : esc(v);
+    case 'date': return dmy(v);
+    case 'days': return v.toFixed(1).replace('.', ',') + ' ngày';
+    case 'tno': return `<span class="tno">${esc(v)}</span>`;
+    case 'mono': return `<span class="mono">${esc(v)}</span>`;
+    case 'pct': return `<span class="meter"><i style="width:${Math.round(v * 100)}%"></i></span>${Math.round(v * 100)}%`;
+    case 'sev': return `<span class="sev sev-${v.level}">${esc(v.label)}</span>`;
+    case 'status': return pill(v);
+    case 'kind': return `<span class="tag k-${v}">${KIND[v].short}</span>`;
+    default: return esc(v);
+  }
+}
+function cellXlsx(type, v) {
+  if (v === null || v === undefined) return '';
+  switch (type) {
+    case 'date': return dmy(v); case 'days': return Math.round(v * 10) / 10; case 'pct': return Math.round(v * 1000) / 10 + '%';
+    case 'sev': return v.label; case 'status': return STATUS[v].label; case 'kind': return KIND[v].label; default: return v;
+  }
+}
+const NUMERIC = ['num', 'money', 'days', 'pct'];
+function monthChart(months) {
+  const W = 640, H = 210, L = 30, R = 8, TOP = 18, B = 26, pw = W - L - R, ph = H - TOP - B;
+  const max = Math.max(1, ...months.map(m => m.total));
+  const step = max <= 5 ? 1 : max <= 10 ? 2 : max <= 25 ? 5 : 10;
+  const top = Math.ceil(max / step) * step; const y0 = TOP + ph;
+  const band = pw / months.length; const bw = Math.min(24, band * .5);
+  let g = '';
+  for (let v = 0; v <= top; v += step) { const y = y0 - v / top * ph;
+    g += `<line x1="${L}" x2="${W - R}" y1="${y}" y2="${y}" stroke="var(--border)" stroke-width="1"/><text x="${L - 8}" y="${y + 4}" text-anchor="end" font-size="11" fill="var(--muted)">${v}</text>`; }
+  const last = months.length - 1;
+  months.forEach((m, n) => {
+    const x = L + band * n + (band - bw) / 2; const h = m.total / top * ph;
+    if (h > 0) { const r = Math.min(4, h); const yt = y0 - h;
+      g += `<path d="M${x},${y0} V${yt + r} Q${x},${yt} ${x + r},${yt} H${x + bw - r} Q${x + bw},${yt} ${x + bw},${yt + r} V${y0} Z" fill="var(--accent)" opacity="${m.inPeriod ? 1 : .35}"/>`; }
+    if (n === last || m.total === max) g += `<text x="${x + bw / 2}" y="${y0 - h - 6}" text-anchor="middle" font-size="12" font-weight="600" fill="var(--text)">${m.total}</text>`;
+    g += `<text x="${x + bw / 2}" y="${H - 6}" text-anchor="middle" font-size="11" fill="var(--muted)">${m.label}</text>`;
+    g += `<rect class="hit" data-i="${n}" x="${L + band * n}" y="${TOP}" width="${band}" height="${ph}" fill="transparent" tabindex="0" aria-label="${m.label}: ${m.total} phiếu"/>`;
+  });
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Số phiếu nhận theo tháng">${g}</svg><div class="tip" id="chart-tip" hidden></div>`;
+}
+function sectionHtml(s) {
+  const numCol = (n) => NUMERIC.includes(s.cols[n][1]);
+  return `<div class="panel ${s.wide ? 'wide' : ''}">
+    <div class="rep-head"><h2>${s.title}</h2><p>${s.note}</p></div>
+    <div class="tbl"><table>
+      <thead><tr>${s.cols.map(([h], n) => `<th class="${numCol(n) ? 'num' : ''}">${h}</th>`).join('')}</tr></thead>
+      <tbody>${s.rows.map(r => `<tr class="${r.total ? 'total' : ''} ${r.id ? 'click' : ''}" ${r.id ? `data-ticket="${r.id}"` : ''}>${r.cells.map((v, n) => `<td class="${numCol(n) ? 'num' : ''} ${s.cols[n][1] === 'text' && n > 0 ? 'wrap' : ''}">${cellHtml(s.cols[n][1], v)}</td>`).join('')}</tr>`).join('')
+        || `<tr><td colspan="${s.cols.length}" class="muted">Không có dữ liệu.</td></tr>`}</tbody>
+    </table></div></div>`;
+}
+VIEWS.reports = function () {
+  if (!rep.from) setPreset('this');
+  const r = buildReport();
+  $('#view').innerHTML = `
+    <div class="toolbar">
+      <div class="seg">${PRESETS.map(([k, l]) => `<button type="button" data-preset="${k}" aria-pressed="${rep.preset === k}">${l}</button>`).join('')}</div>
+      <label class="row" for="rp-from"><span class="hint">Từ</span><input type="date" id="rp-from" value="${rep.from}"></label>
+      <label class="row" for="rp-to"><span class="hint">đến</span><input type="date" id="rp-to" value="${rep.to}"></label>
+      <span style="flex:1"></span><button type="button" class="btn" id="rp-xlsx">Xuất báo cáo Excel</button>
+    </div>
+    <div class="toolbar">
+      <div class="seg">${[['', 'Tất cả loại'], ...ALL.map(k => [k, KIND[k].label])].map(([k, l]) => `<button type="button" data-rkind="${k}" aria-pressed="${rep.kind === k}">${l}</button>`).join('')}</div>
+      <span class="hint">Kỳ báo cáo: ${dmy(rep.from)} – ${dmy(rep.to)}</span>
+    </div>
+    <div class="kpis">${r.kpis.map(k => `<div class="kpi"><span class="lbl">${k.lbl}</span><span class="val">${k.val}</span><span class="sub">${k.sub}</span></div>`).join('')}</div>
+    <div class="panel">
+      <div class="rep-head"><h2>Phiếu nhận theo tháng</h2><p>6 tháng gần nhất · cột đậm là tháng nằm trong kỳ báo cáo</p></div>
+      <div class="chart-wrap" id="chart">${monthChart(r.months)}</div>
+      <details class="tbl-view"><summary>Xem dạng bảng</summary><div class="tbl"><table>
+        <thead><tr><th>Tháng</th>${ALL.map(k => `<th class="num">${KIND[k].short}</th>`).join('')}<th class="num">Tổng</th></tr></thead>
+        <tbody>${r.months.map(m => `<tr><td>${m.label}</td>${m.byKind.map(([, n]) => `<td class="num">${n}</td>`).join('')}<td class="num">${m.total}</td></tr>`).join('')}</tbody>
+      </table></div></details>
+    </div>
+    <div class="rep-grid">${r.sections.map(sectionHtml).join('')}</div>
+    <p class="demo-note">Nút "Xuất báo cáo Excel" chỉ chạy khi mở file <span class="mono">rma-demo.html</span> trên máy. Trên link claude.ai, trình xem chặn tải file.</p>`;
+  const tip = $('#chart-tip'); const wrap = $('#chart');
+  $$('#chart .hit').forEach(h => {
+    const show = () => { const m = r.months[h.dataset.i]; const svg = wrap.querySelector('svg').getBoundingClientRect(); const box = h.getBoundingClientRect();
+      tip.innerHTML = `<b>Tháng ${m.ym.slice(5)}/${m.ym.slice(0, 4)}: ${m.total} phiếu</b><br>${m.byKind.map(([l, n]) => `${l} ${n}`).join(' · ')}`;
+      tip.style.left = (box.left - svg.left + box.width / 2 + 16) + 'px'; tip.style.top = (box.top - svg.top + 18) + 'px'; tip.hidden = false; };
+    h.addEventListener('pointerenter', show); h.addEventListener('focus', show);
+    h.addEventListener('pointerleave', () => tip.hidden = true); h.addEventListener('blur', () => tip.hidden = true);
+  });
+};
+function exportReport() {
+  if (typeof XLSX === 'undefined') { toast('Chưa tải được thư viện Excel, kiểm tra kết nối mạng'); return; }
+  try {
+    const r = buildReport(); const wb = XLSX.utils.book_new();
+    const period = 'Kỳ báo cáo: ' + dmy(rep.from) + ' – ' + dmy(rep.to) + (rep.kind ? ' · ' + KIND[rep.kind].label : '');
+    const head = (title) => [[COMPANY.name.toUpperCase()], [title], [period], []];
+    const add = (name, aoa, widths) => { const ws = XLSX.utils.aoa_to_sheet(aoa); ws['!cols'] = widths.map(w => ({ wch: w })); XLSX.utils.book_append_sheet(wb, ws, name.slice(0, 31)); };
+    add('Tổng quan', [...head('BÁO CÁO TỔNG HỢP RMA'), ...r.kpis.map(k => [k.lbl, k.val, k.sub]), [], ['Phiếu nhận theo tháng'], ['Tháng', ...ALL.map(k => KIND[k].short), 'Tổng'], ...r.months.map(m => [m.label, ...m.byKind.map(([, n]) => n), m.total])], [28, 18, 40, 10, 10]);
+    for (const s of r.sections) add(s.title.replace(/[\\/?*[\]:()]/g, ''), [...head(s.title.toUpperCase()), [s.note.replace(' · bấm dòng để mở phiếu', '')], s.cols.map(c => c[0]), ...s.rows.map(row => row.cells.map((v, n) => cellXlsx(s.cols[n][1], v)))], s.cols.map(c => c[1] === 'text' ? 26 : 14));
+    const list = r.received.sort((a, b) => a.ticket_no.localeCompare(b.ticket_no)).map(t => { const i = deviceInfo(t.device_id); const rd = deviceInfo(t.returned_device_id); const c = byId('customers', t.customer_id); const ls = lastShipment(t);
+      return [t.ticket_no, KIND[kindOf(t)].label, STATUS[t.status].label, c.name, c.contact_name || '', c.phone, productName(i), i.d.serial_number, rd.d ? rd.d.serial_number + (isDifferentProduct(t) ? ' (' + productName(rd) + ')' : '') : '', byId('users', t.technician_id)?.name || '',
+        dmy(t.received_date), dmy(t.returned_date), RESULT[t.result] || '', t.charge_amount || '', t.erp_receipt_no || '', t.erp_return_no || '', ls ? byId('service_centers', ls.service_center_id)?.name : '', ls?.vendor_case_no || '', shipmentsOf(t).length]; });
+    add('Danh sách phiếu', [...head('DANH SÁCH PHIẾU NHẬN TRONG KỲ'), ['Số phiếu', 'Loại', 'Trạng thái', 'Khách hàng', 'Người liên hệ', 'SĐT', 'Thiết bị', 'Serial nhận', 'Serial trả', 'IT phụ trách', 'Ngày nhận', 'Ngày trả', 'Kết quả', 'Số tiền', 'V223', 'V233', 'Hãng/TTBH', 'Mã hồ sơ hãng', 'Số lần gửi TTBH'], ...list],
+      [11, 16, 16, 26, 16, 14, 30, 20, 20, 16, 11, 11, 30, 12, 14, 14, 24, 16, 10]);
+    XLSX.writeFile(wb, `BaoCao_RMA_${rep.from}_${rep.to}.xlsx`);
+  } catch (e) { toast('Không tạo được file Excel: ' + e.message); }
+}
+
+// ---------- hộp thoại ----------
+const dlg = $('#dlg');
+function openDialog(html) { $('#dlg-inner').innerHTML = html; if (!dlg.open) dlg.showModal(); }
+
+function deviceDialog(id) {
+  const x = deviceSummary(byId('devices', id));
+  const repairs = x.tickets.filter(t => t.service_type === 'repair' && ['free', 'repaired'].includes(t.result));
+  openDialog(`
+    <div class="dlg-head"><div><h2>${esc(x.i.b?.name)} ${esc(x.i.m?.code)} <span class="mono" style="font-weight:500">${esc(x.d.serial_number)}</span></h2>
+      <div class="muted">${esc(x.i.t?.name)}${x.i.m?.name ? ' · ' + esc(x.i.m.name) : ''}</div></div>
+      <button type="button" class="x" data-close aria-label="Đóng">×</button></div>
+    <div class="dlg-body">
+      <dl class="kv">
+        <div><dt>Khách hàng gần nhất</dt><dd>${x.customer ? `${esc(x.customer.name)}<br><span class="mono muted">${esc([x.customer.contact_name, x.customer.phone].filter(Boolean).join(' · '))}</span>` : '—'}</dd></div>
+        <div><dt>Số lần gửi</dt><dd>${x.tickets.length}</dd></div>
+        <div><dt>Đang xử lý</dt><dd>${x.open ? `<span class="tno">${x.open.ticket_no}</span> ${pill(x.open.status)}` : 'Không'}</dd></div>
+        <div><dt>Bảo hành sau sửa chữa</dt><dd>${warrantyCell(x.rw)}</dd></div>
+      </dl>
+      ${x.replacedFrom ? `<p class="hint" style="margin-top:10px">Máy này là máy hãng đổi, thay cho serial <span class="mono">${esc(x.replacedFrom.serial_number)}</span>. Lịch sử bên dưới gồm cả các phiếu của máy cũ.</p>` : ''}
+      ${x.replacements.length ? `<p class="hint warn" style="margin-top:10px">Máy này đã được hãng đổi sang ${x.replacements.map(r => `<span class="mono">${esc(r.serial_number)}</span> (${esc(productName(modelInfo(r.product_model_id)))})`).join(', ')}. Khách không còn giữ máy này.</p>` : ''}
+      ${x.customerIds.length > 1 ? `<p class="hint" style="margin-top:10px">Máy từng được ${x.customerIds.length} khách gửi: ${x.customerIds.map(cid => esc(byId('customers', cid).name)).join(', ')}.</p>` : ''}
+      <div class="section-title">Lịch sử phiếu của máy</div>
+      <div class="tbl"><table><thead><tr><th>Số phiếu</th><th>Loại</th><th>Khách hàng</th><th>Ngày nhận</th><th>Ngày trả</th><th>Kết quả</th><th>BH sau sửa</th><th>Trạng thái</th></tr></thead><tbody>
+        ${x.tickets.map(t => `<tr class="click" data-ticket="${t.id}"><td class="tno">${t.ticket_no}</td><td>${kindTag(t)}<div class="hint">${WARRANTY[t.warranty_status]}</div></td>
+          <td>${esc(byId('customers', t.customer_id)?.name)}</td><td>${dmy(t.received_date)}</td><td>${dmy(t.returned_date) || dash}</td>
+          <td class="wrap">${esc(RESULT[t.result]) || dash}${t.returned_device_id && t.device_id === x.d.id ? `<div class="hint">→ đổi sang <span class="mono">${esc(byId('devices', t.returned_device_id).serial_number)}</span></div>` : ''}</td>
+          <td class="wrap">${t.service_type === 'repair' && ['free', 'repaired'].includes(t.result) ? esc(warrantyLabel(t)) : dash}</td><td>${pill(t.status)}</td></tr>`).join('') || '<tr><td colspan="8" class="muted">Máy chưa từng gửi.</td></tr>'}
+      </tbody></table></div>
+      ${repairs.length ? `<p class="hint" style="margin-top:8px">Đã sửa ${repairs.length} lần tại Sang Y${repairs.some(t => t.repair_warranty_months) ? `, tổng cộng ${repairs.reduce((sum, t) => sum + (t.repair_warranty_months || 0), 0)} tháng bảo hành sau sửa` : ''}.</p>` : ''}
+    </div>
+    <div class="dlg-foot">${x.replacements.length ? '' : `<button type="button" class="btn ghost" data-newfor="${x.d.id}">+ Lập phiếu mới cho máy này</button>`}<span class="spacer"></span><button type="button" class="btn ghost" data-close>Đóng</button></div>`);
+}
+
+const findType = (name) => { const n = name.trim().toLowerCase(); return n ? db.device_types.find(t => t.name.toLowerCase() === n) : null; };
+const findBrand = (name) => { const n = name.trim().toUpperCase(); return n ? db.brands.find(b => b.name === n) : null; };
+function typeCode(name) {
+  const base = name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/gi, 'D').toUpperCase().replace(/[^A-Z0-9]+/g, '_').replace(/^_|_$/g, '').slice(0, 25) || 'TYPE';
+  let code = base; for (let n = 2; db.device_types.some(t => t.code === code); n++) code = base + '_' + n;
+  return code;
+}
+
+function newTicketDialog(prefill = {}) {
+  const models = db.product_models.filter(m => m.is_active);
+  const centers = db.service_centers.filter(s => s.is_active);
+  openDialog(`
+    <form id="f-ticket">
+      <div class="dlg-head"><div><h2>Lập phiếu mới</h2><div class="muted">Số phiếu dự kiến: <span class="tno">${peekTicketNo()}</span> · Ngày ${dmy(db.today)}</div></div><button type="button" class="x" data-close aria-label="Đóng">×</button></div>
+      <div class="dlg-body">
+        <div class="section-title" style="margin-top:0">Thiết bị</div>
+        <div class="form-grid">
+          <label class="field full"><span>Số serial / Service Tag *</span><input id="nt-serial" placeholder="Nhập serial trước: máy đã có sẽ tự điền loại, hãng, model"></label>
+          <label class="field"><span>Loại thiết bị *</span><select id="nt-type"><option value="">Chọn loại…</option>${db.device_types.filter(t => t.is_active).map(t => `<option value="${t.id}">${esc(t.name)}</option>`).join('')}<option value="new">+ Loại mới…</option></select>
+            <input id="nt-newtype" placeholder="Tên loại mới, VD: Máy chiếu" maxlength="100" hidden><span class="hint" id="nt-type-info"></span></label>
+          <label class="field"><span>Hãng *</span><select id="nt-brand"><option value="">Chọn hãng…</option>${db.brands.filter(b => b.is_active).map(b => `<option value="${b.id}">${esc(b.name)}</option>`).join('')}<option value="new">+ Hãng mới…</option></select>
+            <input id="nt-newbrand" placeholder="Tên hãng mới, VD: LENOVO" maxlength="100" hidden><span class="hint" id="nt-brand-info"></span></label>
+          <label class="field"><span>Model *</span><select id="nt-model"></select><input id="nt-newmodel" placeholder="Mã model mới, VD: U2723QE" hidden><span class="hint" id="nt-model-info"></span></label>
+          <div class="field" id="nt-wbox"></div>
+        </div>
+        <div class="section-title">Tình trạng bảo hành <span class="muted" style="text-transform:none;letter-spacing:0;font-weight:400">· nhân viên tự chọn</span></div>
+        <div class="seg" id="nt-ws">${Object.entries(WARRANTY).map(([k, l]) => `<button type="button" data-ws="${k}">${l}</button>`).join('')}</div>
+        <div class="section-title">Hình thức xử lý</div>
+        <div class="seg" id="nt-kind">${ALL.map(k => `<button type="button" data-k="${k}">${KIND[k].label}</button>`).join('')}</div>
+        <p class="hint" id="nt-kind-hint"></p>
+        <div class="section-title">Khách hàng</div>
+        <div class="form-grid">
+          <label class="field full"><span>Khách gửi máy</span><select id="nt-customer"><option value="new">+ Khách mới</option>${db.customers.map(c => `<option value="${c.id}">${esc(c.name)} · ${esc(c.phone)}</option>`).join('')}</select></label>
+          <label class="field new-c"><span>Tên khách / công ty *</span><input id="nt-cname"></label>
+          <label class="field new-c"><span>Số điện thoại *</span><input id="nt-cphone" inputmode="tel"></label>
+          <label class="field new-c"><span>Người liên hệ <i>(tuỳ chọn)</i></span><input id="nt-ccontact"></label>
+        </div>
+        <div class="section-title">Tiếp nhận</div>
+        <div class="form-grid">
+          <label class="field full"><span>Lỗi khách báo *</span><textarea id="nt-fault"></textarea></label>
+          <label class="field not-onsite-customer"><span>Phụ kiện kèm theo <i>(tuỳ chọn)</i></span><input id="nt-acc" placeholder="Sạc, dây nguồn, remote…"></label>
+          <label class="field"><span id="nt-date-lbl">Ngày nhận máy *</span><input type="date" id="nt-date" value="${db.today}"></label>
+          <label class="field"><span>IT phụ trách</span><select id="nt-tech"><option value="">Chưa phân công</option>${techs().map(u => `<option value="${u.id}" ${u.id === db.currentUserId ? 'selected' : ''}>${esc(u.name)}</option>`).join('')}</select></label>
+        </div>
+        <div class="onsite-only"><div class="section-title">Hãng đến bảo hành</div>
+          <div class="form-grid">
+            <label class="field"><span>Hãng / TTBH *</span><select id="nt-center"><option value="">Chọn…</option>${centers.map(s => `<option value="${s.id}">${esc(s.name)}</option>`).join('')}</select></label>
+            <label class="field"><span>Mã hồ sơ của hãng <i>(VD: SER No)</i></span><input id="nt-case"></label>
+            <label class="field"><span>Ngày hẹn hãng đến</span><input type="date" id="nt-appt"></label>
+          </div></div>
+        <div class="err" id="nt-err" style="margin-top:14px"></div>
+      </div>
+      <div class="dlg-foot"><button type="button" class="btn ghost" data-close>Hủy bỏ</button><button class="btn">Lập phiếu</button></div>
+    </form>`);
+  let kind = 'repair'; let ws = 'out_of_warranty';
+  const isOnsiteKind = (k) => k === 'onsite' || k === 'onsite_sangy';
+  const currentDevice = () => { const mid = Number($('#nt-model').value); const serial = $('#nt-serial').value.trim().toLowerCase();
+    return mid && serial ? db.devices.find(d => d.product_model_id === mid && d.serial_number.toLowerCase() === serial) : null; };
+  const sync = () => {
+    if (ws === 'out_of_warranty') kind = 'repair';
+    $$('#nt-ws button').forEach(b => b.setAttribute('aria-pressed', b.dataset.ws === ws));
+    $$('#nt-kind button').forEach(b => { b.setAttribute('aria-pressed', b.dataset.k === kind); b.disabled = ws === 'out_of_warranty' && b.dataset.k !== 'repair'; });
+    $('#nt-kind-hint').textContent = (ws === 'out_of_warranty' ? 'Hết bảo hành: chỉ lập phiếu sửa chữa. ' : '') + KIND[kind].hint;
+    $$('.not-onsite-customer').forEach(el => el.hidden = kind === 'onsite');
+    $('.onsite-only').hidden = !isOnsiteKind(kind);
+    $('#nt-date-lbl').textContent = kind === 'onsite' ? 'Ngày yêu cầu hãng *' : 'Ngày nhận máy *';
+    $$('.new-c').forEach(el => el.hidden = $('#nt-customer').value !== 'new');
+    const isNewType = $('#nt-type').value === 'new'; $('#nt-newtype').hidden = !isNewType;
+    const isNewBrand = $('#nt-brand').value === 'new'; $('#nt-newbrand').hidden = !isNewBrand;
+    const sameType = isNewType && findType($('#nt-newtype').value);
+    const sameBrand = isNewBrand && findBrand($('#nt-newbrand').value);
+    $('#nt-type-info').textContent = isNewType ? (sameType ? `Đã có loại "${sameType.name}", sẽ dùng loại này.` : 'Loại mới sẽ được thêm vào danh mục.') : '';
+    $('#nt-brand-info').textContent = isNewBrand ? (sameBrand ? `Đã có hãng ${sameBrand.name}, sẽ dùng hãng này.` : 'Hãng mới sẽ được thêm vào danh mục.') : '';
+    const isNewModel = $('#nt-model').value === 'new'; $('#nt-newmodel').hidden = !isNewModel;
+    const i = modelInfo($('#nt-model').value);
+    $('#nt-model-info').textContent = isNewModel ? 'Model mới sẽ được thêm vào danh mục.' : i.m?.name || '';
+    const dev = currentDevice(); const box = $('#nt-wbox');
+    if (!dev) { box.innerHTML = $('#nt-serial').value.trim() && i.m ? '<span class="hint">Máy mới, chưa từng gửi Sang Y.</span>' : ''; return; }
+    const ids = deviceChain(dev.id).map(d => d.id);
+    const past = db.rma_tickets.filter(t => ids.includes(t.device_id) || ids.includes(t.returned_device_id)).sort((a, b) => b.received_date.localeCompare(a.received_date));
+    const rw = activeRepairWarranty(dev.id);
+    box.innerHTML = `<span>Lịch sử máy</span><span class="hint">Đã gửi ${past.length} lần${past.length ? `, gần nhất <span class="tno">${past[0].ticket_no}</span> (${dmy(past[0].received_date)})` : ''}.</span>
+      ${rw ? `<span class="hint warn">Còn bảo hành sau sửa của Sang Y đến ${dmy(repairWarrantyEnd(rw))} (phiếu ${rw.ticket_no}). Nhân viên tự quyết định còn / hết bảo hành.</span>` : ''}`;
+  };
+  const fillModels = (keep) => {
+    const typeValue = $('#nt-type').value, brandValue = $('#nt-brand').value, sel = $('#nt-model');
+    if (!typeValue || !brandValue) { sel.innerHTML = '<option value="">Chọn loại và hãng trước</option>'; sel.disabled = true; return; }
+    if (typeValue === 'new' || brandValue === 'new') { sel.disabled = false; sel.innerHTML = '<option value="new">+ Model mới…</option>'; sel.value = 'new'; return; }
+    const type = Number(typeValue), brand = Number(brandValue);
+    const ms = models.filter(m => m.device_type_id === type && m.brand_id === brand);
+    sel.disabled = false;
+    sel.innerHTML = `<option value="">${ms.length ? 'Chọn model…' : 'Chưa có model nào'}</option>${ms.map(m => `<option value="${m.id}">${esc(m.code)}</option>`).join('')}<option value="new">+ Model mới…</option>`;
+    if (keep && [...sel.options].some(o => o.value === String(keep))) sel.value = keep;
+  };
+  $('#nt-kind').addEventListener('click', (e) => { const b = e.target.closest('[data-k]'); if (b && !b.disabled) { kind = b.dataset.k; sync(); } });
+  $('#nt-ws').addEventListener('click', (e) => { const b = e.target.closest('[data-ws]'); if (b) { ws = b.dataset.ws; if (ws === 'in_warranty' && kind === 'repair') kind = 'carry_in'; sync(); } });
+  ['#nt-type', '#nt-brand'].forEach(s => $(s).addEventListener('change', () => { fillModels($('#nt-model').value); sync(); }));
+  ['#nt-newtype', '#nt-newbrand'].forEach(s => $(s).addEventListener('input', sync));
+  ['#nt-customer', '#nt-model'].forEach(s => $(s).addEventListener('change', sync));
+  $('#nt-serial').addEventListener('input', () => {
+    const serial = $('#nt-serial').value.trim().toLowerCase();
+    const found = serial && db.devices.filter(d => d.serial_number.toLowerCase() === serial);
+    if (found && found.length === 1 && String(found[0].product_model_id) !== $('#nt-model').value) {
+      const m = byId('product_models', found[0].product_model_id); $('#nt-type').value = m.device_type_id; $('#nt-brand').value = m.brand_id; fillModels(m.id);
+    }
+    sync();
+  });
+  fillModels(); sync();
+  if (prefill.serial) { $('#nt-serial').value = prefill.serial; $('#nt-serial').dispatchEvent(new Event('input')); }
+  if (prefill.customerId) { $('#nt-customer').value = String(prefill.customerId); sync(); }
+  $('#f-ticket').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const v = (s) => $(s).value.trim(); const err = [];
+    const isNew = v('#nt-customer') === 'new';
+    if (!v('#nt-serial')) err.push('Nhập số serial.');
+    if (!v('#nt-type')) err.push('Chọn loại thiết bị.');
+    if (v('#nt-type') === 'new' && !v('#nt-newtype')) err.push('Nhập tên loại thiết bị mới.');
+    if (!v('#nt-brand')) err.push('Chọn hãng.');
+    if (v('#nt-brand') === 'new' && !v('#nt-newbrand')) err.push('Nhập tên hãng mới.');
+    if (v('#nt-type') && v('#nt-brand') && !v('#nt-model')) err.push('Chọn model thiết bị.');
+    if (v('#nt-model') === 'new' && !v('#nt-newmodel')) err.push('Nhập mã model mới.');
+    if (isNew && (!v('#nt-cname') || !v('#nt-cphone'))) err.push('Nhập tên và số điện thoại của khách mới.');
+    if (!v('#nt-fault')) err.push('Nhập lỗi khách báo.');
+    if (!v('#nt-date')) err.push(kind === 'onsite' ? 'Chọn ngày yêu cầu hãng.' : 'Chọn ngày nhận máy.');
+    if (isOnsiteKind(kind) && !v('#nt-center')) err.push('Chọn hãng sẽ đến bảo hành.');
+    if (err.length) { $('#nt-err').innerHTML = err.map(esc).join('<br>'); return; }
+    let ticketNo; try { ticketNo = takeTicketNo(); } catch (x) { $('#nt-err').textContent = x.message; return; }
+    const customerId = isNew ? insert('customers', { name: v('#nt-cname'), contact_name: v('#nt-ccontact') || null, phone: v('#nt-cphone'), address: null, note: null }).id : Number(v('#nt-customer'));
+    const typeId = v('#nt-type') === 'new' ? (findType(v('#nt-newtype')) || insert('device_types', { code: typeCode(v('#nt-newtype')), name: v('#nt-newtype'), is_active: true })).id : Number(v('#nt-type'));
+    const brandId = v('#nt-brand') === 'new' ? (findBrand(v('#nt-newbrand')) || insert('brands', { name: v('#nt-newbrand').toUpperCase(), is_active: true })).id : Number(v('#nt-brand'));
+    let modelId = Number(v('#nt-model'));
+    if (v('#nt-model') === 'new') { const code = v('#nt-newmodel');
+      const exist = db.product_models.find(m => m.brand_id === brandId && m.code.toLowerCase() === code.toLowerCase());
+      modelId = exist ? exist.id : insert('product_models', { brand_id: brandId, device_type_id: typeId, code, name: null, is_active: true }).id; }
+    const dev = findOrCreateDevice(modelId, v('#nt-serial'));
+    const ts = nowTs(); const onsite = isOnsiteKind(kind); const serviceType = onsite ? 'onsite' : kind;
+    const t = insert('rma_tickets', { ticket_no: ticketNo, service_type: serviceType, original_service_type: serviceType, onsite_location: onsite ? (kind === 'onsite_sangy' ? 'sangy' : 'customer') : null,
+      warranty_status: ws, repair_warranty_months: null, customer_id: customerId, device_id: dev.id, returned_device_id: null,
+      technician_id: Number(v('#nt-tech')) || null, fault_description: v('#nt-fault'), accessories: kind === 'onsite' ? null : (v('#nt-acc') || null), received_date: v('#nt-date'), returned_date: null,
+      status: onsite ? 'scheduled' : 'received', result: null, scrap_reason: null, is_chargeable: false, charge_amount: null, quote_status: null, quoted_at: null, quote_decided_at: null,
+      erp_receipt_no: null, erp_return_no: null, note: null, created_by: db.currentUserId, deleted_at: null, created_at: ts, updated_at: ts });
+    if (onsite) insert('rma_center_shipments', { rma_ticket_id: t.id, service_center_id: Number(v('#nt-center')), vendor_case_no: v('#nt-case') || null, appointment_date: v('#nt-appt') || null,
+      sent_date: v('#nt-date'), back_date: null, center_return_no: null, outcome: 'pending', note: null, created_by: db.currentUserId });
+    insert('rma_ticket_status_logs', { rma_ticket_id: t.id, from_status: null, to_status: t.status, user_id: db.currentUserId, note: null, created_at: ts });
+    save(); filter = { kind: '', status: '', q: '' }; page = 'tickets'; render(); ticketDialog(t.id); toast('Đã lập phiếu ' + ticketNo);
+  });
+}
+
+function fieldInput(f, t) {
+  const id = 'af-' + f.key; const def = f.def ? (f.def(t) ?? '') : '';
+  const label = `<span>${esc(f.label)}${f.required ? ' *' : ' <i>(tuỳ chọn)</i>'}</span>`;
+  if (f.type === 'center') { const cur = lastShipment(t)?.service_center_id;
+    return `<label class="field">${label}<select id="${id}"><option value="">Chọn…</option>${db.service_centers.filter(s => s.is_active).map(s => `<option value="${s.id}" ${s.id === cur ? 'selected' : ''}>${esc(s.name)}</option>`).join('')}</select></label>`; }
+  if (f.type === 'date') return `<label class="field">${label}<input type="date" id="${id}" value="${esc(def)}"></label>`;
+  if (f.type === 'model') {
+    const cur = modelInfo(byId('devices', t.device_id).product_model_id);
+    const groups = db.device_types.filter(ty => ty.is_active).map(ty => {
+      const ms = db.product_models.filter(m => m.is_active && m.device_type_id === ty.id);
+      return ms.length ? `<optgroup label="${esc(ty.name)}">${ms.map(m => `<option value="${m.id}">${esc(byId('brands', m.brand_id).name)} ${esc(m.code)}</option>`).join('')}</optgroup>` : '';
+    }).join('');
+    return `<label class="field">${label}<select id="${id}"><option value="">Cùng model máy cũ (${esc(cur.b.name)} ${esc(cur.m.code)})</option>${groups}</select></label>`;
+  }
+  if (f.type === 'number') return `<label class="field full">${label}<input type="number" id="${id}" min="1" max="60" step="1" placeholder="VD: 3" style="max-width:160px"></label>`;
+  return `<label class="field ${f.key === 'note' ? 'full' : ''}">${label}<input id="${id}" value="${esc(def)}"></label>`;
+}
+
+function ticketDialog(id, pending = null) {
+  const t = byId('rma_tickets', id); const k = kindOf(t);
+  const c = byId('customers', t.customer_id); const i = deviceInfo(t.device_id); const r = deviceInfo(t.returned_device_id);
+  const closed = isClosed(t); const atCustomer = k === 'onsite'; const onsite = t.service_type === 'onsite';
+  const logs = db.rma_ticket_status_logs.filter(l => l.rma_ticket_id === t.id);
+  const ids = deviceChain(t.device_id).map(d => d.id);
+  const history = db.rma_tickets.filter(x => x.id !== t.id && (ids.includes(x.device_id) || ids.includes(x.returned_device_id)));
+  const acts = closed ? [] : actionsFor(t); const act = pending && acts.find(a => a.id === pending);
+  const ships = shipmentsOf(t); const parts = partsOf(t); const items = itemsOf(t);
+  const quoteEditable = k === 'repair' && t.status === 'inspecting';
+  const partsEditable = !closed && t.original_service_type !== 'repair';
+  const canReceipt = printsSlips(t) && t.status !== 'cancelled';
+  const canReturn = printsSlips(t) && ['ready', 'returned'].includes(t.status);
+  const kv = (label, val) => `<div><dt>${label}</dt><dd>${val || '—'}</dd></div>`;
+
+  const shipBox = !ships.length ? '' : `
+    <div class="section-title">${onsite ? (atCustomer ? 'Hãng đến nhà khách bảo hành' : 'Hãng đến Sang Y bảo hành') : 'Các lần gửi TTBH'} <code class="mono muted">rma_center_shipments</code></div>
+    <div class="tbl"><table><thead><tr><th>#</th><th>Hãng / TTBH</th><th>Mã hồ sơ hãng</th><th>${onsite ? 'Ngày yêu cầu' : 'Ngày gửi'}</th>${onsite ? '<th>Ngày hẹn</th>' : ''}<th>${onsite ? 'Ngày xong' : 'Ngày về'}</th>${onsite ? '' : '<th>Phiếu trả TTBH</th>'}<th>Kết quả</th></tr></thead>
+      <tbody>${ships.map((s, n) => `<tr><td>${n + 1}</td><td>${esc(byId('service_centers', s.service_center_id)?.name)}</td><td class="mono">${esc(s.vendor_case_no) || dash}</td><td>${dmy(s.sent_date)}</td>
+        ${onsite ? `<td>${dmy(s.appointment_date) || dash}</td>` : ''}<td>${dmy(s.back_date) || dash}</td>${onsite ? '' : `<td class="mono">${esc(s.center_return_no) || dash}</td>`}
+        <td>${pillOf(s.outcome === 'pending' && onsite ? ['Chờ hãng đến', 'center'] : OUTCOME[s.outcome])}${s.outcome === 'pending' ? ` <span class="hint">${daysBetween(s.sent_date, db.today)} ngày</span>` : ''}</td></tr>`).join('')}</tbody></table></div>`;
+
+  const partsBox = t.original_service_type === 'repair' ? '' : `
+    <div class="section-title">Linh kiện hãng / TTBH thay <code class="mono muted">rma_replaced_parts</code></div>
+    <div class="tbl"><table><thead><tr><th>Mã linh kiện</th><th>Mô tả</th><th class="num">SL</th><th>Lần gửi</th>${partsEditable ? '<th></th>' : ''}</tr></thead><tbody>
+      ${parts.map(p => `<tr><td class="mono">${esc(p.part_code) || '—'}</td><td class="wrap">${esc(p.description)}</td><td class="num">${p.quantity}</td><td>${p.rma_center_shipment_id ? '#' + (ships.findIndex(s => s.id === p.rma_center_shipment_id) + 1) : dash}</td>
+        ${partsEditable ? `<td><button type="button" class="btn ghost sm" data-delpart="${p.id}">Xoá</button></td>` : ''}</tr>`).join('') || '<tr><td colspan="5" class="muted">Chưa có linh kiện nào.</td></tr>'}
+    </tbody></table></div>
+    ${partsEditable ? `<form class="inline-form" id="f-part"><input name="code" placeholder="Mã linh kiện (VD: 5JKJK)"><input name="desc" placeholder="Mô tả *" required style="flex-basis:200px">
+      <input name="qty" type="number" min="1" value="1" style="flex:0 1 70px" aria-label="Số lượng"><button class="btn ghost">Thêm linh kiện</button></form>` : ''}`;
+
+  const quoteBox = k !== 'repair' || (!items.length && !quoteEditable) ? '' : `
+    <div class="section-title">Báo giá <code class="mono muted">rma_quote_items</code> ${t.quote_status ? pillOf(QSTATUS[t.quote_status]) : ''}</div>
+    <div class="tbl"><table><thead><tr><th>Nội dung</th><th class="num">SL</th><th class="num">Đơn giá</th><th class="num">Thành tiền</th>${quoteEditable ? '<th></th>' : ''}</tr></thead><tbody>
+      ${items.map(it => `<tr><td class="wrap">${esc(it.description)}</td><td class="num">${it.quantity}</td><td class="num">${money(it.unit_price)}</td><td class="num">${money(it.quantity * it.unit_price)}</td>
+        ${quoteEditable ? `<td><button type="button" class="btn ghost sm" data-delitem="${it.id}">Xoá</button></td>` : ''}</tr>`).join('') || `<tr><td colspan="5" class="muted">Chưa có dòng nào.</td></tr>`}
+      ${items.length ? `<tr class="total"><td colspan="3">Tổng cộng</td><td class="num">${money(itemsTotal(t))}</td>${quoteEditable ? '<td></td>' : ''}</tr>` : ''}
+    </tbody></table></div>
+    ${quoteEditable ? `<form class="inline-form" id="f-item"><input name="desc" placeholder="Nội dung (linh kiện / công) *" required style="flex-basis:200px">
+      <input name="qty" type="number" min="1" value="1" style="flex:0 1 70px" aria-label="Số lượng"><input name="price" inputmode="numeric" placeholder="Đơn giá *" required><button class="btn ghost">Thêm dòng</button></form>
+      <p class="hint">Lỗi cần thay / sửa: lập bảng giá rồi bấm "Gửi báo giá cho khách". Giá chỉ báo một lần: khách đồng ý thì sửa, không đồng ý thì không sửa. Lỗi đơn giản chọn "Miễn phí", không sửa được chọn "Báo phế".</p>` : ''}
+    ${t.quoted_at ? `<p class="hint">Gửi báo giá ${esc(t.quoted_at.slice(0, 16))}${t.quote_decided_at ? ` · khách trả lời ${esc(t.quote_decided_at.slice(0, 16))}` : ''}</p>` : ''}`;
+
+  const erpBox = !t.is_chargeable ? '' : `
+    <div class="section-title">Chứng từ ERP (phiếu có phí)</div>
+    <form id="f-erp" class="box"><div class="form-grid">
+      <label class="field"><span>Số chứng từ V223 <i>(nhận hàng)</i></span><input id="erp-223" maxlength="50" value="${esc(t.erp_receipt_no)}" ${closed ? 'disabled' : ''}></label>
+      <label class="field"><span>Số chứng từ V233 <i>(trả hàng)</i></span><input id="erp-233" maxlength="50" value="${esc(t.erp_return_no)}" ${closed ? 'disabled' : ''}></label>
+    </div>${closed ? '' : '<div class="row" style="justify-content:flex-end;margin-top:10px"><button class="btn ghost sm">Lưu số chứng từ</button></div>'}</form>`;
+
+  const actionBox = !acts.length ? '' : `
+    <div class="section-title">Bước tiếp theo</div>
+    <div class="row">${acts.map(a => `<button type="button" class="btn ${a.style || ''}" data-act="${a.id}" aria-pressed="${pending === a.id}">${a.label}</button>`).join('')}</div>
+    ${act ? `<form id="f-act" class="action-box"><div class="form-grid">${act.fields.map(f => fieldInput(f, t)).join('')}</div>
+      <div class="row" style="justify-content:flex-end;margin-top:10px"><button type="button" class="btn ghost sm" data-act="">Bỏ qua</button><button class="btn sm">Xác nhận: ${act.label}</button></div></form>` : ''}`;
+
+  openDialog(`
+    <div class="dlg-head"><div><h2><span class="tno">${t.ticket_no}</span> ${kindTag(t)} ${pill(t.status)}</h2>
+      <div class="muted">Lập bởi ${esc(byId('users', t.created_by)?.name)} · ${esc(t.created_at)} · IT phụ trách: ${esc(byId('users', t.technician_id)?.name) || 'chưa phân công'}${t.original_service_type !== t.service_type ? ` · chuyển từ ${KIND[t.original_service_type].label}` : ''}</div></div>
+      <button type="button" class="x" data-close aria-label="Đóng">×</button></div>
+    <div class="dlg-body">
+      <dl class="kv">
+        ${kv('Khách hàng', esc(c.name))}${kv('Liên hệ', esc([c.contact_name, c.phone].filter(Boolean).join(' · ')))}
+        ${kv('Thiết bị', esc(productName(i)))}${kv('Serial nhận', `<span class="mono">${esc(i.d.serial_number)}</span>`)}
+        ${r.d ? kv(isDifferentProduct(t) ? 'Máy trả (hãng đổi sản phẩm khác)' : 'Serial trả (hãng đổi máy)', `${isDifferentProduct(t) ? esc(productName(r)) + '<br>' : ''}<span class="mono">${esc(r.d.serial_number)}</span>`) : ''}
+        ${atCustomer ? '' : kv('Phụ kiện', esc(t.accessories))}
+        ${kv(atCustomer ? 'Ngày yêu cầu' : 'Ngày nhận', dmy(t.received_date))}${kv(atCustomer ? 'Ngày hoàn tất' : 'Ngày trả', dmy(t.returned_date))}
+        ${kv('Tình trạng bảo hành', `<span class="pill ${t.warranty_status === 'in_warranty' ? 'st-completed' : 'st-returned'}">${WARRANTY[t.warranty_status]}</span>`)}
+        ${t.result ? kv('Kết quả', esc(RESULT[t.result])) : ''}${t.is_chargeable ? kv('Số tiền', money(t.charge_amount)) : ''}
+        ${t.service_type === 'repair' && ['free', 'repaired'].includes(t.result) ? kv('BH sau sửa chữa', esc(warrantyLabel(t))) : ''}
+      </dl>
+      <div class="section-title">Lỗi khách báo</div><div>${esc(t.fault_description)}</div>
+      ${t.scrap_reason ? `<div class="section-title">Lý do báo phế</div><div>${esc(t.scrap_reason)}</div>` : ''}
+      ${history.length ? `<p class="hint warn" style="margin-top:10px">Máy này đã từng gửi: ${history.map(h => `<span class="tno">${h.ticket_no}</span> (${dmy(h.received_date)})`).join(', ')}</p>` : ''}
+      ${shipBox}${partsBox}${quoteBox}${erpBox}${actionBox}
+      <div class="err" id="td-err" style="margin-top:12px"></div>
+      <div class="section-title">Chứng từ của phiếu <code class="mono muted">attachments</code></div>
+      ${attachBox(t.id)}
+      <div class="section-title">Lịch sử <code class="mono muted">rma_ticket_status_logs</code></div>
+      <ul class="timeline">${logs.map(l => `<li><div>${l.from_status ? pill(l.from_status) + ' → ' : ''}${pill(l.to_status)} <span class="muted">· ${esc(byId('users', l.user_id)?.name)} · ${esc(l.created_at)}</span>${l.note ? `<div>${esc(l.note)}</div>` : ''}</div></li>`).join('')}</ul>
+    </div>
+    <div class="dlg-foot">
+      ${canReceipt ? `<button type="button" class="btn ghost" data-slip="receipt:${t.id}">Phiếu nhận</button>` : ''}
+      ${canReturn ? `<button type="button" class="btn ghost" data-slip="return:${t.id}">Phiếu trả</button>` : ''}
+      ${atCustomer ? '<span class="hint">Hãng bảo hành tại nhà khách: không in phiếu nhận/trả.</span>' : ''}
+      <span class="spacer"></span><button type="button" class="btn ghost" data-close>Đóng</button>
+    </div>`);
+
+  const again = () => { save(); render(); ticketDialog(t.id, pending); };
+  const inner = $('#dlg-inner');
+  $$('[data-act]', inner).forEach(b => b.addEventListener('click', () => ticketDialog(t.id, b.dataset.act || null)));
+  $$('[data-delpart]', inner).forEach(b => b.addEventListener('click', () => { db.rma_replaced_parts = db.rma_replaced_parts.filter(p => p.id !== Number(b.dataset.delpart)); again(); }));
+  $$('[data-delitem]', inner).forEach(b => b.addEventListener('click', () => { db.rma_quote_items = db.rma_quote_items.filter(x => x.id !== Number(b.dataset.delitem)); again(); }));
+  $('#f-part')?.addEventListener('submit', (e) => { e.preventDefault(); const fd = new FormData(e.target);
+    insert('rma_replaced_parts', { rma_ticket_id: t.id, rma_center_shipment_id: lastShipment(t)?.id ?? null, part_code: String(fd.get('code')).trim() || null, description: String(fd.get('desc')).trim(), quantity: Math.max(1, Number(fd.get('qty')) || 1) }); again(); });
+  $('#f-item')?.addEventListener('submit', (e) => { e.preventDefault(); const fd = new FormData(e.target); const price = Number(String(fd.get('price')).replace(/[.,\s]/g, ''));
+    if (!(price >= 0)) { $('#td-err').textContent = 'Đơn giá phải là số.'; return; }
+    insert('rma_quote_items', { rma_ticket_id: t.id, description: String(fd.get('desc')).trim(), quantity: Math.max(1, Number(fd.get('qty')) || 1), unit_price: price }); again(); });
+  $('#f-erp')?.addEventListener('submit', (e) => { e.preventDefault(); if (closed) return;
+    Object.assign(t, { erp_receipt_no: $('#erp-223').value.trim() || null, erp_return_no: $('#erp-233').value.trim() || null, updated_at: nowTs() }); again(); toast('Đã lưu số chứng từ ERP'); });
+  $('#f-act')?.addEventListener('submit', (e) => {
+    e.preventDefault(); const vals = {}; const errs = [];
+    for (const f of act.fields) { vals[f.key] = $('#af-' + f.key).value.trim(); if (f.required && !vals[f.key]) errs.push('Nhập "' + f.label + '".'); }
+    if (!errs.length && act.validate) errs.push(...act.validate(t, vals));
+    if (errs.length) { $('#td-err').innerHTML = errs.map(esc).join('<br>'); return; }
+    const from = t.status; const ts = nowTs();
+    act.apply?.(t, vals); t.status = act.to; t.updated_at = ts;
+    insert('rma_ticket_status_logs', { rma_ticket_id: t.id, from_status: from, to_status: act.to, user_id: db.currentUserId, note: vals.note || null, created_at: ts });
+    save(); render(); ticketDialog(t.id); toast(`${t.ticket_no}: ${STATUS[t.status].label}`);
+  });
+  wireAttachments(inner, () => { render(); ticketDialog(t.id, pending); });
+}
+
+// ---------- phiếu nhận / phiếu trả ----------
+function buildSlip(type, t) {
+  const c = byId('customers', t.customer_id); const i = deviceInfo(t.device_id); const r = deviceInfo(t.returned_device_id);
+  const k = kindOf(t); const isReturn = type === 'return';
+  const title = isReturn ? (k === 'repair' ? 'Phiếu trả hàng sửa chữa' : 'Phiếu trả hàng bảo hành') : (t.original_service_type === 'repair' ? 'Phiếu nhận hàng sửa chữa' : 'Phiếu nhận hàng bảo hành');
+  const date = isReturn ? (t.returned_date || db.today) : t.received_date;
+  const staff = isReturn ? byId('users', db.currentUserId) : (byId('users', t.technician_id) || byId('users', t.created_by));
+  const name = productName(i); const serialIn = i.d.serial_number; const serialOut = r.d ? r.d.serial_number : serialIn;
+  const lines = isReturn && t.is_chargeable ? itemsOf(t) : [];
+  const wLine = isReturn && t.service_type === 'repair' && t.repair_warranty_months ? `Bảo hành sau sửa chữa: ${t.repair_warranty_months} tháng, đến ngày ${dmy(addMonths(date, t.repair_warranty_months))}.`
+    : isReturn && t.service_type === 'repair' && ['free', 'repaired'].includes(t.result) ? 'Không bảo hành sau sửa chữa.' : '';
+  const head = isReturn ? ['STT', 'Tên sản phẩm', 'SL', 'Seri lỗi', 'Seri trả', 'Kết quả'] : ['STT', 'Tên sản phẩm', 'SL', 'Serial', 'Tình trạng / lỗi khách báo', 'Phụ kiện kèm theo'];
+  const row = isReturn ? [1, name, 1, serialIn, isDifferentProduct(t) ? `${serialOut} (${productName(r)})` : serialOut, RESULT[t.result] || ''] : [1, name, 1, serialIn, t.fault_description, t.accessories || 'Không'];
+  const swapLine = isReturn && r.d ? `Hãng đã đổi ${isDifferentProduct(t) ? 'sang sản phẩm khác' : 'máy mới cùng model'}: ${productName(r)}, serial ${r.d.serial_number}.` : '';
+  const html = `<div class="slip">
+    <div class="head"><div class="logo">${COMPANY.short}</div><div class="co"><b>${esc(COMPANY.name)}</b><div>ĐC: ${esc(COMPANY.address)}</div><div>Tel: ${esc(COMPANY.phone)} · Email: ${esc(COMPANY.email)}</div></div></div>
+    <h3>${title}</h3>
+    <div class="meta-c">Số phiếu: <b>${t.ticket_no}</b> · Ngày ${dmy(date)}</div>
+    <div class="meta">
+      <div>Khách hàng: <b>${esc(c.name)}</b></div><div>Điện thoại: ${esc(c.phone)}</div>
+      <div>Người liên hệ: ${esc(c.contact_name) || '……………………'}</div><div>Địa chỉ: ${esc(c.address) || '……………………………'}</div>
+      <div>Loại: ${KIND[k].label}</div><div>Tình trạng bảo hành: ${WARRANTY[t.warranty_status]}</div>${isReturn ? `<div>Ngày nhận: ${dmy(t.received_date)}</div>` : ''}
+    </div>
+    <table><thead><tr>${head.map(h => `<th>${h}</th>`).join('')}</tr></thead>
+      <tbody><tr>${row.map((v, n) => `<td style="${n === 0 || n === 2 ? 'text-align:center' : ''}">${esc(v)}</td>`).join('')}</tr></tbody></table>
+    ${swapLine ? `<p>${esc(swapLine)}</p>` : ''}
+    ${t.scrap_reason && isReturn ? `<p>Lý do báo phế: ${esc(t.scrap_reason)}</p>` : ''}
+    ${lines.length ? `<table><thead><tr><th>STT</th><th>Nội dung sửa chữa</th><th>SL</th><th>Đơn giá</th><th>Thành tiền</th></tr></thead><tbody>
+      ${lines.map((p, n) => `<tr><td style="text-align:center">${n + 1}</td><td>${esc(p.description)}</td><td style="text-align:center">${p.quantity}</td><td style="text-align:right">${money(p.unit_price)}</td><td style="text-align:right">${money(p.quantity * p.unit_price)}</td></tr>`).join('')}
+      <tr class="total"><td colspan="4" style="text-align:right">Tổng cộng</td><td style="text-align:right">${money(t.charge_amount)}</td></tr></tbody></table>` : ''}
+    ${isReturn && !t.is_chargeable ? `<p>Chi phí: <b>Miễn phí</b></p>` : ''}
+    ${wLine ? `<p>${wLine}</p>` : ''}
+    <div class="sign"><div><b>Khách hàng</b><i>(Ký, ghi rõ họ tên)</i></div><div><b>${isReturn ? 'Nhân viên trả' : 'Nhân viên nhận'}</b><i>(Ký, ghi rõ họ tên)</i><div class="name">${esc(staff?.name)}</div></div></div>
+    ${isReturn ? '' : '<div class="foot">Quý khách vui lòng giữ phiếu này và mang theo khi nhận lại hàng.</div>'}
+  </div>`;
+  const aoa = [[COMPANY.name.toUpperCase()], ['ĐC: ' + COMPANY.address], ['Tel: ' + COMPANY.phone + ' · Email: ' + COMPANY.email], [],
+    [title.toUpperCase()], ['Số phiếu: ' + t.ticket_no + '   Ngày ' + dmy(date)], [],
+    ['Khách hàng:', c.name, '', 'Điện thoại:', c.phone], ['Người liên hệ:', c.contact_name || '', '', 'Địa chỉ:', c.address || ''], ['Loại:', KIND[k].label, '', 'Tình trạng BH:', WARRANTY[t.warranty_status]], [], head, row];
+  if (swapLine) aoa.push([], [swapLine]);
+  if (t.scrap_reason && isReturn) aoa.push([], ['Lý do báo phế:', t.scrap_reason]);
+  if (lines.length) { aoa.push([], ['STT', 'Nội dung sửa chữa', 'SL', 'Đơn giá', 'Thành tiền']); lines.forEach((p, n) => aoa.push([n + 1, p.description, p.quantity, p.unit_price, p.quantity * p.unit_price])); aoa.push(['', '', '', 'Tổng cộng', t.charge_amount]); }
+  if (isReturn && !t.is_chargeable) aoa.push([], ['Chi phí:', 'Miễn phí']);
+  if (wLine) aoa.push([], [wLine]);
+  aoa.push([], [], ['', 'KHÁCH HÀNG', '', '', isReturn ? 'NHÂN VIÊN TRẢ' : 'NHÂN VIÊN NHẬN'], ['', '(Ký, ghi rõ họ tên)', '', '', '(Ký, ghi rõ họ tên)'], [], [], ['', '', '', '', staff?.name || '']);
+  return { html, aoa, file: (isReturn ? 'PhieuTra_' : 'PhieuNhan_') + t.ticket_no, title };
+}
+function slipDialog(type, id) {
+  const t = byId('rma_tickets', id); const s = buildSlip(type, t);
+  openDialog(`
+    <div class="dlg-head"><div><h2>${s.title} · <span class="tno">${t.ticket_no}</span></h2><div class="muted">Xem trước khi in hoặc xuất file</div></div><button type="button" class="x" data-close aria-label="Đóng">×</button></div>
+    <div class="dlg-body"><div class="slip-wrap">${s.html}</div>
+      <p class="hint" style="margin-top:10px">Nút "In / Lưu PDF" và "Tải Excel" chỉ chạy khi mở file <span class="mono">rma-demo.html</span> trực tiếp trên máy (cần mạng để tải thư viện Excel). Trên link claude.ai, trình xem chặn in và tải file.</p>
+      <div class="err" id="slip-err"></div></div>
+    <div class="dlg-foot"><button type="button" class="btn ghost" data-back="${t.id}">← Quay lại phiếu</button><span class="spacer"></span>
+      <button type="button" class="btn ghost" id="slip-xlsx">Tải Excel</button><button type="button" class="btn" id="slip-print">In / Lưu PDF</button></div>`);
+  $('#slip-print').addEventListener('click', () => { $('#print-area').innerHTML = s.html; try { window.print(); } catch (e) {} });
+  $('#slip-xlsx').addEventListener('click', () => {
+    if (typeof XLSX === 'undefined') { $('#slip-err').textContent = 'Chưa tải được thư viện Excel. Kiểm tra kết nối mạng rồi mở lại trang.'; return; }
+    try { const ws = XLSX.utils.aoa_to_sheet(s.aoa); ws['!cols'] = [{ wch: 14 }, { wch: 34 }, { wch: 6 }, { wch: 22 }, { wch: 26 }, { wch: 30 }];
+      ws['!merges'] = [0, 1, 2, 4, 5].map(rw => ({ s: { r: rw, c: 0 }, e: { r: rw, c: 5 } }));
+      const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, t.ticket_no); XLSX.writeFile(wb, s.file + '.xlsx');
+    } catch (e) { $('#slip-err').textContent = 'Không tạo được file Excel: ' + e.message; }
+  });
+}
+
+// ---------- sự kiện ----------
+document.addEventListener('click', (e) => {
+  const el = e.target.closest('[data-preset],[data-rkind],#rp-xlsx,[data-page],[data-kind],[data-status],[data-ticket],[data-close],[data-close2],[data-toggle],[data-raw],[data-slip],[data-back],[data-dev],[data-devchip],[data-cust-devices],[data-newfor],#new-ticket,#reset-btn');
+  if (!el) return;
+  if (el.dataset.preset) { setPreset(el.dataset.preset); render(); }
+  else if (el.hasAttribute('data-rkind')) { rep.kind = el.dataset.rkind; render(); }
+  else if (el.id === 'rp-xlsx') exportReport();
+  else if (el.dataset.page) { page = el.dataset.page; render(); }
+  else if (el.hasAttribute('data-kind')) { filter.kind = el.dataset.kind; filter.status = ''; render(); }
+  else if (el.hasAttribute('data-status')) { filter.status = el.dataset.status; render(); }
+  else if (el.dataset.ticket) ticketDialog(el.dataset.ticket);
+  else if (el.hasAttribute('data-close')) dlg.close();
+  else if (el.hasAttribute('data-close2')) $('#dlg2').close();
+  else if (el.dataset.raw) { VIEWS.raw.cur = el.dataset.raw; render(); }
+  else if (el.dataset.slip) { const [type, id] = el.dataset.slip.split(':'); slipDialog(type, id); }
+  else if (el.dataset.back) ticketDialog(el.dataset.back);
+  else if (el.dataset.toggle) { const [tb, id] = el.dataset.toggle.split(':'); const r = byId(tb, id); r.is_active = !r.is_active; save(); render(); }
+  else if (el.dataset.dev) deviceDialog(el.dataset.dev);
+  else if (el.hasAttribute('data-devchip')) { devFilter.chip = el.dataset.devchip; render(); }
+  else if (el.dataset.custDevices) { devFilter = { q: '', chip: '', customer: el.dataset.custDevices, sort: 'recent' }; page = 'devices'; render(); }
+  else if (el.dataset.newfor) { const x = deviceSummary(byId('devices', el.dataset.newfor)); newTicketDialog({ serial: x.d.serial_number, customerId: x.customer?.id }); }
+  else if (el.id === 'new-ticket') newTicketDialog();
+  else if (el.id === 'reset-btn') {
+    if (el.dataset.armed) { db = seed(); save(); page = 'tickets'; filter = { kind: '', status: '', q: '' }; devFilter = { q: '', chip: '', customer: '', sort: 'recent' }; render(); toast('Đã khôi phục dữ liệu mẫu'); }
+    else { el.dataset.armed = '1'; el.textContent = 'Bấm lần nữa để xác nhận'; setTimeout(() => { delete el.dataset.armed; el.textContent = 'Khôi phục dữ liệu mẫu'; }, 3000); }
+  }
+});
+document.addEventListener('input', (e) => {
+  const keep = (id) => { const pos = e.target.selectionStart; render(); const s = $('#' + id); s.focus(); s.setSelectionRange(pos, pos); };
+  if (e.target.id === 't-search') { filter.q = e.target.value; keep('t-search'); }
+  else if (e.target.id === 'dv-search') { devFilter.q = e.target.value; keep('dv-search'); }
+});
+document.addEventListener('change', (e) => {
+  if (e.target.id === 'dv-customer') { devFilter.customer = e.target.value; render(); return; }
+  if (e.target.id === 'dv-sort') { devFilter.sort = e.target.value; render(); return; }
+  if (e.target.id === 'rp-from' || e.target.id === 'rp-to') {
+    const v = e.target.value; if (!v) return;
+    rep[e.target.id === 'rp-from' ? 'from' : 'to'] = v; rep.preset = '';
+    if (rep.from > rep.to) [rep.from, rep.to] = [rep.to, rep.from];
+    render();
+  }
+});
+document.addEventListener('submit', (e) => {
+  const f = e.target; const v = (s) => $(s).value.trim();
+  const catErr = (m) => { const el = $('#cat-err'); if (el) el.textContent = m; };
+  if (f.id === 'f-customer') { e.preventDefault(); insert('customers', { name: v('#c-name'), contact_name: v('#c-contact') || null, phone: v('#c-phone'), address: v('#c-address') || null, note: null }); save(); render(); toast('Đã thêm khách hàng'); }
+  else if (f.id === 'f-center') { e.preventDefault(); insert('service_centers', { name: v('#sc-name'), brands: v('#sc-brands') || null, phone: v('#sc-phone') || null, address: v('#sc-address') || null, is_active: true }); save(); render(); toast('Đã thêm hãng / TTBH'); }
+  else if (f.id === 'f-type') { e.preventDefault(); const code = v('#dt-code').toUpperCase();
+    if (db.device_types.some(t => t.code === code)) return catErr('Mã loại thiết bị "' + code + '" đã có.');
+    insert('device_types', { code, name: v('#dt-name'), is_active: true }); save(); render(); toast('Đã thêm loại thiết bị'); }
+  else if (f.id === 'f-brand') { e.preventDefault(); const name = v('#b-name').toUpperCase();
+    if (db.brands.some(b => b.name === name)) return catErr('Hãng "' + name + '" đã có.');
+    insert('brands', { name, is_active: true }); save(); render(); toast('Đã thêm hãng'); }
+  else if (f.id === 'f-model') { e.preventDefault(); const brand_id = Number(v('#m-brand')); const code = v('#m-code');
+    if (db.product_models.some(m => m.brand_id === brand_id && m.code.toLowerCase() === code.toLowerCase())) return catErr('Model "' + code + '" của hãng này đã có.');
+    insert('product_models', { brand_id, device_type_id: Number(v('#m-type')), code, name: v('#m-name') || null, is_active: true }); save(); render(); toast('Đã thêm model'); }
+});
+$('#ctx-user').addEventListener('change', (e) => { db.currentUserId = Number(e.target.value); save(); });
+$('#ctx-date').addEventListener('change', (e) => { if (e.target.value) { db.today = e.target.value; save(); if (rep.preset) setPreset(rep.preset); render(); } });
+
+load(); render();
+</script>

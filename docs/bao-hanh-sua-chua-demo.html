@@ -1,0 +1,568 @@
+<title>Bảo hành sửa chữa Sang Y</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+    :root {
+        --brand: #1f4a3d;
+        --brand-hover: #24574a;
+        --brand-soft: #e2ede7;
+        --canvas: #f2f4f1;
+        --surface: #ffffff;
+        --panel: #f7f8f6;
+        --line: #d8dfda;
+        --ink: #16211c;
+        --muted: #5b6a62;
+        --on-brand: #ffffff;
+        --ok-bg: #e3f3ea; --ok-ink: #17603f; --ok-bar: #1f8a5a;
+        --warn-bg: #fdf1dc; --warn-ink: #8a5300; --warn-line: #eccb8f;
+        --bad-bg: #fbe7e5; --bad-ink: #9b2c22;
+        --off-bg: #eceeed; --off-ink: #5b6a62;
+        --paper: #fffefb;
+        --font-sans: 'Be Vietnam Pro', ui-sans-serif, system-ui, 'Segoe UI', sans-serif;
+        --font-mono: 'JetBrains Mono', ui-monospace, Consolas, monospace;
+    }
+    @media (prefers-color-scheme: dark) {
+        :root:not([data-theme="light"]) {
+            color-scheme: dark;
+            --brand: #6fb99b; --brand-hover: #86c9ad; --brand-soft: #1d3129;
+            --canvas: #111714; --surface: #18201c; --panel: #1d2621; --line: #2c3a33;
+            --ink: #e4ece7; --muted: #9aaca2; --on-brand: #0e1512;
+            --ok-bg: #173226; --ok-ink: #8fd6b1; --ok-bar: #4fb585;
+            --warn-bg: #33270f; --warn-ink: #f1c878; --warn-line: #5a4519;
+            --bad-bg: #3a1c19; --bad-ink: #f3a39a;
+            --off-bg: #232c27; --off-ink: #9aaca2;
+            --paper: #1b221e;
+        }
+    }
+    :root[data-theme="dark"] {
+        color-scheme: dark;
+        --brand: #6fb99b; --brand-hover: #86c9ad; --brand-soft: #1d3129;
+        --canvas: #111714; --surface: #18201c; --panel: #1d2621; --line: #2c3a33;
+        --ink: #e4ece7; --muted: #9aaca2; --on-brand: #0e1512;
+        --ok-bg: #173226; --ok-ink: #8fd6b1; --ok-bar: #4fb585;
+        --warn-bg: #33270f; --warn-ink: #f1c878; --warn-line: #5a4519;
+        --bad-bg: #3a1c19; --bad-ink: #f3a39a;
+        --off-bg: #232c27; --off-ink: #9aaca2;
+        --paper: #1b221e;
+    }
+
+    * { box-sizing: border-box; }
+    body { background: var(--canvas); color: var(--ink); font: 14px/1.55 var(--font-sans); padding-inline: 16px; padding-block: 24px 48px; }
+    .wrap { max-width: 1180px; margin: 0 auto; display: grid; gap: 20px; }
+    h1, h2, h3 { margin: 0; text-wrap: balance; }
+    h1 { font-size: 24px; font-weight: 700; letter-spacing: -0.01em; }
+    h2 { font-size: 16px; font-weight: 600; }
+    h3 { font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+    p { margin: 0; }
+    .mono { font-family: var(--font-mono); }
+    .muted { color: var(--muted); }
+    .small { font-size: 12px; }
+    .num { font-variant-numeric: tabular-nums; }
+
+    header.top { display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: end; justify-content: space-between; }
+    .intro { max-width: 68ch; color: var(--muted); margin-top: 4px; }
+    .tag { display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; padding: 2px 10px; font-size: 12px; font-weight: 600; background: var(--brand-soft); color: var(--brand); }
+
+    .picker { display: grid; gap: 8px; }
+    .seg { display: flex; flex-wrap: wrap; gap: 6px; }
+    .seg button { font: inherit; font-weight: 600; font-size: 13px; cursor: pointer; border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 8px; padding: 7px 12px; }
+    .seg button[aria-pressed="true"] { background: var(--brand); border-color: var(--brand); color: var(--on-brand); }
+    .seg button:focus-visible, .btn:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+
+    .steps { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+    .steps button { font: inherit; text-align: left; cursor: pointer; border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 10px; padding: 10px 12px; display: grid; gap: 2px; }
+    .steps button b { font-size: 13px; }
+    .steps button span { font-size: 12px; color: var(--muted); }
+    .steps button .n { font-family: var(--font-mono); font-size: 11px; color: var(--muted); }
+    .steps button[aria-selected="true"] { border-color: var(--brand); box-shadow: inset 0 0 0 1px var(--brand); background: var(--brand-soft); }
+    @media (max-width: 720px) { .steps { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+    .layout { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 20px; align-items: start; }
+    @media (max-width: 960px) { .layout { grid-template-columns: minmax(0, 1fr); } }
+
+    .card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 20px; display: grid; gap: 16px; }
+    .card-head { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: baseline; justify-content: space-between; }
+    .note { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; display: grid; gap: 10px; font-size: 13px; }
+    .note ul { margin: 0; padding-left: 18px; display: grid; gap: 6px; }
+
+    .facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px 20px; }
+    .facts dt { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+    .facts dd { margin: 0; font-weight: 500; }
+
+    .table-scroll { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th { text-align: left; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); font-weight: 600; padding: 8px 10px; background: var(--panel); border-bottom: 1px solid var(--line); white-space: nowrap; }
+    td { padding: 9px 10px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+    td.r, th.r { text-align: right; }
+    tr.off td { color: var(--muted); }
+
+    input[type="number"], input[type="text"], select, textarea { font: inherit; font-size: 13px; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; }
+    input[type="number"] { width: 70px; }
+    textarea { width: 100%; min-height: 64px; resize: vertical; }
+    label.check { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; white-space: nowrap; }
+    input[type="checkbox"], input[type="radio"] { accent-color: var(--brand); width: 16px; height: 16px; }
+
+    .chips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+    .chip { display: inline-flex; align-items: center; gap: 4px; border: 1px solid var(--line); background: var(--panel); border-radius: 999px; padding: 3px 4px 3px 10px; font-size: 12px; }
+    .chip button { font: inherit; cursor: pointer; border: 0; background: transparent; color: var(--muted); width: 20px; height: 20px; border-radius: 50%; line-height: 1; }
+    .chip button:hover { color: var(--bad-ink); }
+    .chip-add { display: flex; gap: 6px; flex-wrap: wrap; }
+    .chip-add input { min-width: 0; flex: 1 1 180px; }
+
+    .btn { font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; border-radius: 6px; padding: 7px 14px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); }
+    .btn-primary { background: var(--brand); border-color: var(--brand); color: var(--on-brand); }
+    .btn-primary:hover { background: var(--brand-hover); }
+
+    .pill { display: inline-flex; align-items: center; border-radius: 999px; padding: 1px 9px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+    .pill.ok { background: var(--ok-bg); color: var(--ok-ink); }
+    .pill.warn { background: var(--warn-bg); color: var(--warn-ink); }
+    .pill.bad { background: var(--bad-bg); color: var(--bad-ink); }
+    .pill.off { background: var(--off-bg); color: var(--off-ink); }
+
+    .alert { border-radius: 8px; padding: 12px 14px; font-size: 13px; display: grid; gap: 8px; }
+    .alert.warn { background: var(--warn-bg); border: 1px solid var(--warn-line); color: var(--ink); }
+    .alert.ok { background: var(--ok-bg); color: var(--ink); }
+    .alert.bad { background: var(--bad-bg); color: var(--ink); }
+    .alert strong { font-weight: 600; }
+
+    .witem { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; align-items: center; padding: 8px 0; border-top: 1px dashed var(--warn-line); }
+    .witem:first-of-type { border-top: 0; }
+    .bar { grid-column: 1 / -1; height: 5px; background: var(--off-bg); border-radius: 3px; overflow: hidden; }
+    .bar span { display: block; height: 100%; background: var(--ok-bar); border-radius: 3px; }
+
+    .field { display: grid; gap: 4px; }
+    .field > span { font-size: 12px; font-weight: 600; }
+    .choice { display: grid; gap: 8px; }
+    .choice label { display: grid; grid-template-columns: 18px minmax(0, 1fr); gap: 8px; align-items: start; border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; cursor: pointer; background: var(--surface); }
+    .choice label:has(input:checked) { border-color: var(--brand); background: var(--brand-soft); }
+    .choice input { margin-top: 3px; }
+    .choice b { display: block; }
+
+    .slip { background: var(--paper); border: 1px solid var(--line); border-radius: 4px; padding: 24px; display: grid; gap: 14px; font-size: 13px; }
+    .slip-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 16px; border-bottom: 2px solid var(--ink); padding-bottom: 10px; }
+    .slip-title { text-align: center; font-size: 17px; font-weight: 700; letter-spacing: .04em; }
+    .slip h4 { margin: 0; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; }
+    .slip table td, .slip table th { background: transparent; border: 1px solid var(--line); }
+    .slip ul { margin: 0; padding-left: 18px; }
+    .sign { display: grid; grid-template-columns: 1fr 1fr; text-align: center; gap: 16px; padding-top: 8px; }
+    .sign span { display: block; font-size: 12px; color: var(--muted); padding-bottom: 36px; }
+
+    .timeline { display: grid; gap: 0; }
+    .tl { display: grid; grid-template-columns: 14px minmax(0, 1fr); gap: 10px; padding-bottom: 14px; position: relative; }
+    .tl::before { content: ""; position: absolute; left: 6px; top: 14px; bottom: 0; width: 2px; background: var(--line); }
+    .tl:last-child::before { display: none; }
+    .dot { width: 14px; height: 14px; border-radius: 50%; background: var(--brand); margin-top: 3px; }
+    .tl.claim .dot { background: var(--warn-ink); }
+
+    .schema { font-family: var(--font-mono); font-size: 12px; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; overflow-x: auto; white-space: pre; line-height: 1.6; }
+    .row { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; }
+    @media (prefers-reduced-motion: no-preference) { .bar span { transition: width .3s ease; } }
+</style>
+
+<div class="wrap">
+    <header class="top">
+        <div>
+            <span class="tag">Demo · chưa làm vào hệ thống</span>
+            <h1 style="margin-top:8px">Bảo hành sửa chữa theo hạng mục</h1>
+            <p class="intro">Sang Y chỉ bảo hành đúng hạng mục đã sửa hoặc đã thay. Chọn loại thiết bị, rồi đi qua 4 bước: sửa xong, in phiếu trả, khách quay lại, kiểm tra xem lỗi mới có thuộc phạm vi bảo hành không.</p>
+        </div>
+    </header>
+
+    <section class="picker" aria-label="Chọn loại thiết bị">
+        <h3>Ví dụ theo loại thiết bị</h3>
+        <div class="seg" id="scenario-picker"></div>
+    </section>
+
+    <nav class="steps" role="tablist" aria-label="Các bước" id="steps"></nav>
+
+    <div class="layout">
+        <main id="stage" aria-live="polite"></main>
+        <aside class="note" id="aside"></aside>
+    </div>
+
+    <section class="card">
+        <div class="card-head"><h2>Thay đổi dữ liệu dự kiến</h2><span class="muted small">Làm vào code sau khi bạn duyệt demo</span></div>
+        <div class="schema">rma_warranty_items          (mới) hạng mục được bảo hành của mỗi phiếu
+  id, rma_ticket_id, rma_quote_item_id?, description, months, ends_on
+
+device_types
+  + warranty_exclusions     danh sách "không bảo hành" mặc định theo loại thiết bị
+
+rma_tickets
+  + warranty_exclusions     bản chép lúc trả máy (in lên phiếu trả, sửa riêng được)
+  + claim_ticket_id?        phiếu gốc khi khách quay lại đòi BH sửa chữa
+  + claim_item_id?          hạng mục được bảo hành lần này
+  + claim_result            trong phạm vi / ngoài phạm vi
+  + claim_note              lý do (bắt buộc khi ngoài phạm vi)
+  - repair_warranty_months  bỏ, thay bằng số tháng của từng hạng mục</div>
+    </section>
+</div>
+
+<script>
+const TODAY = new Date(2026, 8, 29);
+
+const SCENARIOS = {
+    laptop: {
+        label: 'Laptop', type: 'Máy tính xách tay', model: 'DELL Latitude 5440', serial: '5440HX77Q',
+        customer: 'Branch of Pixelz Co., Ltd', ticket: '26080003', newTicket: '26090010', returned: new Date(2026, 7, 27),
+        fault: 'Máy chậm, hay treo, ổ cứng kêu lạch cạch',
+        lines: [
+            { desc: 'Thay SSD 256GB Kingston', kind: 'Linh kiện', qty: 1, price: 890000, on: true, months: 12 },
+            { desc: 'Cài Windows 11 + Office, driver', kind: 'Phần mềm', qty: 1, price: 150000, on: true, months: 1 },
+            { desc: 'Vệ sinh máy, tra keo tản nhiệt', kind: 'Công', qty: 1, price: 100000, on: false, months: 0 },
+        ],
+        exclusions: ['Lỗi phần cứng khác ngoài hạng mục đã thay', 'Virus, phần mềm do khách tự cài', 'Rơi vỡ, vào nước, cháy nổ'],
+        complaints: [
+            { text: 'Máy không nhận ổ cứng, không vào được Windows', item: 0, verdict: 'in' },
+            { text: 'Liệt phím A, S, D trên bàn phím', item: null, verdict: 'out', reason: 'Lỗi bàn phím, phiếu 26080003 chỉ bảo hành SSD và phần mềm.' },
+            { text: 'Windows báo lỗi kích hoạt, mất Office', item: 1, verdict: 'expired', reason: 'Hạng mục cài Windows chỉ bảo hành 1 tháng, đã hết hạn.' },
+        ],
+    },
+    printer: {
+        label: 'Máy in', type: 'Máy in kim', model: 'EPSON LQ310', serial: 'X3GY104522',
+        customer: 'Công ty CP Cảng Xanh', ticket: '26080005', newTicket: '26090010', returned: new Date(2026, 7, 22),
+        fault: 'In mờ, mất nét đầu kim',
+        lines: [
+            { desc: 'Thay đầu kim LQ-310', kind: 'Linh kiện', qty: 1, price: 850000, on: true, months: 6 },
+            { desc: 'Công thay và căn chỉnh đầu kim', kind: 'Công', qty: 1, price: 150000, on: true, months: 6 },
+            { desc: 'Thay băng mực S015639', kind: 'Vật tư', qty: 1, price: 90000, on: false, months: 0 },
+        ],
+        exclusions: ['Mực, băng mực, trống, bao lụa, rulo (vật tư tiêu hao)', 'Lỗi do giấy ẩm, giấy kém chất lượng', 'Kẹt giấy do dị vật (ghim, kẹp)'],
+        complaints: [
+            { text: 'In bị mất dòng ngang, đứt nét giữa trang', item: 0, verdict: 'in' },
+            { text: 'Chữ in nhạt, băng mực bị xơ', item: null, verdict: 'out', reason: 'Băng mực là vật tư tiêu hao, không bảo hành.' },
+        ],
+    },
+    attendance: {
+        label: 'Máy chấm công', type: 'Máy chấm công', model: 'RONALD JACK X628-C', serial: 'RJ628C0091',
+        customer: 'Công ty CP Cảng Xanh', ticket: '26090002', newTicket: '26090010', returned: new Date(2026, 8, 5),
+        fault: 'Không nhận vân tay, màn hình báo lỗi cảm biến',
+        lines: [
+            { desc: 'Thay mắt đọc vân tay', kind: 'Linh kiện', qty: 1, price: 650000, on: true, months: 6 },
+            { desc: 'Nạp lại firmware, cài đặt lại ca làm việc', kind: 'Phần mềm', qty: 1, price: 200000, on: true, months: 1 },
+        ],
+        exclusions: ['Mất dữ liệu chấm công, cài đặt ca do khách thao tác', 'Hỏng do sét, điện áp không ổn định', 'Adapter nguồn đi kèm'],
+        complaints: [
+            { text: 'Quẹt vân tay báo "Vui lòng thử lại" liên tục', item: 0, verdict: 'in' },
+            { text: 'Sau trận mưa giông máy không lên nguồn', item: null, verdict: 'out', reason: 'Hỏng nguồn do sét, thuộc mục không bảo hành.' },
+        ],
+    },
+    tv: {
+        label: 'Tivi', type: 'Tivi', model: 'TCL 55P735', serial: 'TCL55P7A90871',
+        customer: 'Võ Thị Hạnh', ticket: '26090004', newTicket: '26090010', returned: new Date(2026, 8, 15),
+        fault: 'Màn hình sọc ngang, có tiếng không có hình',
+        lines: [
+            { desc: 'Thay panel 55 inch', kind: 'Linh kiện', qty: 1, price: 2900000, on: true, months: 6 },
+            { desc: 'Công thay panel', kind: 'Công', qty: 1, price: 300000, on: true, months: 6 },
+        ],
+        exclusions: ['Vỡ màn, cấn màn do va đập', 'Vào nước, côn trùng', 'Board nguồn, board main (không thay lần này)'],
+        complaints: [
+            { text: 'Màn lại xuất hiện sọc dọc bên trái', item: 0, verdict: 'in' },
+            { text: 'Tivi không lên nguồn, đèn chờ không sáng', item: null, verdict: 'out', reason: 'Lỗi board nguồn, lần trước chỉ thay panel.' },
+        ],
+    },
+    monitor: {
+        label: 'Màn hình', type: 'Màn hình', model: 'DELL U2422H', serial: 'CN0DJ8F1',
+        customer: 'Phạm Quốc Dũng', ticket: '26090006', newTicket: '26090010', returned: new Date(2026, 8, 20),
+        fault: 'Màn hình chập chờn, tự tắt sau vài phút',
+        lines: [
+            { desc: 'Thay board nguồn', kind: 'Linh kiện', qty: 1, price: 750000, on: true, months: 6 },
+            { desc: 'Công kiểm tra, thay thế', kind: 'Công', qty: 1, price: 100000, on: false, months: 0 },
+        ],
+        exclusions: ['Panel, điểm chết, hở sáng', 'Vỡ màn, cấn màn', 'Chân đế, cáp tín hiệu'],
+        complaints: [
+            { text: 'Màn lại tự tắt, đèn nguồn nháy cam', item: 0, verdict: 'in' },
+            { text: 'Xuất hiện 3 điểm chết giữa màn', item: null, verdict: 'out', reason: 'Lỗi panel, lần trước chỉ thay board nguồn.' },
+        ],
+    },
+};
+
+const STEPS = [
+    { id: 'finish', title: 'Sửa xong', sub: 'Chọn hạng mục được BH' },
+    { id: 'slip', title: 'Phiếu trả', sub: 'Khách biết BH cái gì' },
+    { id: 'intake', title: 'Khách quay lại', sub: 'Nhập serial là thấy' },
+    { id: 'inspect', title: 'Kiểm tra', sub: 'Trong / ngoài phạm vi' },
+];
+
+const state = { scenario: 'laptop', step: 'finish', complaint: 0, decision: null, reason: '', coveredItem: null, confirmed: false };
+const data = structuredClone(SCENARIOS);
+Object.values(data).forEach((s) => (s.returned = new Date(s.returned)));
+
+const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+const money = (n) => n.toLocaleString('vi-VN') + ' ₫';
+const fmt = (d) => `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+const addMonths = (date, months) => {
+    const d = new Date(date.getFullYear(), date.getMonth() + months, 1);
+    const last = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+    d.setDate(Math.min(date.getDate(), last));
+    return d;
+};
+const days = (a, b) => Math.round((b - a) / 86400000);
+const current = () => data[state.scenario];
+
+function itemStatus(s, line) {
+    if (!line.on || !line.months) return { level: 'off', label: 'Không BH' };
+    const ends = addMonths(s.returned, line.months);
+    const left = days(TODAY, ends);
+    const total = Math.max(1, days(s.returned, ends));
+    if (left < 0) return { level: 'bad', label: `Hết hạn ${fmt(ends)}`, ends, left, pct: 0 };
+    if (left <= 15) return { level: 'warn', label: `Sắp hết · còn ${left} ngày`, ends, left, pct: Math.max(4, Math.round(left / total * 100)) };
+    return { level: 'ok', label: `Còn ${left} ngày`, ends, left, pct: Math.max(4, Math.round(left / total * 100)) };
+}
+
+function renderPicker() {
+    document.getElementById('scenario-picker').innerHTML = Object.entries(data)
+        .map(([key, s]) => `<button type="button" data-scenario="${key}" aria-pressed="${key === state.scenario}">${esc(s.label)}</button>`).join('');
+    document.getElementById('steps').innerHTML = STEPS
+        .map((step, i) => `<button type="button" role="tab" id="tab-${step.id}" data-step="${step.id}" aria-selected="${step.id === state.step}"><span class="n">Bước ${i + 1}</span><b>${step.title}</b><span>${step.sub}</span></button>`).join('');
+}
+
+function ticketFacts(s, extra = '') {
+    return `<dl class="facts">
+        <div><dt>Phiếu</dt><dd class="mono">${s.ticket}</dd></div>
+        <div><dt>Thiết bị</dt><dd>${esc(s.type)} ${esc(s.model)}</dd></div>
+        <div><dt>Serial</dt><dd class="mono">${esc(s.serial)}</dd></div>
+        <div><dt>Khách hàng</dt><dd>${esc(s.customer)}</dd></div>
+        ${extra}
+    </dl>`;
+}
+
+function renderFinish(s) {
+    const rows = s.lines.map((line, i) => {
+        const st = itemStatus(s, line);
+        return `<tr class="${line.on ? '' : 'off'}">
+            <td>${esc(line.desc)}<div class="small muted">${esc(line.kind)} · ${money(line.price * line.qty)}</div></td>
+            <td><label class="check"><input type="checkbox" data-line-on="${i}" ${line.on ? 'checked' : ''} id="on-${state.scenario}-${i}"> Bảo hành</label></td>
+            <td><input type="number" min="1" max="60" value="${line.on ? line.months : ''}" data-line-months="${i}" id="m-${state.scenario}-${i}" aria-label="Số tháng bảo hành ${esc(line.desc)}" ${line.on ? '' : 'disabled'}> <span class="small muted">tháng</span></td>
+            <td class="num">${line.on && line.months ? fmt(addMonths(s.returned, line.months)) : '—'}</td>
+        </tr>`;
+    }).join('');
+    const chips = s.exclusions.map((text, i) => `<span class="chip">${esc(text)}<button type="button" data-drop-exclusion="${i}" aria-label="Bỏ ${esc(text)}">×</button></span>`).join('');
+    const covered = s.lines.filter((l) => l.on && l.months);
+
+    return `<section class="card" aria-labelledby="tab-finish">
+        <div class="card-head"><h2>Bước "Sửa xong" · phiếu ${s.ticket}</h2><span class="pill ok">Đang sửa → Chờ trả khách</span></div>
+        ${ticketFacts(s, `<div><dt>Ngày trả dự kiến</dt><dd class="num">${fmt(s.returned)}</dd></div>`)}
+        <div class="field"><span>Hạng mục bảo hành sau sửa</span>
+            <p class="small muted">Lấy sẵn từ báo giá. Tick hạng mục nào được bảo hành và bao nhiêu tháng. Hạng mục bỏ tick sẽ in là "Không bảo hành".</p>
+        </div>
+        <div class="table-scroll"><table>
+            <thead><tr><th>Hạng mục</th><th>BH?</th><th>Thời gian</th><th>Đến ngày</th></tr></thead>
+            <tbody>${rows}</tbody>
+        </table></div>
+        <div class="field"><span>Không bảo hành <span class="muted" style="font-weight:400">(mặc định của loại "${esc(s.type)}", sửa riêng cho phiếu này được)</span></span>
+            <div class="chips">${chips || '<span class="small muted">Chưa có mục nào.</span>'}</div>
+            <form class="chip-add" data-add-exclusion>
+                <input type="text" id="new-exclusion" placeholder="Thêm mục không bảo hành…" aria-label="Thêm mục không bảo hành">
+                <button class="btn" type="submit">Thêm</button>
+            </form>
+        </div>
+        <div class="row" style="justify-content:space-between">
+            <p class="small muted">${covered.length ? `Máy được bảo hành ${covered.length} hạng mục, lâu nhất đến ${fmt(addMonths(s.returned, Math.max(...covered.map((l) => l.months))))}.` : 'Phiếu này không có hạng mục nào được bảo hành.'}</p>
+            <button class="btn btn-primary" type="button" data-go="slip">Xác nhận: Sửa xong → xem phiếu trả</button>
+        </div>
+    </section>`;
+}
+
+function renderSlip(s) {
+    const covered = s.lines.filter((l) => l.on && l.months);
+    const notCovered = s.lines.filter((l) => !(l.on && l.months));
+    const total = s.lines.reduce((sum, l) => sum + l.price * l.qty, 0);
+    return `<section class="slip" aria-labelledby="tab-slip">
+        <div class="slip-head">
+            <div><b>CÔNG TY TNHH DỊCH VỤ VÀ KỸ THUẬT SANG Y</b><div class="small muted">Số 303 Lê Duẩn, Kiến An, Hải Phòng</div></div>
+            <div class="small" style="text-align:right">Số phiếu: <b class="mono">${s.ticket}</b><br>Ngày trả: ${fmt(s.returned)}</div>
+        </div>
+        <div class="slip-title">PHIẾU TRẢ HÀNG SỬA CHỮA</div>
+        <div class="small">Khách hàng: <b>${esc(s.customer)}</b> · Thiết bị: <b>${esc(s.type)} ${esc(s.model)}</b> · Serial: <b class="mono">${esc(s.serial)}</b></div>
+        <div class="table-scroll"><table>
+            <thead><tr><th>Nội dung sửa chữa</th><th class="r">Thành tiền</th><th>Bảo hành</th></tr></thead>
+            <tbody>${s.lines.map((l) => `<tr><td>${esc(l.desc)}</td><td class="r num">${money(l.price * l.qty)}</td><td>${l.on && l.months ? `${l.months} tháng, đến ${fmt(addMonths(s.returned, l.months))}` : 'Không bảo hành'}</td></tr>`).join('')}
+            <tr><td><b>Tổng cộng</b></td><td class="r num"><b>${money(total)}</b></td><td></td></tr></tbody>
+        </table></div>
+        <div style="display:grid;gap:6px">
+            <h4>Điều kiện bảo hành</h4>
+            <p>Sang Y chỉ bảo hành <b>đúng hạng mục ghi thời hạn ở bảng trên</b>${covered.length ? ` (${covered.map((l) => esc(l.desc.toLowerCase())).join('; ')})` : ''}, tính từ ngày trả máy. Khi bảo hành, khách mang theo phiếu này.</p>
+            <h4 style="margin-top:6px">Không bảo hành</h4>
+            <ul>${[...notCovered.map((l) => esc(l.desc)), ...s.exclusions.map(esc)].map((t) => `<li>${t}</li>`).join('')}</ul>
+        </div>
+        <div class="sign"><div><span>Khách hàng (ký, ghi rõ họ tên)</span></div><div><span>Nhân viên Sang Y</span></div></div>
+        <div class="row" style="justify-content:flex-end"><button class="btn btn-primary" type="button" data-go="intake">Giả sử 1 thời gian sau khách quay lại →</button></div>
+    </section>`;
+}
+
+function warrantyPanel(s) {
+    const items = s.lines.map((line) => {
+        const st = itemStatus(s, line);
+        return `<div class="witem">
+            <span>${esc(line.desc)} <span class="small muted">· ${esc(line.kind)}</span></span>
+            <span class="pill ${st.level}">${st.label}</span>
+            ${st.level !== 'off' ? `<div class="bar" aria-hidden="true"><span style="width:${st.pct}%"></span></div>` : ''}
+        </div>`;
+    }).join('');
+    return `<div class="alert warn">
+        <div><strong>Máy còn bảo hành sửa chữa của Sang Y</strong> theo phiếu <b class="mono">${s.ticket}</b> (trả ngày ${fmt(s.returned)})</div>
+        <div>${items}</div>
+        <div class="small"><b>Không bảo hành:</b> ${s.exclusions.map(esc).join('; ')}</div>
+    </div>`;
+}
+
+function renderIntake(s) {
+    const c = s.complaints[state.complaint];
+    return `<section class="card" aria-labelledby="tab-intake">
+        <div class="card-head"><h2>Lập phiếu mới · dự kiến ${s.newTicket}</h2><span class="muted small num">Hôm nay ${fmt(TODAY)}</span></div>
+        <div class="field"><span>Số serial</span><input type="text" class="mono" value="${esc(s.serial)}" readonly id="serial" aria-label="Số serial"></div>
+        <p class="small muted">Máy đã có trong hệ thống: ${esc(s.type)} ${esc(s.model)} · ${esc(s.customer)}.</p>
+        ${warrantyPanel(s)}
+        <div class="field"><span>Khách báo lỗi gì? <span class="muted" style="font-weight:400">(chọn thử một tình huống)</span></span>
+            <div class="choice">${s.complaints.map((item, i) => `<label><input type="radio" name="complaint" value="${i}" ${i === state.complaint ? 'checked' : ''} data-complaint="${i}"><span>${esc(item.text)}</span></label>`).join('')}</div>
+        </div>
+        <div class="field"><span>Hình thức</span>
+            <div class="choice"><label><input type="checkbox" checked disabled><span><b>Khách yêu cầu bảo hành sửa chữa theo phiếu ${s.ticket}</b><span class="small muted">Phiếu mới liên kết phiếu gốc. Chưa quyết định miễn phí ngay, IT kiểm tra rồi mới kết luận trong hay ngoài phạm vi.</span></span></label></div>
+        </div>
+        <div class="row" style="justify-content:flex-end"><button class="btn btn-primary" type="button" data-go="inspect">Lập phiếu → IT kiểm tra</button></div>
+    </section>`;
+}
+
+function renderInspect(s) {
+    const c = s.complaints[state.complaint];
+    const eligible = s.lines.map((line, i) => ({ line, i, st: itemStatus(s, line) })).filter((x) => x.st.level === 'ok' || x.st.level === 'warn');
+    const suggested = c.verdict === 'in' ? 'in' : 'out';
+    const decision = state.decision ?? suggested;
+    const coveredItem = state.coveredItem ?? (c.item !== null && eligible.some((x) => x.i === c.item) ? c.item : eligible[0]?.i);
+    const reason = state.reason || c.reason || '';
+    const covered = s.lines[coveredItem];
+    const coveredEnds = covered ? addMonths(s.returned, covered.months) : null;
+
+    const result = decision === 'in'
+        ? `<div class="alert ok"><div><strong>Kết quả: Bảo hành sửa chữa, miễn phí.</strong></div>
+            <ul style="margin:0;padding-left:18px">
+                <li>Không lập báo giá, không tính phí, không cần chứng từ ERP.</li>
+                <li>Hạn bảo hành <b>giữ nguyên đến ${coveredEnds ? fmt(coveredEnds) : '—'}</b>, không cộng thêm.</li>
+                <li>Lịch sử máy ghi: phiếu ${s.newTicket} bảo hành cho "${esc(covered?.desc)}" của phiếu ${s.ticket}.</li>
+            </ul></div>`
+        : `<div class="alert bad"><div><strong>Kết quả: Từ chối bảo hành, ngoài phạm vi.</strong></div>
+            <ul style="margin:0;padding-left:18px">
+                <li>Phiếu chuyển sang sửa chữa thường: lập báo giá, khách đồng ý thì sửa.</li>
+                <li>Phiếu vẫn liên kết phiếu ${s.ticket} và lưu lý do, khi khách hỏi lại vẫn tra được.</li>
+            </ul></div>`;
+
+    return `<section class="card" aria-labelledby="tab-inspect">
+        <div class="card-head"><h2>Phiếu ${s.newTicket} · IT kiểm tra</h2><span class="pill warn">Yêu cầu BH theo phiếu ${s.ticket}</span></div>
+        <dl class="facts">
+            <div><dt>Lỗi khách báo</dt><dd>${esc(c.text)}</dd></div>
+            <div><dt>Phiếu gốc</dt><dd><span class="mono">${s.ticket}</span> · trả ${fmt(s.returned)}</dd></div>
+        </dl>
+        ${warrantyPanel(s)}
+        <div class="field"><span>Kết luận sau kiểm tra</span>
+            <div class="choice">
+                <label><input type="radio" name="decision" value="in" data-decision="in" ${decision === 'in' ? 'checked' : ''} ${eligible.length ? '' : 'disabled'}>
+                    <span><b>Trong phạm vi bảo hành → sửa miễn phí</b><span class="small muted">${eligible.length ? 'Chọn hạng mục được bảo hành:' : 'Không còn hạng mục nào trong hạn.'}</span>
+                    ${eligible.length ? `<select data-covered id="covered-item" aria-label="Hạng mục được bảo hành" style="margin-top:6px;max-width:100%">${eligible.map((x) => `<option value="${x.i}" ${x.i === coveredItem ? 'selected' : ''}>${esc(x.line.desc)} · ${x.st.label}</option>`).join('')}</select>` : ''}</span></label>
+                <label><input type="radio" name="decision" value="out" data-decision="out" ${decision === 'out' ? 'checked' : ''}>
+                    <span><b>Ngoài phạm vi → báo giá như sửa chữa thường</b><span class="small muted">Bắt buộc ghi lý do</span>
+                    <textarea data-reason id="reason" aria-label="Lý do ngoài phạm vi" style="margin-top:6px" placeholder="VD: Lỗi bàn phím, phiếu cũ chỉ bảo hành SSD">${esc(reason)}</textarea></span></label>
+            </div>
+        </div>
+        ${c.verdict !== 'in' && decision === 'in' ? '<p class="small" style="color:var(--bad-ink)">Gợi ý của hệ thống: lỗi này có vẻ ngoài phạm vi. IT vẫn là người quyết định.</p>' : ''}
+        ${result}
+        <div>
+            <h3 style="margin-bottom:10px">Lịch sử máy ${esc(s.serial)}</h3>
+            <div class="timeline">
+                <div class="tl"><span class="dot"></span><div><b class="mono">${s.ticket}</b> · Sửa chữa · trả ${fmt(s.returned)}<div class="small muted">${s.lines.filter((l) => l.on && l.months).map((l) => `${esc(l.desc)} (BH ${l.months} th)`).join(' · ') || 'Không bảo hành'}</div></div></div>
+                <div class="tl claim"><span class="dot"></span><div><b class="mono">${s.newTicket}</b> · ${decision === 'in' ? 'Bảo hành sửa chữa, miễn phí' : 'Từ chối BH, ngoài phạm vi → báo giá'} · ${fmt(TODAY)}<div class="small muted">${decision === 'in' ? `Hạng mục: ${esc(covered?.desc)}` : `Lý do: ${esc(reason || 'chưa ghi')}`}</div></div></div>
+            </div>
+        </div>
+    </section>`;
+}
+
+const ASIDES = {
+    finish: `<h3>Ở bước này</h3><ul>
+        <li>Hạng mục <b>lấy sẵn từ báo giá</b>, nhân viên chỉ tick và nhập số tháng.</li>
+        <li>Mỗi hạng mục có hạn riêng: SSD 12 tháng, cài Win 1 tháng.</li>
+        <li>Phiếu miễn phí không có báo giá thì nhân viên gõ hạng mục đã làm.</li>
+        <li>Danh sách "Không bảo hành" lấy mặc định theo loại thiết bị, sửa ở trang Danh mục.</li></ul>
+        <p class="small muted">Thử bỏ tick, đổi số tháng hoặc thêm, bỏ mục "không bảo hành". Phiếu trả và bước sau sẽ thay đổi theo.</p>`,
+    slip: `<h3>Phiếu trả</h3><ul>
+        <li>Mỗi dòng ghi rõ <b>bảo hành bao lâu, đến ngày nào</b> hoặc "Không bảo hành".</li>
+        <li>Mục "Không bảo hành" in rõ ràng để khách ký nhận, tránh tranh cãi về sau.</li>
+        <li>Xuất Excel và PDF như phiếu trả hiện tại.</li></ul>`,
+    intake: `<h3>Khi khách quay lại</h3><ul>
+        <li>Nhập serial là hiện <b>từng hạng mục</b>: còn hạn, sắp hết hay đã hết.</li>
+        <li>Nhân viên nhận máy không cần quyết định miễn phí, chỉ ghi là khách yêu cầu bảo hành theo phiếu gốc.</li>
+        <li>Ô "Còn / Hết bảo hành" vẫn giữ cho <b>bảo hành của hãng</b>, tách riêng khỏi bảo hành của Sang Y.</li></ul>`,
+    inspect: `<h3>Kết luận</h3><ul>
+        <li><b>Trong phạm vi:</b> sửa miễn phí, không báo giá, <b>không cộng dồn</b> thời gian bảo hành.</li>
+        <li><b>Ngoài phạm vi:</b> bắt buộc ghi lý do, rồi báo giá như bình thường.</li>
+        <li>Hệ thống chỉ gợi ý, IT là người quyết định.</li>
+        <li>Báo cáo thêm: số máy quay lại bảo hành sau sửa, trong hay ngoài phạm vi.</li></ul>
+        <p class="small muted">Quay lại bước 3 để chọn tình huống lỗi khác.</p>`,
+};
+
+function render() {
+    renderPicker();
+    const s = current();
+    const views = { finish: renderFinish, slip: renderSlip, intake: renderIntake, inspect: renderInspect };
+    document.getElementById('stage').innerHTML = views[state.step](s);
+    document.getElementById('aside').innerHTML = ASIDES[state.step];
+}
+
+function resetClaim() {
+    state.decision = null; state.reason = ''; state.coveredItem = null;
+}
+
+document.addEventListener('click', (event) => {
+    const scenario = event.target.closest('[data-scenario]');
+    const step = event.target.closest('[data-step]');
+    const go = event.target.closest('[data-go]');
+    const drop = event.target.closest('[data-drop-exclusion]');
+
+    if (scenario) { state.scenario = scenario.dataset.scenario; state.complaint = 0; resetClaim(); render(); }
+    if (step) { state.step = step.dataset.step; render(); }
+    if (go) { state.step = go.dataset.go; render(); window.scrollTo({ top: document.getElementById('steps').offsetTop - 16, behavior: 'smooth' }); }
+    if (drop) { current().exclusions.splice(Number(drop.dataset.dropExclusion), 1); render(); }
+});
+
+document.addEventListener('change', (event) => {
+    const t = event.target;
+    const s = current();
+    if (t.matches('[data-line-on]')) {
+        const line = s.lines[Number(t.dataset.lineOn)];
+        line.on = t.checked;
+        if (line.on && !line.months) line.months = 3;
+        resetClaim(); render();
+    }
+    if (t.matches('[data-line-months]')) {
+        const months = Math.max(1, Math.min(60, Number(t.value) || 1));
+        s.lines[Number(t.dataset.lineMonths)].months = months;
+        resetClaim(); render();
+    }
+    if (t.matches('[data-complaint]')) { state.complaint = Number(t.value); resetClaim(); render(); }
+    if (t.matches('[data-decision]')) { state.decision = t.value; render(); }
+    if (t.matches('[data-covered]')) { state.coveredItem = Number(t.value); render(); }
+});
+
+document.addEventListener('input', (event) => {
+    if (event.target.matches('[data-reason]')) {
+        state.reason = event.target.value;
+    }
+});
+
+document.addEventListener('focusout', (event) => {
+    if (event.target.matches('[data-reason]') && state.step === 'inspect') {
+        render();
+    }
+});
+
+document.addEventListener('submit', (event) => {
+    if (event.target.matches('[data-add-exclusion]')) {
+        event.preventDefault();
+        const input = event.target.querySelector('input');
+        const text = input.value.trim();
+        if (text) { current().exclusions.push(text); render(); document.getElementById('new-exclusion')?.focus(); }
+    }
+});
+
+render();
+</script>
