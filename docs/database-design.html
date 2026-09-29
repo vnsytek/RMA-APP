@@ -1,0 +1,536 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Thiết kế CSDL RMA Sang Y</title>
+<style>
+  :root {
+    --bg: #f6f7f5; --surface: #ffffff; --text: #1d2521; --muted: #5d6a63;
+    --border: #d9dfdb; --accent: #1f4a3d; --accent-soft: #e4efe9;
+    --warn: #8a5a00; --warn-soft: #fff4dc; --new: #1f6b45; --new-soft: #dcf1e5; --code: #eef1ef;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --bg: #121614; --surface: #1a201d; --text: #e3e8e5; --muted: #9aa8a0;
+      --border: #2e3833; --accent: #7cc3a6; --accent-soft: #1f2f28;
+      --warn: #f0c060; --warn-soft: #2e2716; --new: #7fd3a4; --new-soft: #173226; --code: #222a26;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #121614; --surface: #1a201d; --text: #e3e8e5; --muted: #9aa8a0;
+    --border: #2e3833; --accent: #7cc3a6; --accent-soft: #1f2f28;
+    --warn: #f0c060; --warn-soft: #2e2716; --new: #7fd3a4; --new-soft: #173226; --code: #222a26;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 1120px; margin: 0 auto; padding: 32px 16px 80px; }
+  h1 { font-size: 28px; margin: 0 0 4px; text-wrap: balance; }
+  h2 { font-size: 20px; margin: 48px 0 12px; padding-bottom: 6px; border-bottom: 2px solid var(--accent); }
+  h3 { font-size: 16px; margin: 28px 0 8px; display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; }
+  h3 small { font-weight: 400; color: var(--muted); font-size: 13px; }
+  .sub { color: var(--muted); margin: 0 0 24px; }
+  nav { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 12px 16px; }
+  nav ol { margin: 0; padding-left: 20px; columns: 2; }
+  nav a { color: var(--accent); text-decoration: none; }
+  code { background: var(--code); padding: 1px 5px; border-radius: 4px; font: 13px ui-monospace, Consolas, monospace; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 16px; overflow-x: auto; }
+  .diagram { text-align: center; }
+  table { width: 100%; border-collapse: collapse; background: var(--surface); font-size: 14px; }
+  th, td { border: 1px solid var(--border); padding: 6px 10px; text-align: left; vertical-align: top; }
+  th { background: var(--accent-soft); }
+  .tbl { overflow-x: auto; margin-bottom: 8px; }
+  .tag { display: inline-block; font-size: 11px; font-weight: 600; padding: 0 6px; border-radius: 4px; background: var(--accent-soft); color: var(--accent); margin-right: 4px; }
+  .tag.new { background: var(--new-soft); color: var(--new); }
+  .note { background: var(--warn-soft); border-left: 4px solid var(--warn); padding: 10px 14px; border-radius: 4px; }
+  .flow { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 4px 0; }
+  .flow span { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 4px 10px; }
+  .flow b { color: var(--muted); font-weight: 400; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; }
+  ol li, ul li { margin-bottom: 4px; }
+  .sflow { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px 16px; display: grid; gap: 8px; }
+  .lane { font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); font-weight: 600; margin-top: 4px; }
+  .path { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 6px 0; }
+  .st { display: inline-block; padding: 7px 12px; border-radius: 8px; border: 1.5px solid; font-size: 14px; font-weight: 600; color: #16211c; white-space: nowrap; line-height: 1.3; }
+  .s-start { background: #1f4a3d; border-color: #1f4a3d; color: #fff; border-radius: 999px; }
+  .s-wait { background: #e3edf6; border-color: #2d5f8a; } .s-work { background: #fbf0d9; border-color: #8a5a00; }
+  .s-center { background: #ece6f7; border-color: #5a3f8f; } .s-quote { background: #fbe5d6; border-color: #a4480f; }
+  .s-ready { background: #dcf1e5; border-color: #1f6b45; } .s-done { background: #e7ebe9; border-color: #4b5751; border-width: 2.5px; border-radius: 999px; }
+  .s-cancel { background: #f7e1e1; border-color: #9a3030; border-radius: 999px; }
+  .act { display: inline-grid; justify-items: center; min-width: 56px; padding: 0 8px; align-self: center; }
+  .act small { font-size: 12px; color: var(--text); white-space: nowrap; padding: 0 4px 3px; min-height: 1.2em; }
+  .act i { position: relative; display: block; width: 100%; min-width: 48px; height: 0; border-top: 2px solid var(--muted); }
+  .act i::after { content: ""; position: absolute; right: -2px; top: -6px; border: 5px solid transparent; border-left: 8px solid var(--muted); border-right: 0; }
+  .act.alt i { border-top-style: dashed; }
+  .alt-row { display: grid; grid-template-columns: 150px 1fr; gap: 8px 12px; align-items: center; padding: 6px 0; border-top: 1px dashed var(--border); }
+  .alt-row .why { font-size: 13px; font-weight: 600; color: var(--muted); }
+  .st-group { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+  .or { font-size: 12px; color: var(--muted); padding: 0 2px; }
+  .note-chip { font-size: 12px; color: var(--muted); padding-left: 10px; align-self: center; }
+  .hint-row { margin: 0; font-size: 13px; color: var(--muted); }
+  @media (max-width: 640px) { .alt-row { grid-template-columns: 1fr; } }
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 8px 0 4px; font-size: 13px; }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .legend i { width: 14px; height: 14px; border-radius: 4px; border: 1.5px solid; display: inline-block; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Thiết kế cơ sở dữ liệu – Hệ thống RMA Sang Y</h1>
+  <p class="sub">Bản 2 · 15 bảng nghiệp vụ · MySQL 8 · utf8mb4_unicode_ci · Laravel 13 · cập nhật 29/09/2026 · chưa viết migration</p>
+
+  <nav><ol>
+    <li><a href="#nghiep-vu">Nghiệp vụ</a></li>
+    <li><a href="#erd">Sơ đồ ERD</a></li>
+    <li><a href="#quan-he">Mối quan hệ</a></li>
+    <li><a href="#bang">Chi tiết 15 bảng</a></li>
+    <li><a href="#trang-thai">Trạng thái phiếu</a></li>
+    <li><a href="#quy-tac">Quy tắc nghiệp vụ</a></li>
+    <li><a href="#index">Index</a></li>
+    <li><a href="#thay-doi">Thay đổi so với bản 1</a></li>
+    <li><a href="#mo">Việc còn mở</a></li>
+  </ol></nav>
+
+  <h2 id="nghiep-vu">1. Nghiệp vụ</h2>
+  <p>Công ty TNHH Dịch Vụ và Kỹ Thuật Sang Y · Số 303 Lê Duẩn, Kiến An, Hải Phòng. Chuyển phiếu viết tay sang hệ thống. Có 3 loại phiếu, dùng chung một dãy số <code>YYMM</code> + 4 số (<code>26090001</code>).</p>
+  <div class="grid">
+    <div class="card"><b>1a. Bảo hành tại chỗ</b> <code>onsite</code>
+      <div class="flow"><span>Lập phiếu, mở case với hãng</span><b>→</b><span>Chờ hãng đến</span><b>→</b><span>Hãng xử lý xong</span></div>
+      <small>Không mang máy về, không in phiếu nhận/trả.</small></div>
+    <div class="card"><b>1b. Nhận về bảo hành</b> <code>carry_in</code>
+      <div class="flow"><span>IT nhận</span><b>→</b><span>IT kiểm tra</span><b>→</b><span>Gửi TTBH</span><b>→</b><span>Nhận về</span><b>→</b><span>Trả khách</span></div>
+      <small>IT tự xử lý được thì bỏ qua TTBH. Có thể gửi TTBH nhiều lần. TTBH từ chối thì chuyển thành sửa chữa.</small></div>
+    <div class="card"><b>2. Sửa chữa</b> <code>repair</code>
+      <div class="flow"><span>IT nhận</span><b>→</b><span>IT kiểm tra</span><b>→</b><span>Miễn phí / Báo giá / Báo phế</span><b>→</b><span>Trả khách</span></div>
+      <small>Báo giá một lần: khách đồng ý thì sửa (có phí), không đồng ý thì trả máy không sửa. Phiếu có phí nhập ERP: V223 (nhận hàng), V233 (trả hàng).</small></div>
+  </div>
+
+  <h3>Yêu cầu gốc → nơi lưu</h3>
+  <div class="tbl"><table>
+    <tr><th>Yêu cầu</th><th>Lưu ở đâu</th></tr>
+    <tr><td>Loại thiết bị · Thương hiệu · Model</td><td><code>device_types</code> · <code>brands</code> · <code>product_models</code></td></tr>
+    <tr><td>Số serial (Service Tag)</td><td><code>devices.serial_number</code>; máy hãng đổi: <code>devices.replaced_from_device_id</code></td></tr>
+    <tr><td>Ngày nhận / ngày trả</td><td><code>rma_tickets.received_date</code>, <code>returned_date</code></td></tr>
+    <tr><td>Bảo hành / có tính phí</td><td><code>rma_tickets.service_type</code>, <code>is_chargeable</code>; hạn bảo hành: <code>device_warranties</code></td></tr>
+    <tr><td>Số tiền tính phí</td><td><code>rma_tickets.charge_amount</code> (= tổng báo giá khi khách đồng ý)</td></tr>
+    <tr><td>Số phiếu</td><td><code>rma_tickets.ticket_no</code> + <code>ticket_sequences</code></td></tr>
+    <tr><td>Phiếu có phí → ERP V223 / V233</td><td><code>rma_tickets.erp_receipt_no</code>, <code>erp_return_no</code></td></tr>
+    <tr><td>Gửi hãng / TTBH</td><td><code>service_centers</code>, <code>rma_center_shipments</code>, <code>rma_replaced_parts</code></td></tr>
+    <tr><td>Báo giá sửa chữa</td><td><code>rma_quote_items</code> (các dòng giá) + <code>rma_tickets.quote_status</code></td></tr>
+    <tr><td>Chứng từ (hoá đơn, Delivery Note, phiếu trả TTBH…)</td><td><code>attachments</code></td></tr>
+  </table></div>
+
+  <h2 id="erd">2. Sơ đồ ERD</h2>
+  <div class="card diagram">
+<pre class="mermaid">
+erDiagram
+    device_types ||--o{ product_models : "phân loại"
+    brands ||--o{ product_models : "sản xuất"
+    product_models ||--o{ devices : "thuộc model"
+    devices |o--o{ devices : "đổi thành"
+    devices ||--o{ device_warranties : "có bảo hành"
+    customers ||--o{ rma_tickets : "gửi"
+    devices ||--o{ rma_tickets : "máy nhận"
+    devices |o--o{ rma_tickets : "máy trả"
+    users |o--o{ rma_tickets : "IT phụ trách"
+    rma_tickets ||--|{ rma_ticket_status_logs : "lịch sử"
+    rma_tickets ||--o{ rma_center_shipments : "gửi TTBH"
+    service_centers ||--o{ rma_center_shipments : "nhận"
+    rma_tickets ||--o{ rma_quote_items : "dòng báo giá"
+    rma_tickets ||--o{ rma_replaced_parts : "linh kiện thay"
+    rma_center_shipments |o--o{ rma_replaced_parts : "trong lần gửi"
+    rma_tickets |o--o{ device_warranties : "tạo BH sau sửa"
+    rma_tickets ||--o{ attachments : "chứng từ"
+    devices ||--o{ attachments : "chứng từ"
+
+    users {
+        bigint id PK
+        string name
+        string email UK
+        string role "admin | it"
+        boolean is_active
+    }
+    customers {
+        bigint id PK
+        string name "tên khách / công ty"
+        string contact_name "người liên hệ"
+        string phone
+        string address
+        text note
+    }
+    device_types {
+        bigint id PK
+        string code UK
+        string name
+        boolean is_active
+    }
+    brands {
+        bigint id PK
+        string name UK
+        boolean is_active
+    }
+    product_models {
+        bigint id PK
+        bigint brand_id FK
+        bigint device_type_id FK
+        string code "UK(brand_id, code)"
+        string name
+        boolean is_active
+    }
+    service_centers {
+        bigint id PK
+        string name
+        string brands
+        string phone
+        string address
+        boolean is_active
+    }
+    devices {
+        bigint id PK
+        bigint product_model_id FK
+        string serial_number "UK(model, serial)"
+        bigint replaced_from_device_id FK "nullable"
+    }
+    device_warranties {
+        bigint id PK
+        bigint device_id FK
+        string warranty_type "vendor | sangy | repair"
+        date start_date
+        smallint months
+        date end_date
+        string document_no
+        bigint source_ticket_id FK "nullable"
+    }
+    rma_tickets {
+        bigint id PK
+        char ticket_no UK "26090001"
+        string service_type "onsite | carry_in | repair"
+        string original_service_type
+        bigint customer_id FK
+        bigint device_id FK
+        bigint returned_device_id FK "nullable"
+        bigint technician_id FK "nullable"
+        text fault_description
+        string accessories
+        date received_date
+        date returned_date
+        string status
+        string result
+        string scrap_reason
+        boolean is_chargeable
+        decimal charge_amount
+        string quote_status "sent | accepted | rejected"
+        timestamp quoted_at
+        timestamp quote_decided_at
+        string erp_receipt_no "V223"
+        string erp_return_no "V233"
+        bigint created_by FK
+        timestamp deleted_at
+    }
+    rma_center_shipments {
+        bigint id PK
+        bigint rma_ticket_id FK
+        bigint service_center_id FK
+        string vendor_case_no
+        date appointment_date "onsite"
+        date sent_date
+        date back_date
+        string center_return_no
+        string outcome "pending | repaired | replaced | rejected | cancelled"
+    }
+    rma_quote_items {
+        bigint id PK
+        bigint rma_ticket_id FK
+        string description
+        int quantity
+        decimal unit_price
+    }
+    rma_replaced_parts {
+        bigint id PK
+        bigint rma_ticket_id FK
+        bigint rma_center_shipment_id FK "nullable"
+        string part_code
+        string description
+        int quantity
+    }
+    rma_ticket_status_logs {
+        bigint id PK
+        bigint rma_ticket_id FK
+        string from_status
+        string to_status
+        bigint user_id FK
+        text note
+        timestamp created_at
+    }
+    ticket_sequences {
+        string ticket_type PK
+        char period PK "YYMM"
+        int last_number
+    }
+    attachments {
+        bigint id PK
+        string attachable_type "ticket | device"
+        bigint attachable_id
+        string doc_type
+        string file_name
+        string file_path
+        string mime_type
+        int size_bytes
+        bigint uploaded_by FK
+    }
+</pre>
+  </div>
+  <p class="sub" style="margin-top:8px"><code>ticket_sequences</code> là bộ đếm, không có khoá ngoại. <code>attachments</code> dùng quan hệ đa hình của Laravel (<code>morphMany</code>): một bảng chứng từ gắn được vào phiếu hoặc vào máy.</p>
+
+  <h2 id="quan-he">3. Mối quan hệ</h2>
+  <div class="tbl"><table>
+    <tr><th>Cha</th><th>Con</th><th>Kiểu</th><th>Ý nghĩa</th><th>Khi xoá cha</th></tr>
+    <tr><td><code>device_types</code>, <code>brands</code></td><td><code>product_models</code></td><td>1–N</td><td>Mỗi model thuộc một loại và một hãng</td><td>Chặn</td></tr>
+    <tr><td><code>product_models</code></td><td><code>devices</code></td><td>1–N</td><td>Nhiều máy cùng model</td><td>Chặn</td></tr>
+    <tr><td><code>devices</code></td><td><code>devices</code></td><td>1–N (tự nối)</td><td>Máy hãng đổi trỏ về máy gốc qua <code>replaced_from_device_id</code></td><td>Chặn</td></tr>
+    <tr><td><code>devices</code></td><td><code>device_warranties</code></td><td>1–N</td><td>Một máy có nhiều dòng bảo hành: hãng, Sang Y, sau sửa chữa</td><td>Chặn</td></tr>
+    <tr><td><code>customers</code></td><td><code>rma_tickets</code></td><td>1–N</td><td>Một khách gửi nhiều phiếu</td><td>Chặn</td></tr>
+    <tr><td><code>devices</code></td><td><code>rma_tickets</code></td><td>1–N (2 lần)</td><td><code>device_id</code> = máy nhận; <code>returned_device_id</code> = máy trả nếu hãng đổi</td><td>Chặn</td></tr>
+    <tr><td><code>users</code></td><td><code>rma_tickets</code></td><td>1–N</td><td><code>technician_id</code> (IT phụ trách), <code>created_by</code></td><td>Chặn</td></tr>
+    <tr><td><code>rma_tickets</code></td><td><code>rma_center_shipments</code></td><td>1–N</td><td>Mỗi lần gửi hãng/TTBH là một dòng; onsite cũng một dòng</td><td>Chặn</td></tr>
+    <tr><td><code>service_centers</code></td><td><code>rma_center_shipments</code></td><td>1–N</td><td>TTBH nhận nhiều lần gửi</td><td>Chặn</td></tr>
+        <tr><td><code>rma_tickets</code></td><td><code>rma_quote_items</code></td><td>1–N</td><td>Các dòng linh kiện / công của báo giá (mỗi phiếu chỉ một báo giá)</td><td>Chặn</td></tr>
+    <tr><td><code>rma_tickets</code></td><td><code>rma_replaced_parts</code></td><td>1–N</td><td>Linh kiện hãng/TTBH đã thay; có thể gắn với lần gửi cụ thể</td><td>Chặn</td></tr>
+    <tr><td><code>rma_tickets</code></td><td><code>device_warranties</code></td><td>1–N</td><td>Phiếu sửa có phí tạo bảo hành sau sửa (<code>source_ticket_id</code>)</td><td>Chặn</td></tr>
+    <tr><td><code>rma_tickets</code></td><td><code>rma_ticket_status_logs</code></td><td>1–N (≥1)</td><td>Mỗi lần đổi trạng thái một dòng</td><td>Chặn</td></tr>
+    <tr><td><code>rma_tickets</code>, <code>devices</code></td><td><code>attachments</code></td><td>1–N (đa hình)</td><td>Ảnh / PDF chứng từ</td><td>Chặn</td></tr>
+  </table></div>
+  <p class="note">Không xoá cứng dữ liệu nghiệp vụ. Phiếu chỉ soft delete; danh mục, TTBH, người dùng tắt <code>is_active</code>.</p>
+
+  <h2 id="bang">4. Chi tiết 15 bảng</h2>
+  <p>Mọi bảng có <code>created_at</code>, <code>updated_at</code>, trừ <code>ticket_sequences</code> và <code>rma_ticket_status_logs</code> (chỉ <code>created_at</code>). <span class="tag new">mới</span> = bảng hoặc cột thêm ở bản 2.</p>
+
+  <h3>4.1 <code>rma_tickets</code> <small>Phiếu RMA</small></h3>
+  <div class="tbl"><table>
+    <tr><th>Cột</th><th>Kiểu</th><th>Null</th><th>Ghi chú</th></tr>
+    <tr><td><code>id</code></td><td>bigint unsigned</td><td></td><td>PK</td></tr>
+    <tr><td><code>ticket_no</code></td><td>char(8)</td><td></td><td>UNIQUE, tự sinh, không sửa</td></tr>
+    <tr><td><code>service_type</code> <span class="tag new">mới</span></td><td>enum</td><td></td><td><code>onsite</code> · <code>carry_in</code> · <code>repair</code> (loại hiện tại)</td></tr>
+    <tr><td><code>original_service_type</code> <span class="tag new">mới</span></td><td>enum</td><td></td><td>Loại lúc lập phiếu. Khác <code>service_type</code> khi TTBH từ chối bảo hành</td></tr>
+    <tr><td><code>customer_id</code></td><td>FK customers</td><td></td><td></td></tr>
+    <tr><td><code>device_id</code></td><td>FK devices</td><td></td><td>Máy nhận (Seri lỗi)</td></tr>
+    <tr><td><code>returned_device_id</code></td><td>FK devices</td><td>có</td><td>Máy trả khi hãng đổi (Seri trả)</td></tr>
+    <tr><td><code>technician_id</code></td><td>FK users</td><td>có</td><td>IT phụ trách</td></tr>
+    <tr><td><code>fault_description</code></td><td>text</td><td></td><td>Lỗi khách báo</td></tr>
+    <tr><td><code>accessories</code></td><td>varchar(255)</td><td>có</td><td>Phụ kiện kèm theo</td></tr>
+    <tr><td><code>received_date</code></td><td>date</td><td></td><td>Ngày nhận (onsite: ngày yêu cầu)</td></tr>
+    <tr><td><code>returned_date</code></td><td>date</td><td>có</td><td>Ngày trả (onsite: ngày hoàn tất); ≥ <code>received_date</code></td></tr>
+    <tr><td><code>status</code></td><td>varchar(20)</td><td></td><td>Xem mục 5</td></tr>
+    <tr><td><code>result</code></td><td>varchar(30)</td><td>có</td><td><code>onsite_done</code> · <code>warranty_center</code> · <code>warranty_inhouse</code> · <code>free</code> · <code>repaired</code> · <code>quote_rejected</code> · <code>scrap</code></td></tr>
+    <tr><td><code>scrap_reason</code></td><td>varchar(500)</td><td>có</td><td>Bắt buộc khi <code>result = scrap</code></td></tr>
+    <tr><td><code>quote_status</code> <span class="tag new">mới</span></td><td>enum</td><td>có</td><td><code>sent</code> (chờ khách) · <code>accepted</code> (đồng ý, sửa) · <code>rejected</code> (không đồng ý, không sửa). Null khi không báo giá</td></tr>
+    <tr><td><code>quoted_at</code>, <code>quote_decided_at</code> <span class="tag new">mới</span></td><td>timestamp</td><td>có</td><td>Lúc gửi báo giá, lúc khách trả lời</td></tr>
+    <tr><td><code>is_chargeable</code></td><td>boolean</td><td></td><td>true khi khách đồng ý báo giá</td></tr>
+    <tr><td><code>charge_amount</code></td><td>decimal(15,0)</td><td>có</td><td>VND, = tổng các dòng báo giá lúc khách đồng ý</td></tr>
+        <tr><td><code>erp_receipt_no</code></td><td>varchar(50)</td><td>có</td><td>Chứng từ ERP V223 (nhận hàng), chỉ phiếu có phí</td></tr>
+    <tr><td><code>erp_return_no</code></td><td>varchar(50)</td><td>có</td><td>Chứng từ ERP V233 (trả hàng), chỉ phiếu có phí</td></tr>
+    <tr><td><code>note</code></td><td>text</td><td>có</td><td></td></tr>
+    <tr><td><code>created_by</code></td><td>FK users</td><td></td><td></td></tr>
+    <tr><td><code>deleted_at</code></td><td>timestamp</td><td>có</td><td>Soft delete</td></tr>
+  </table></div>
+
+  <h3>4.2 <code>rma_center_shipments</code> <span class="tag new">mới</span> <small>Mỗi lần gửi hãng / TTBH</small></h3>
+  <div class="tbl"><table>
+    <tr><th>Cột</th><th>Kiểu</th><th>Null</th><th>Ghi chú</th></tr>
+    <tr><td><code>rma_ticket_id</code></td><td>FK</td><td></td><td></td></tr>
+    <tr><td><code>service_center_id</code></td><td>FK</td><td></td><td></td></tr>
+    <tr><td><code>vendor_case_no</code></td><td>varchar(50)</td><td>có</td><td>Mã hồ sơ của hãng, VD Dell SER No <code>92460267312</code></td></tr>
+    <tr><td><code>appointment_date</code></td><td>date</td><td>có</td><td>Ngày hẹn hãng đến (chỉ onsite)</td></tr>
+    <tr><td><code>sent_date</code></td><td>date</td><td></td><td>Ngày gửi TTBH (onsite: ngày yêu cầu hãng)</td></tr>
+    <tr><td><code>back_date</code></td><td>date</td><td>có</td><td>Ngày nhận về công ty (onsite: ngày hãng xử lý xong); ≥ <code>sent_date</code></td></tr>
+    <tr><td><code>center_return_no</code></td><td>varchar(50)</td><td>có</td><td>Số phiếu trả của TTBH</td></tr>
+    <tr><td><code>outcome</code></td><td>enum</td><td></td><td><code>pending</code> (đang ở TTBH) · <code>repaired</code> · <code>replaced</code> (đổi máy/serial) · <code>rejected</code> (từ chối BH) · <code>cancelled</code> (phiếu bị hủy khi đang chờ)</td></tr>
+    <tr><td><code>note</code>, <code>created_by</code></td><td></td><td></td><td></td></tr>
+  </table></div>
+  <p>Index <code>(rma_ticket_id)</code>, <code>(service_center_id, outcome)</code>, <code>(vendor_case_no)</code>. Mỗi phiếu có tối đa một dòng <code>pending</code>.</p>
+
+  <h3>4.3 <code>rma_quote_items</code> <span class="tag new">mới</span> <small>Dòng báo giá sửa chữa</small></h3>
+  <div class="tbl"><table>
+    <tr><th>Cột</th><th>Kiểu</th><th>Ghi chú</th></tr>
+    <tr><td><code>rma_ticket_id</code></td><td>FK</td><td>Mỗi phiếu chỉ có <b>một</b> báo giá, nên dòng giá gắn thẳng vào phiếu</td></tr>
+    <tr><td><code>description</code></td><td>varchar(255)</td><td>Linh kiện hoặc công, VD "Đầu kim LQ-310"</td></tr>
+    <tr><td><code>quantity</code></td><td>int unsigned</td><td>≥ 1</td></tr>
+    <tr><td><code>unit_price</code></td><td>decimal(15,0)</td><td>Thành tiền = quantity × unit_price (tính khi hiển thị)</td></tr>
+  </table></div>
+  <p>Chỉ thêm / xoá dòng khi phiếu đang ở <code>inspecting</code>. Gửi báo giá rồi thì khoá, không báo giá lại.</p>
+
+  <h3>4.4 <code>rma_replaced_parts</code> <span class="tag new">mới</span> <small>Linh kiện hãng / TTBH thay</small></h3>
+  <div class="tbl"><table>
+    <tr><th>Cột</th><th>Kiểu</th><th>Null</th><th>Ghi chú</th></tr>
+    <tr><td><code>rma_ticket_id</code></td><td>FK</td><td></td><td></td></tr>
+    <tr><td><code>rma_center_shipment_id</code></td><td>FK</td><td>có</td><td>Thay trong lần gửi nào</td></tr>
+    <tr><td><code>part_code</code></td><td>varchar(50)</td><td>có</td><td>VD <code>5JKJK</code></td></tr>
+    <tr><td><code>description</code></td><td>varchar(255)</td><td></td><td>VD <code>ASSY,BASE,DIS,U3223QE,ANZ</code></td></tr>
+    <tr><td><code>quantity</code></td><td>int unsigned</td><td></td><td></td></tr>
+  </table></div>
+
+  <h3>4.5 <code>devices</code> <small>Máy vật lý</small></h3>
+  <div class="tbl"><table>
+    <tr><th>Cột</th><th>Kiểu</th><th>Null</th><th>Ghi chú</th></tr>
+    <tr><td><code>product_model_id</code></td><td>FK</td><td></td><td></td></tr>
+    <tr><td><code>serial_number</code></td><td>varchar(100)</td><td></td><td>INDEX; UNIQUE (<code>product_model_id</code>, <code>serial_number</code>)</td></tr>
+    <tr><td><code>replaced_from_device_id</code> <span class="tag new">mới</span></td><td>FK devices</td><td>có</td><td>Máy gốc, khi đây là máy hãng đổi. Máy mới kế thừa hạn bảo hành của máy gốc</td></tr>
+  </table></div>
+
+  <h3>4.6 <code>device_warranties</code> <span class="tag new">mới</span> <small>Bảo hành của máy</small></h3>
+  <div class="tbl"><table>
+    <tr><th>Cột</th><th>Kiểu</th><th>Null</th><th>Ghi chú</th></tr>
+    <tr><td><code>device_id</code></td><td>FK</td><td></td><td></td></tr>
+    <tr><td><code>warranty_type</code></td><td>enum</td><td></td><td><code>vendor</code> (hãng) · <code>sangy</code> (Sang Y bán) · <code>repair</code> (sau sửa chữa)</td></tr>
+    <tr><td><code>start_date</code></td><td>date</td><td></td><td>Ngày mua / ngày trả sau sửa</td></tr>
+    <tr><td><code>months</code></td><td>smallint unsigned</td><td></td><td>Số tháng bảo hành</td></tr>
+    <tr><td><code>end_date</code></td><td>date</td><td></td><td><code>start_date + months</code>, lưu sẵn để tra cứu nhanh</td></tr>
+    <tr><td><code>document_no</code></td><td>varchar(50)</td><td>có</td><td>Số hoá đơn / phiếu xuất / số phiếu RMA</td></tr>
+    <tr><td><code>source_ticket_id</code></td><td>FK rma_tickets</td><td>có</td><td>Phiếu sửa đã tạo dòng bảo hành này</td></tr>
+    <tr><td><code>note</code>, <code>created_by</code></td><td></td><td></td><td></td></tr>
+  </table></div>
+  <p>Index <code>(device_id, end_date)</code>. Nhập tay hoặc nhập từ file Excel.</p>
+
+  <h3>4.7 <code>attachments</code> <span class="tag new">mới</span> <small>Chứng từ đính kèm</small></h3>
+  <div class="tbl"><table>
+    <tr><th>Cột</th><th>Kiểu</th><th>Ghi chú</th></tr>
+    <tr><td><code>attachable_type</code>, <code>attachable_id</code></td><td>varchar, bigint</td><td>Gắn vào <code>rma_tickets</code> hoặc <code>devices</code>. INDEX (type, id)</td></tr>
+    <tr><td><code>doc_type</code></td><td>varchar(30)</td><td><code>invoice</code> hoá đơn · <code>warranty_card</code> phiếu BH · <code>vendor_note</code> phiếu hãng · <code>center_return</code> phiếu trả TTBH · <code>scrap_record</code> biên bản báo phế · <code>photo</code> ảnh máy · <code>other</code></td></tr>
+    <tr><td><code>file_name</code>, <code>file_path</code>, <code>mime_type</code>, <code>size_bytes</code></td><td></td><td>File lưu trên disk <code>storage/app/attachments</code>, CSDL chỉ lưu đường dẫn. Tối đa 10 MB, chỉ ảnh và PDF</td></tr>
+    <tr><td><code>uploaded_by</code></td><td>FK users</td><td></td></tr>
+  </table></div>
+
+  <h3>4.8 <code>customers</code> <small>Khách hàng</small></h3>
+  <div class="tbl"><table>
+    <tr><th>Cột</th><th>Kiểu</th><th>Null</th><th>Ghi chú</th></tr>
+    <tr><td><code>name</code></td><td>varchar(255)</td><td></td><td>Tên khách hoặc tên công ty</td></tr>
+    <tr><td><code>contact_name</code> <span class="tag new">mới</span></td><td>varchar(255)</td><td>có</td><td>Người liên hệ, VD "Chị Thu Anh"</td></tr>
+    <tr><td><code>phone</code></td><td>varchar(20)</td><td></td><td>INDEX</td></tr>
+    <tr><td><code>address</code></td><td>varchar(500)</td><td>có</td><td></td></tr>
+    <tr><td><code>note</code></td><td>text</td><td>có</td><td>Cột <code>company_name</code> của bản 1 bỏ, vì <code>name</code> đã là tên công ty</td></tr>
+  </table></div>
+
+  <h3>4.9 Danh mục <small><code>device_types</code>, <code>brands</code>, <code>product_models</code>, <code>service_centers</code></small></h3>
+  <div class="tbl"><table>
+    <tr><th>Bảng</th><th>Cột</th><th>Ràng buộc</th></tr>
+    <tr><td><code>device_types</code></td><td><code>code</code> varchar(30), <code>name</code> varchar(100), <code>is_active</code></td><td>UNIQUE <code>code</code></td></tr>
+    <tr><td><code>brands</code></td><td><code>name</code> varchar(100), <code>is_active</code></td><td>UNIQUE <code>name</code></td></tr>
+    <tr><td><code>product_models</code></td><td><code>brand_id</code>, <code>device_type_id</code>, <code>code</code> varchar(100), <code>name</code>, <code>is_active</code></td><td>UNIQUE (<code>brand_id</code>, <code>code</code>)</td></tr>
+    <tr><td><code>service_centers</code></td><td><code>name</code>, <code>brands</code> (chữ tự do), <code>phone</code>, <code>address</code>, <code>is_active</code></td><td></td></tr>
+  </table></div>
+
+  <h3>4.10 Hệ thống <small><code>users</code>, <code>rma_ticket_status_logs</code>, <code>ticket_sequences</code></small></h3>
+  <div class="tbl"><table>
+    <tr><th>Bảng</th><th>Cột</th><th>Ghi chú</th></tr>
+    <tr><td><code>users</code></td><td>Bảng mặc định Laravel + <code>role</code> (<code>admin</code> | <code>it</code>), <code>is_active</code></td><td>Hiện có Vũ Bảo Long, Phạm Minh Tuấn</td></tr>
+    <tr><td><code>rma_ticket_status_logs</code></td><td><code>rma_ticket_id</code>, <code>from_status</code>, <code>to_status</code>, <code>user_id</code>, <code>note</code>, <code>created_at</code></td><td>Chỉ ghi thêm. INDEX (<code>rma_ticket_id</code>, <code>created_at</code>)</td></tr>
+    <tr><td><code>ticket_sequences</code></td><td><code>ticket_type</code>, <code>period</code> char(4), <code>last_number</code></td><td>PK (<code>ticket_type</code>, <code>period</code>). Khoá dòng <code>SELECT … FOR UPDATE</code> khi cấp số</td></tr>
+  </table></div>
+
+  <h2 id="trang-thai">5. Trạng thái phiếu</h2>
+  <p>Mỗi loại phiếu đi theo một đường riêng. <b>Ô</b> là trạng thái của phiếu, <b>chữ trên mũi tên</b> là nút bấm trên hệ thống. <b>Đường liền</b> là luồng chính, <b>đường đứt</b> là trường hợp ngoại lệ.</p>
+  <div class="legend">
+    <span><i style="background:#e3edf6;border-color:#2d5f8a"></i>Chờ / mới nhận</span>
+    <span><i style="background:#fbf0d9;border-color:#8a5a00"></i>IT đang làm</span>
+    <span><i style="background:#ece6f7;border-color:#5a3f8f"></i>Đang ở hãng / TTBH</span>
+    <span><i style="background:#fbe5d6;border-color:#a4480f"></i>Chờ khách duyệt giá</span>
+    <span><i style="background:#dcf1e5;border-color:#1f6b45"></i>Xong, chờ trả khách</span>
+    <span><i style="background:#e7ebe9;border-color:#4b5751"></i>Đã đóng</span>
+    <span><i style="background:#f7e1e1;border-color:#9a3030"></i>Đã hủy</span>
+  </div>
+
+  <h3>5.1 Bảo hành tại chỗ <small>hãng đến tận nơi, không mang máy về</small></h3>
+  <div class="sflow">
+    <div class="lane">Luồng chính</div>
+    <div class="path"><span class="st s-start">Lập phiếu, mở case với hãng</span><span class="act"><small></small><i></i></span><span class="st s-wait">Chờ hãng đến</span><span class="act"><small>Hãng xử lý xong</small><i></i></span><span class="st s-done">Hoàn tất</span></div>
+    <div class="lane">Trường hợp khác</div><div class="alt-row"><span class="why">Hãng đổi máy</span><p class="hint-row">Bấm "Hãng xử lý xong" và nhập serial mới. Máy mới giữ hạn bảo hành của máy cũ.</p></div>
+    <div class="alt-row"><span class="why">Hủy phiếu</span><div class="path alt"><span class="st s-wait">Chờ hãng đến</span><span class="act alt"><small>Hủy · bắt buộc ghi lý do</small><i></i></span><span class="st s-cancel">Đã hủy</span></div></div>
+  </div>
+  <h3>5.2 Nhận về bảo hành <small>IT mang máy về, gửi TTBH nếu cần</small></h3>
+  <div class="sflow">
+    <div class="lane">Luồng chính</div>
+    <div class="path"><span class="st s-start">Lập phiếu</span><span class="act"><small></small><i></i></span><span class="st s-wait">Đã nhận máy</span><span class="act"><small>Bắt đầu kiểm tra</small><i></i></span><span class="st s-work">IT kiểm tra</span><span class="act"><small>Gửi TTBH</small><i></i></span><span class="st s-center">Đang ở TTBH</span><span class="act"><small>Nhận về (sửa / đổi mới)</small><i></i></span><span class="st s-ready">Chờ trả khách</span><span class="act"><small>Trả khách</small><i></i></span><span class="st s-done">Đã trả</span></div>
+    <div class="lane">Trường hợp khác</div><div class="alt-row"><span class="why">IT tự sửa được</span><div class="path alt"><span class="st s-work">IT kiểm tra</span><span class="act alt"><small>IT tự xử lý xong</small><i></i></span><span class="st s-ready">Chờ trả khách</span></div></div><div class="alt-row"><span class="why">Nhận về vẫn lỗi</span><div class="path alt"><span class="st s-ready">Chờ trả khách</span><span class="act alt"><small>Vẫn lỗi, gửi TTBH lại</small><i></i></span><span class="st s-center">Đang ở TTBH</span></div></div><div class="alt-row"><span class="why">TTBH từ chối BH</span><div class="path alt"><span class="st s-center">Đang ở TTBH</span><span class="act alt"><small>TTBH từ chối</small><i></i></span><span class="st s-work">IT kiểm tra</span><span class="note-chip">phiếu chuyển thành <b>Sửa chữa</b>, giữ số phiếu → đi tiếp theo 5.3</span></div></div>
+    <div class="alt-row"><span class="why">Hủy phiếu</span><div class="path alt"><span class="st-group"><span class="st s-wait">Đã nhận máy</span><span class="or">hoặc</span><span class="st s-work">IT kiểm tra</span></span><span class="act alt"><small>Hủy · bắt buộc ghi lý do</small><i></i></span><span class="st s-cancel">Đã hủy</span></div></div>
+  </div>
+  <h3>5.3 Sửa chữa <small>IT kiểm tra rồi chọn 1 trong 3 kết quả</small></h3>
+  <div class="sflow">
+    <div class="lane">Luồng chính</div>
+    <div class="path"><span class="st s-start">Lập phiếu</span><span class="act"><small></small><i></i></span><span class="st s-wait">Đã nhận máy</span><span class="act"><small>Bắt đầu kiểm tra</small><i></i></span><span class="st s-work">IT kiểm tra</span><span class="act"><small>② Gửi báo giá</small><i></i></span><span class="st s-quote">Chờ duyệt báo giá</span><span class="act"><small>Khách đồng ý</small><i></i></span><span class="st s-work">Đang sửa</span><span class="act"><small>Sửa xong</small><i></i></span><span class="st s-ready">Chờ trả khách</span><span class="act"><small>Trả khách</small><i></i></span><span class="st s-done">Đã trả</span></div>
+    <div class="lane">Trường hợp khác</div><div class="alt-row"><span class="why">① Lỗi đơn giản</span><div class="path alt"><span class="st s-work">IT kiểm tra</span><span class="act alt"><small>Miễn phí</small><i></i></span><span class="st s-ready">Chờ trả khách</span></div></div><div class="alt-row"><span class="why">③ Không sửa được</span><div class="path alt"><span class="st s-work">IT kiểm tra</span><span class="act alt"><small>Báo phế · ghi lý do</small><i></i></span><span class="st s-ready">Chờ trả khách</span></div></div><div class="alt-row"><span class="why">Khách từ chối</span><div class="path alt"><span class="st s-quote">Chờ duyệt báo giá</span><span class="act alt"><small>Khách không đồng ý</small><i></i></span><span class="st s-ready">Chờ trả khách</span><span class="note-chip">trả máy không sửa, không thu phí. Báo giá chỉ một lần, không báo giá lại</span></div></div>
+    <div class="alt-row"><span class="why">Hủy phiếu</span><div class="path alt"><span class="st-group"><span class="st s-wait">Đã nhận máy</span><span class="or">,</span><span class="st s-work">IT kiểm tra</span><span class="or">hoặc</span><span class="st s-quote">Chờ duyệt báo giá</span></span><span class="act alt"><small>Hủy · bắt buộc ghi lý do</small><i></i></span><span class="st s-cancel">Đã hủy</span></div></div>
+  </div>
+  <p class="note">Phiếu <b>có phí</b> (khách đã đồng ý báo giá) chỉ bấm được "Trả khách" khi đã nhập đủ số chứng từ ERP <b>V223</b> và <b>V233</b>. Sau khi trả, máy tự có bảo hành sau sửa chữa 3 tháng.</p>
+
+  <h3>Bảng trạng thái</h3>
+  <div class="tbl"><table>
+    <tr><th>Mã</th><th>Hiển thị</th><th>Nghĩa là</th><th>Có ở loại</th></tr>
+    <tr><td><code>scheduled</code></td><td>Chờ hãng đến</td><td>Đã báo hãng, đang chờ kỹ thuật hãng đến</td><td>Tại chỗ</td></tr>
+    <tr><td><code>received</code></td><td>Đã nhận máy</td><td>IT đã cầm máy về, chưa kiểm tra</td><td>Nhận về, Sửa chữa</td></tr>
+    <tr><td><code>inspecting</code></td><td>IT kiểm tra</td><td>IT đang tìm lỗi / lập báo giá</td><td>Nhận về, Sửa chữa</td></tr>
+    <tr><td><code>at_center</code></td><td>Đang ở TTBH</td><td>Máy đang nằm ở trung tâm bảo hành</td><td>Nhận về</td></tr>
+    <tr><td><code>quoted</code></td><td>Chờ duyệt báo giá</td><td>Đã gửi giá, chờ khách trả lời</td><td>Sửa chữa</td></tr>
+    <tr><td><code>repairing</code></td><td>Đang sửa</td><td>Khách đã đồng ý, IT đang sửa</td><td>Sửa chữa</td></tr>
+    <tr><td><code>ready</code></td><td>Chờ trả khách</td><td>Đã có kết quả, báo khách đến lấy</td><td>Nhận về, Sửa chữa</td></tr>
+    <tr><td><code>done</code></td><td>Hoàn tất</td><td>Hãng đã xử lý xong tại chỗ, phiếu đóng</td><td>Tại chỗ</td></tr>
+    <tr><td><code>returned</code></td><td>Đã trả</td><td>Đã trả máy cho khách, phiếu đóng</td><td>Nhận về, Sửa chữa</td></tr>
+    <tr><td><code>cancelled</code></td><td>Đã hủy</td><td>Phiếu hủy, bắt buộc ghi lý do, giữ nguyên số phiếu</td><td>Cả 3</td></tr>
+  </table></div>
+
+  <h2 id="quy-tac">6. Quy tắc nghiệp vụ</h2>
+  <ol>
+    <li><b>Số phiếu</b> <code>YYMM</code> + 4 số, chung cho mọi loại, sang tháng quay về 0001, không sửa. Không xoá cứng phiếu; hủy thì ghi lý do.</li>
+    <li><b>Gửi TTBH:</b> mỗi lần gửi tạo một dòng <code>rma_center_shipments</code> (<code>pending</code>). Nhận về thì đóng dòng đó với <code>outcome</code>. Có serial mới → <code>replaced</code>, tạo máy mới có <code>replaced_from_device_id</code> và gán <code>returned_device_id</code>.</li>
+    <li><b>TTBH từ chối:</b> <code>outcome = rejected</code>, phiếu đổi <code>service_type</code> sang <code>repair</code>, giữ nguyên số phiếu và <code>original_service_type</code>.</li>
+    <li><b>Onsite:</b> lúc lập phiếu tạo luôn một dòng <code>rma_center_shipments</code> với hãng, mã hồ sơ, ngày hẹn.</li>
+    <li><b>Báo giá (một lần):</b> IT thêm các dòng giá khi phiếu đang <code>inspecting</code>, rồi bấm gửi → <code>quote_status = sent</code>, khoá bảng giá. Khách đồng ý → <code>accepted</code>, <code>is_chargeable = true</code>, <code>charge_amount</code> = tổng các dòng, sửa máy. Khách không đồng ý → <code>rejected</code>, trả máy không sửa, không thu phí. Không có báo giá lại. Chọn "Miễn phí" hoặc "Báo phế" thì xoá các dòng giá nháp.</li>
+    <li><b>ERP:</b> chỉ phiếu có phí. Phải có đủ V223 và V233 mới được trả khách.</li>
+    <li><b>Bảo hành sau sửa:</b> phiếu có phí khi trả khách tự tạo <code>device_warranties</code> loại <code>repair</code>, 3 tháng tính từ ngày trả.</li>
+    <li><b>Tra cứu bảo hành:</b> hạn bảo hành của máy = <code>end_date</code> lớn nhất trong các dòng bảo hành của máy đó <b>và các máy gốc</b> (đi ngược theo <code>replaced_from_device_id</code>). Còn ≤ 30 ngày thì báo "Sắp hết".</li>
+    <li><b>Khi lập phiếu:</b> nhập serial xong hệ thống hiện hạn bảo hành và gợi ý loại phiếu. Máy không có dữ liệu bảo hành thì mặc định là sửa chữa.</li>
+    <li><b>Phiếu đã đóng</b> (<code>returned</code>, <code>done</code>, <code>cancelled</code>) không sửa được nội dung, chỉ thêm chứng từ.</li>
+    <li>Mỗi lần đổi trạng thái ghi một dòng <code>rma_ticket_status_logs</code>.</li>
+  </ol>
+
+  <h2 id="index">7. Index</h2>
+  <div class="tbl"><table>
+    <tr><th>Bảng</th><th>Index</th><th>Dùng cho</th></tr>
+    <tr><td><code>devices</code></td><td><code>serial_number</code></td><td>Tra cứu bảo hành, lập phiếu</td></tr>
+    <tr><td><code>customers</code></td><td><code>phone</code></td><td>Tìm khách cũ</td></tr>
+    <tr><td><code>rma_tickets</code></td><td><code>(service_type, status)</code>, <code>status</code>, <code>received_date</code>, <code>returned_date</code>, <code>technician_id</code>, <code>customer_id</code>, <code>device_id</code>, <code>erp_receipt_no</code>, <code>erp_return_no</code></td><td>Danh sách, bộ lọc, báo cáo</td></tr>
+    <tr><td><code>rma_center_shipments</code></td><td><code>rma_ticket_id</code>, <code>(service_center_id, outcome)</code>, <code>vendor_case_no</code></td><td>Báo cáo TTBH, tìm theo mã hồ sơ hãng</td></tr>
+    <tr><td><code>rma_quote_items</code></td><td><code>rma_ticket_id</code></td><td>Bảng giá của phiếu</td></tr>
+    <tr><td><code>device_warranties</code></td><td><code>(device_id, end_date)</code></td><td>Tra cứu bảo hành</td></tr>
+    <tr><td><code>rma_ticket_status_logs</code></td><td><code>(rma_ticket_id, created_at)</code></td><td>Lịch sử phiếu</td></tr>
+    <tr><td><code>attachments</code></td><td><code>(attachable_type, attachable_id)</code></td><td>Chứng từ của phiếu / máy</td></tr>
+  </table></div>
+  <p>Vài nghìn phiếu mỗi năm thì các index trên là đủ. Tìm kiếm "chứa chuỗi" (<code>LIKE '%abc%'</code>) không dùng được index, nhưng ở quy mô này vẫn nhanh.</p>
+
+  <h2 id="thay-doi">8. Thay đổi so với bản 1</h2>
+  <ul>
+    <li>Thêm 6 bảng: <code>service_centers</code>, <code>rma_center_shipments</code>, <code>rma_quote_items</code>, <code>rma_replaced_parts</code>, <code>device_warranties</code>, <code>attachments</code>.</li>
+    <li><code>rma_tickets</code>: thay <code>ticket_type</code> + <code>warranty_status</code> bằng <code>service_type</code> + <code>original_service_type</code>; thêm <code>returned_device_id</code>, <code>technician_id</code>, <code>result</code>, <code>scrap_reason</code>, <code>quote_status</code>, <code>quoted_at</code>, <code>quote_decided_at</code>. Thông tin gửi TTBH chuyển sang <code>rma_center_shipments</code>.</li>
+    <li><code>devices</code>: thêm <code>replaced_from_device_id</code>. <code>customers</code>: thêm <code>contact_name</code>, bỏ <code>company_name</code>.</li>
+    <li>Trạng thái: thêm <code>scheduled</code>, <code>inspecting</code>, <code>at_center</code>, <code>quoted</code>, <code>ready</code>, <code>done</code>; bỏ <code>completed</code>.</li>
+  </ul>
+
+  <p>Không có bảng <code>rma_quotes</code> (báo giá nhiều lần) vì công ty chỉ báo giá một lần: khách đồng ý thì sửa, không đồng ý thì không sửa.</p>
+
+  <h2 id="mo">9. Việc còn mở</h2>
+  <ul>
+    <li>Số điện thoại, email, logo Sang Y để in lên phiếu.</li>
+    <li>Mẫu số chứng từ V223/V233 thực tế trong ERP.</li>
+    <li>Danh sách máy Sang Y đã bán (serial + ngày bán + thời hạn) để nhập bảo hành ban đầu.</li>
+    <li>Thời hạn bảo hành sau sửa chữa: đang giả định 3 tháng.</li>
+    <li>Phân quyền: ai là quản trị (quản lý danh mục, người dùng).</li>
+  </ul>
+</main>
+<script type="module">
+  import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+  const dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+  mermaid.initialize({ startOnLoad: true, theme: dark ? "dark" : "neutral", flowchart: { curve: "basis", nodeSpacing: 40, rankSpacing: 60, htmlLabels: true } });
+</script>
+</body>
+</html>

@@ -4,6 +4,119 @@
 @source '../../storage/framework/views/*.php';
 
 @theme {
-    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
-        'Segoe UI Symbol', 'Noto Color Emoji';
+    --font-sans: 'Be Vietnam Pro', ui-sans-serif, system-ui, 'Segoe UI', sans-serif;
+    --font-mono: 'JetBrains Mono', ui-monospace, Consolas, monospace;
+
+    --color-brand: #1f4a3d;
+    --color-brand-dark: #173a30;
+    --color-brand-hover: #24574a;
+    --color-brand-soft: #e2ede7;
+    --color-canvas: #f2f4f1;
+    --color-panel: #f7f8f6;
+    --color-line: #d8dfda;
+    --color-ink: #16211c;
+    --color-muted: #5b6a62;
+    --color-side-text: #d5e4dc;
+    --color-side-muted: #86a497;
+}
+
+@layer base {
+    body {
+        @apply bg-canvas text-ink antialiased;
+    }
+
+    [hidden] {
+        display: none !important;
+    }
+}
+
+@layer components {
+    .card {
+        @apply rounded-lg border border-line bg-white;
+    }
+
+    .label {
+        @apply mb-1 block text-xs font-semibold text-ink;
+    }
+
+    .label-hint {
+        @apply font-normal text-muted;
+    }
+
+    .input {
+        @apply block w-full rounded-md border border-line bg-white px-3 py-2 text-sm text-ink placeholder:text-muted/70 focus:border-brand focus:ring-2 focus:ring-brand/20 focus:outline-none disabled:bg-panel disabled:text-muted;
+    }
+
+    .btn {
+        @apply inline-flex cursor-pointer items-center justify-center gap-1.5 rounded-md border px-3.5 py-2 text-sm font-semibold whitespace-nowrap transition focus-visible:ring-2 focus-visible:ring-brand/40 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50;
+    }
+
+    .btn-primary {
+        @apply border-brand bg-brand text-white hover:bg-brand-hover;
+    }
+
+    .btn-secondary {
+        @apply border-line bg-white text-ink hover:bg-panel;
+    }
+
+    .btn-danger {
+        @apply border-red-700 bg-white text-red-700 hover:bg-red-50;
+    }
+
+    .btn-sm {
+        @apply px-2.5 py-1 text-xs;
+    }
+
+    .table {
+        @apply w-full border-collapse text-sm tabular-nums;
+    }
+
+    .table th {
+        @apply border-b border-line bg-panel px-3 py-2 text-left text-[11px] font-semibold tracking-wider whitespace-nowrap text-muted uppercase;
+    }
+
+    .table td {
+        @apply border-b border-line px-3 py-2.5 align-top;
+    }
+
+    .table tr[data-href] {
+        @apply cursor-pointer hover:bg-brand-soft/60;
+    }
+
+    .section-title {
+        @apply mt-6 mb-2 text-[11px] font-semibold tracking-widest text-muted uppercase;
+    }
+
+    .ticket-no {
+        @apply font-mono font-semibold text-brand;
+    }
+
+    .segmented {
+        @apply inline-flex flex-wrap overflow-hidden rounded-lg border border-line bg-white;
+    }
+
+    .segmented > * {
+        @apply border-r border-line px-4 py-2 text-sm last:border-r-0;
+    }
+
+    .segmented .is-active,
+    .segmented label:has(input:checked) {
+        @apply bg-brand font-semibold text-white;
+    }
+
+    .segmented label {
+        @apply cursor-pointer;
+    }
+
+    .segmented label:has(input:disabled) {
+        @apply cursor-not-allowed text-muted/60;
+    }
+
+    .stat-chip {
+        @apply min-w-24 rounded-lg border border-line bg-white px-3 py-2 hover:border-brand;
+    }
+
+    .stat-chip.is-active {
+        @apply border-brand ring-1 ring-brand;
+    }
 }
