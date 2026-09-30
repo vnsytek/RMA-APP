@@ -9,23 +9,23 @@
     </x-slot:actions>
 
     <div class="segmented mb-3">
-        <a href="{{ route('tickets.index', array_filter(['q' => $search])) }}" @class(['is-active' => $kind === null, 'hover:bg-panel' => $kind !== null])>
+        <a href="{{ route('tickets.index', array_filter(['q' => $search, 'technician' => $technician])) }}" @class(['is-active' => $kind === null, 'hover:bg-panel' => $kind !== null])>
             Tất cả <span class="opacity-70">{{ $kindCounts->sum() }}</span>
         </a>
         @foreach (TicketKind::cases() as $type)
-            <a href="{{ route('tickets.index', array_filter(['kind' => $type->value, 'q' => $search])) }}" @class(['is-active' => $kind === $type, 'hover:bg-panel' => $kind !== $type])>
+            <a href="{{ route('tickets.index', array_filter(['kind' => $type->value, 'q' => $search, 'technician' => $technician])) }}" @class(['is-active' => $kind === $type, 'hover:bg-panel' => $kind !== $type])>
                 {{ $type->label() }} <span class="opacity-70">{{ $kindCounts[$type->value] }}</span>
             </a>
         @endforeach
     </div>
 
     <div class="mb-3 flex flex-wrap gap-2">
-        <a href="{{ route('tickets.index', array_filter(['kind' => $kind?->value, 'q' => $search])) }}" @class(['stat-chip', 'is-active' => $status === null])>
+        <a href="{{ route('tickets.index', array_filter(['kind' => $kind?->value, 'q' => $search, 'technician' => $technician])) }}" @class(['stat-chip', 'is-active' => $status === null])>
             <b class="block text-lg tabular-nums">{{ $statusCounts->sum() }}</b><span class="text-xs text-muted">Mọi trạng thái</span>
         </a>
         @foreach (TicketStatus::cases() as $option)
             @continue(! isset($statusCounts[$option->value]))
-            <a href="{{ route('tickets.index', array_filter(['kind' => $kind?->value, 'status' => $option->value, 'q' => $search])) }}" @class(['stat-chip', 'is-active' => $status === $option])>
+            <a href="{{ route('tickets.index', array_filter(['kind' => $kind?->value, 'status' => $option->value, 'q' => $search, 'technician' => $technician])) }}" @class(['stat-chip', 'is-active' => $status === $option])>
                 <b class="block text-lg tabular-nums">{{ $statusCounts[$option->value] }}</b><span class="text-xs text-muted">{{ $option->label() }}</span>
             </a>
         @endforeach
@@ -34,6 +34,14 @@
     <form method="GET" class="mb-3 flex gap-2">
         @if ($kind) <input type="hidden" name="kind" value="{{ $kind->value }}"> @endif
         @if ($status) <input type="hidden" name="status" value="{{ $status->value }}"> @endif
+        @can('admin')
+            <select name="technician" class="input w-auto" aria-label="Lọc theo nhân viên phụ trách" data-autosubmit>
+                <option value="">Mọi nhân viên</option>
+                @foreach ($technicians as $person)
+                    <option value="{{ $person->id }}" @selected((string) $technician === (string) $person->id)>{{ $person->name }}@unless ($person->is_active) (đã khoá)@endunless</option>
+                @endforeach
+            </select>
+        @endcan
         <input type="search" name="q" value="{{ $search }}" class="input" placeholder="Tìm số phiếu, khách, SĐT, serial, model, mã hồ sơ hãng, số V223/V233…" aria-label="Tìm phiếu">
         <button class="btn btn-secondary">Tìm</button>
     </form>
@@ -51,7 +59,7 @@
                             <x-kind-tag :kind="$ticket->kind()" />
                             <div class="text-xs text-muted">{{ $ticket->warranty_status->label() }}@if ($ticket->wasConverted()) · từ {{ $ticket->originalKind()->shortLabel() }}@endif</div>
                         </td>
-                        <td>{{ $ticket->customer->name }}<div class="font-mono text-xs text-muted">{{ $ticket->customer->phone }}</div></td>
+                        <td>{{ $ticket->customer->name }}<div class="text-xs text-muted">{{ $ticket->contactLabel() }}</div></td>
                         <td>{{ $ticket->device->productModel->deviceType->name }}<div class="text-xs text-muted">{{ $ticket->device->productModel->shortName() }}</div></td>
                         <td class="font-mono text-xs">
                             {{ $ticket->device->serial_number }}

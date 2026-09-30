@@ -7,6 +7,7 @@ use App\Enums\ShipmentOutcome;
 use App\Enums\TicketKind;
 use App\Enums\WarrantyStatus;
 use App\Models\Customer;
+use App\Models\CustomerContact;
 use App\Models\Device;
 use App\Models\RmaTicket;
 use App\Models\User;
@@ -40,6 +41,8 @@ class TicketIntake
 
         return DB::transaction(function () use ($data, $photos, $user, $kind): RmaTicket {
             $receivedDate = Carbon::parse($data['received_date']);
+            $customer = $this->resolveCustomer($data);
+            $contact = $this->resolveContact($customer, $data);
 
             $ticket = RmaTicket::create([
                 'ticket_no' => $this->numbers->next(today()),
@@ -47,7 +50,10 @@ class TicketIntake
                 'original_service_type' => $kind->serviceType(),
                 'onsite_location' => $kind->onsiteLocation(),
                 'warranty_status' => WarrantyStatus::from($data['warranty_status']),
-                'customer_id' => $this->resolveCustomer($data)->id,
+                'customer_id' => $customer->id,
+                'customer_contact_id' => $contact->id,
+                'contact_name' => $contact->name,
+                'contact_phone' => $contact->phone,
                 'device_id' => $this->resolveDevice($data)->id,
                 'technician_id' => $data['technician_id'] ?? null,
                 'fault_description' => $data['fault_description'],
@@ -93,10 +99,33 @@ class TicketIntake
 
         return Customer::create([
             'name' => Str::squish($data['customer_name']),
-            'contact_name' => $data['customer_contact'] ?? null,
-            'phone' => Str::squish($data['customer_phone']),
+            'tax_code' => $data['customer_tax_code'] ?? null,
             'address' => $data['customer_address'] ?? null,
         ]);
+    }
+
+    /**
+     * The chosen contact, or a new one added to the customer's address book (reusing an entry with the same phone).
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function resolveContact(Customer $customer, array $data): CustomerContact
+    {
+        if (($data['contact_id'] ?? 'new') !== 'new' && $customer->wasRecentlyCreated === false) {
+            return $customer->contacts()->findOrFail($data['contact_id']);
+        }
+
+        $name = Str::squish($data['contact_name']);
+        $phone = Str::squish($data['contact_phone']);
+        $existing = $customer->contacts()->where('phone', $phone)->first();
+
+        if ($existing) {
+            $existing->update(['name' => $name, 'is_active' => true]);
+
+            return $existing;
+        }
+
+        return $customer->contacts()->create(['name' => $name, 'phone' => $phone]);
     }
 
     /**

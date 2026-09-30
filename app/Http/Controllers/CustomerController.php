@@ -5,9 +5,11 @@ namespace App\Http\Controllers;
 use App\Models\Customer;
 use App\Services\DeviceSummary;
 use App\Services\DeviceTracker;
+use App\Services\TaxCodeLookup;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class CustomerController extends Controller
@@ -19,8 +21,10 @@ class CustomerController extends Controller
         $customers = Customer::query()
             ->when($search !== '', fn (Builder $query) => $query->where(fn (Builder $query) => $query
                 ->where('name', 'like', "%{$search}%")
-                ->orWhere('contact_name', 'like', "%{$search}%")
-                ->orWhere('phone', 'like', "%{$search}%")))
+                ->orWhere('phone', 'like', "%{$search}%")
+                ->orWhereHas('contacts', fn (Builder $contact) => $contact->where('name', 'like', "%{$search}%")->orWhere('phone', 'like', "%{$search}%"))
+                ->orWhere('tax_code', 'like', "%{$search}%")))
+            ->with(['contacts' => fn ($query) => $query->active()])
             ->withCount(['tickets', 'tickets as open_tickets_count' => fn (Builder $query) => $query->open()])
             ->orderBy('name')
             ->paginate(30)
@@ -40,37 +44,65 @@ class CustomerController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        Customer::create($this->validated($request));
+        $customer = Customer::create($this->validated($request, null));
 
-        return back()->with('status', 'Đã thêm khách hàng.');
+        return redirect()->route('customers.show', $customer)->with('status', "Đã thêm khách hàng {$customer->name}.");
     }
 
-    public function edit(Customer $customer): View
+    public function show(Request $request, Customer $customer): View
     {
-        return view('customers.edit', [
+        return view('customers.show', [
             'customer' => $customer,
-            'tickets' => $customer->tickets()->with('device.productModel.brand', 'device.productModel.deviceType')->orderByDesc('ticket_no')->limit(100)->get(),
+            'tickets' => $customer->tickets()->visibleTo($request->user())->with('device.productModel.brand', 'device.productModel.deviceType')->orderByDesc('ticket_no')->limit(100)->get(),
+            'contacts' => $customer->contacts()->withCount('tickets')->get(),
+            'ticketCount' => $customer->tickets()->withTrashed()->count(),
+            'openCount' => $customer->tickets()->open()->count(),
+            'deviceCount' => $customer->tickets()->distinct()->count('device_id'),
         ]);
     }
 
     public function update(Request $request, Customer $customer): RedirectResponse
     {
-        $customer->update($this->validated($request));
+        $customer->update($this->validated($request, $customer));
 
-        return redirect()->route('customers.index')->with('status', 'Đã lưu khách hàng.');
+        return redirect()->route('customers.show', $customer)->with('status', 'Đã lưu khách hàng.');
+    }
+
+    /**
+     * Admins remove a customer entered by mistake; one that already has tickets is kept for their history.
+     */
+    public function destroy(Customer $customer): RedirectResponse
+    {
+        $tickets = $customer->tickets()->withTrashed()->count();
+
+        if ($tickets > 0) {
+            return back()->with('error', "Không xoá được {$customer->name}: khách đã có {$tickets} phiếu. Chỉ xoá được khách chưa có phiếu nào.");
+        }
+
+        $customer->delete();
+
+        return redirect()->route('customers.index')->with('status', "Đã xoá khách hàng {$customer->name}.");
     }
 
     /**
      * @return array<string, mixed>
      */
-    private function validated(Request $request): array
+    /**
+     * A company is identified by its tax code; people and companies without one need a phone number.
+     */
+    private function validated(Request $request, ?Customer $customer): array
     {
+        $request->merge(['tax_code' => TaxCodeLookup::normalize($request->input('tax_code'))]);
+
         return $request->validateWithBag('customer', [
             'name' => ['required', 'string', 'max:255'],
-            'contact_name' => ['nullable', 'string', 'max:255'],
-            'phone' => ['required', 'string', 'max:20'],
+            'tax_code' => ['nullable', 'string', 'regex:'.TaxCodeLookup::pattern(), Rule::unique('customers', 'tax_code')->ignore($customer)],
+            'phone' => ['nullable', 'string', 'max:20'],
             'address' => ['nullable', 'string', 'max:500'],
             'note' => ['nullable', 'string', 'max:2000'],
-        ], attributes: ['name' => 'tên khách', 'contact_name' => 'người liên hệ', 'phone' => 'số điện thoại', 'address' => 'địa chỉ', 'note' => 'ghi chú']);
+        ], [
+            'tax_code.regex' => 'Mã số thuế gồm 10 số, chi nhánh thêm "-" và 3 số (VD: 0801379534-001).',
+            'tax_code.unique' => 'Đã có khách hàng dùng mã số thuế này.',
+        ], ['name' => 'tên khách', 'tax_code' => 'mã số thuế', 'phone' => 'số điện thoại công ty', 'address' => 'địa chỉ', 'note' => 'ghi chú']);
     }
 }

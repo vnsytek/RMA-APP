@@ -4,6 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Đăng nhập · {{ config('app.name') }}</title>
+    <link rel="icon" type="image/png" href="{{ asset('images/favicon.png') }}">
     @fonts
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
@@ -12,8 +13,11 @@
         <section class="relative hidden flex-col justify-between overflow-hidden bg-brand-dark p-12 text-white lg:flex"
                  style="background-image: linear-gradient(rgb(255 255 255 / .04) 1px, transparent 1px), linear-gradient(90deg, rgb(255 255 255 / .04) 1px, transparent 1px); background-size: 32px 32px;">
             <div class="flex items-center gap-3">
-                <span class="grid size-10 place-items-center border border-white/40 text-sm font-bold">SY</span>
-                <span class="text-sm font-bold tracking-[0.2em]">RMA</span>
+                <img src="{{ asset('images/logo-sangy-128.png') }}" alt="{{ config('rma.company.short_name') }}" class="size-14">
+                <span>
+                    <span class="block text-sm font-bold tracking-[0.2em]">RMA</span>
+                    <span class="block text-xs text-side-muted">{{ config('rma.company.short_name') }}</span>
+                </span>
             </div>
             <div>
                 <p class="text-xs font-semibold tracking-[0.25em] text-side-muted uppercase">{{ config('rma.company.name') }}</p>
@@ -25,6 +29,7 @@
         <section class="flex items-center justify-center bg-canvas px-4 py-12">
             <form method="POST" action="{{ url('/login') }}" class="w-full max-w-sm">
                 @csrf
+                <img src="{{ asset('images/logo-sangy-light-128.png') }}" alt="{{ config('rma.company.short_name') }}" class="mb-4 size-16 lg:hidden">
                 <p class="text-xs font-semibold tracking-[0.2em] text-muted uppercase">RMA Portal</p>
                 <h2 class="mt-2 text-3xl font-bold">Đăng nhập</h2>
 

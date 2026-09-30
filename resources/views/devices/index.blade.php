@@ -53,7 +53,7 @@
                         </td>
                         <td>
                             @if ($item->customer)
-                                {{ $item->customer->name }}<div class="font-mono text-xs text-muted">{{ $item->customer->phone }}</div>
+                                {{ $item->customer->name }}<div class="text-xs text-muted">{{ $item->lastTicket()?->contactLabel() }}</div>
                                 @if ($item->customerIds->count() > 1)
                                     <div class="text-xs text-muted">+{{ $item->customerIds->count() - 1 }} khách khác từng gửi</div>
                                 @endif
@@ -63,7 +63,7 @@
                         </td>
                         <td>
                             @if ($last)
-                                <a href="{{ route('tickets.show', $last) }}" class="ticket-no">{{ $last->ticket_no }}</a> <x-kind-tag :kind="$last->kind()" />
+                                <x-ticket-link :ticket="$last" /> <x-kind-tag :kind="$last->kind()" />
                                 <div class="mt-1 flex flex-wrap items-center gap-2"><x-status-pill :status="$last->status" /><span class="text-xs text-muted">{{ vn_date($last->received_date) }}</span></div>
                             @else
                                 <span class="text-muted">—</span>

@@ -119,4 +119,37 @@
     .stat-chip.is-active {
         @apply border-brand ring-1 ring-brand;
     }
+
+    /* Native <dialog> opened with showModal(); see data-dialog-open in app.js. */
+    .modal {
+        @apply m-auto w-[calc(100%-2rem)] max-w-lg rounded-lg border border-line bg-white p-0 text-ink shadow-xl backdrop:bg-black/40;
+    }
+
+    .modal-body {
+        @apply max-h-[85vh] space-y-4 overflow-y-auto p-5;
+    }
+
+    .modal-head {
+        @apply flex items-start justify-between gap-3;
+    }
+
+    .modal-head h2 {
+        @apply text-base font-semibold;
+    }
+
+    .modal-x {
+        @apply -mt-1 -mr-1 grid size-8 cursor-pointer place-items-center rounded-md text-xl leading-none text-muted hover:bg-panel hover:text-ink;
+    }
+
+    .modal-foot {
+        @apply flex justify-end gap-2 pt-1;
+    }
+
+    .modal-section {
+        @apply border-t border-line pt-4;
+    }
+
+    .modal-section h3 {
+        @apply text-sm font-semibold;
+    }
 }

@@ -41,14 +41,18 @@ class UserController extends Controller
     {
         $bag = 'user'.$user->id;
         $data = $request->validateWithBag($bag, [
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user)],
             'role' => ['required', Rule::enum(UserRole::class)],
             'password' => ['nullable', 'string', Password::min(8)],
-        ], attributes: ['role' => 'quyền', 'password' => 'mật khẩu mới']);
+        ], attributes: ['name' => 'họ tên', 'email' => 'email', 'role' => 'quyền', 'password' => 'mật khẩu mới']);
 
         if ($user->is($request->user()) && $data['role'] !== UserRole::Admin->value) {
-            return back()->withErrors(['role' => 'Không tự bỏ quyền Admin của chính mình.'], $bag);
+            return back()->withInput()->withErrors(['role' => 'Không tự bỏ quyền Admin của chính mình.'], $bag);
         }
 
+        $user->name = $data['name'];
+        $user->email = $data['email'];
         $user->role = UserRole::from($data['role']);
 
         if (filled($data['password'] ?? null)) {
@@ -58,6 +62,22 @@ class UserController extends Controller
         $user->save();
 
         return back()->with('status', "Đã lưu tài khoản {$user->name}.");
+    }
+
+    /**
+     * Hand every open ticket someone is in charge of to a colleague, e.g. while they are on leave.
+     */
+    public function handover(Request $request, User $user): RedirectResponse
+    {
+        $bag = 'handover'.$user->id;
+        $data = $request->validateWithBag($bag, [
+            'to_user_id' => ['required', 'integer', Rule::exists('users', 'id')->where('is_active', true), Rule::notIn([$user->id])],
+        ], attributes: ['to_user_id' => 'người nhận']);
+
+        $to = User::findOrFail($data['to_user_id']);
+        $moved = $user->assignedTickets()->open()->update(['technician_id' => $to->id]);
+
+        return back()->with('status', "Đã chuyển {$moved} phiếu đang mở của {$user->name} sang {$to->name}.");
     }
 
     public function toggle(Request $request, User $user): RedirectResponse

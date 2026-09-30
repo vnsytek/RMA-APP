@@ -16,6 +16,16 @@ class DatabaseSeeder extends Seeder
     use WithoutModelEvents;
 
     /**
+     * Staff accounts (role User): email => display name.
+     */
+    public const STAFF = [
+        'huy@sangy.vn' => 'Huy',
+        'tam@sangy.vn' => 'Tâm',
+        'kha@sangy.vn' => 'Kha',
+        'tung@sangy.vn' => 'Tùng',
+    ];
+
+    /**
      * Seed the accounts and master data every installation needs.
      */
     public function run(): void
@@ -23,7 +33,10 @@ class DatabaseSeeder extends Seeder
         $password = env('RMA_SEED_PASSWORD', 'SangY@2026');
 
         User::firstOrCreate(['email' => 'long.vu@sangy.vn'], ['name' => 'Vũ Bảo Long', 'password' => $password, 'role' => UserRole::Admin, 'is_active' => true]);
-        User::firstOrCreate(['email' => 'tuan.pham@sangy.vn'], ['name' => 'Phạm Minh Tuấn', 'password' => $password, 'role' => UserRole::User, 'is_active' => true]);
+
+        foreach (self::STAFF as $email => $name) {
+            User::firstOrCreate(['email' => $email], ['name' => $name, 'password' => $password, 'role' => UserRole::User, 'is_active' => true]);
+        }
 
         $types = collect([
             'MONITOR' => 'Màn hình', 'LAPTOP' => 'Máy tính xách tay', 'PC' => 'Máy tính để bàn',

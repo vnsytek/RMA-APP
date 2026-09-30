@@ -7,6 +7,7 @@ use App\Enums\TicketKind;
 use App\Enums\WarrantyStatus;
 use App\Models\RmaTicket;
 use App\Services\AttachmentStorage;
+use App\Services\TaxCodeLookup;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
@@ -19,6 +20,21 @@ class StoreRmaTicketRequest extends FormRequest
     }
 
     /**
+     * Staff other than admins are always in charge of the tickets they open.
+     */
+    protected function prepareForValidation(): void
+    {
+        $this->merge([
+            'customer_tax_code' => TaxCodeLookup::normalize($this->input('customer_tax_code')),
+            'contact_id' => $this->input('contact_id') ?: 'new',
+        ]);
+
+        if (! $this->user()->isAdmin()) {
+            $this->merge(['technician_id' => $this->user()->id]);
+        }
+    }
+
+    /**
      * @return array<string, array<int, mixed>>
      */
     public function rules(): array
@@ -28,6 +44,7 @@ class StoreRmaTicketRequest extends FormRequest
         $newBrand = $this->input('brand_id') === 'new';
         $newModel = $this->input('product_model_id') === 'new';
         $newCustomer = $this->input('customer_id', 'new') === 'new';
+        $newContact = $newCustomer || $this->input('contact_id', 'new') === 'new';
 
         return [
             'warranty_status' => ['required', Rule::enum(WarrantyStatus::class)],
@@ -47,8 +64,12 @@ class StoreRmaTicketRequest extends FormRequest
 
             'customer_id' => $newCustomer ? ['required'] : ['required', 'integer', Rule::exists('customers', 'id')],
             'customer_name' => [Rule::requiredIf($newCustomer), 'nullable', 'string', 'max:255'],
-            'customer_phone' => [Rule::requiredIf($newCustomer), 'nullable', 'string', 'max:20'],
-            'customer_contact' => ['nullable', 'string', 'max:255'],
+            'contact_id' => $newContact
+                ? ['required']
+                : ['required', 'integer', Rule::exists('customer_contacts', 'id')->where('customer_id', $this->integer('customer_id'))->where('is_active', true)],
+            'contact_name' => [Rule::requiredIf($newContact), 'nullable', 'string', 'max:255'],
+            'contact_phone' => [Rule::requiredIf($newContact), 'nullable', 'string', 'max:20'],
+            'customer_tax_code' => ['nullable', 'string', 'regex:'.TaxCodeLookup::pattern(), Rule::unique('customers', 'tax_code')],
             'customer_address' => ['nullable', 'string', 'max:500'],
 
             'fault_description' => ['required', 'string', 'max:2000'],
@@ -109,6 +130,17 @@ class StoreRmaTicketRequest extends FormRequest
     /**
      * @return array<string, string>
      */
+    public function messages(): array
+    {
+        return [
+            'customer_tax_code.regex' => 'Mã số thuế gồm 10 số, chi nhánh thêm "-" và 3 số (VD: 0801379534-001).',
+            'customer_tax_code.unique' => 'Đã có khách hàng dùng mã số thuế này, hãy chọn khách đó trong ô "Khách gửi máy".',
+        ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
     public function attributes(): array
     {
         return [
@@ -123,8 +155,10 @@ class StoreRmaTicketRequest extends FormRequest
             'new_model_code' => 'mã model mới',
             'customer_id' => 'khách hàng',
             'customer_name' => 'tên khách',
-            'customer_phone' => 'số điện thoại',
-            'customer_contact' => 'người liên hệ',
+            'contact_id' => 'người liên hệ',
+            'contact_name' => 'tên người liên hệ',
+            'contact_phone' => 'số điện thoại người liên hệ',
+            'customer_tax_code' => 'mã số thuế',
             'fault_description' => 'lỗi khách báo',
             'accessories' => 'phụ kiện',
             'received_date' => TicketKind::tryFrom((string) $this->input('kind')) === TicketKind::Onsite ? 'ngày yêu cầu hãng' : 'ngày nhận máy',

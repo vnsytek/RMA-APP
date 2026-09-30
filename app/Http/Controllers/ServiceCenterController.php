@@ -22,16 +22,16 @@ class ServiceCenterController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        ServiceCenter::create($this->validated($request));
+        $center = ServiceCenter::create($this->validated($request, 'serviceCenter'));
 
-        return back()->with('status', 'Đã thêm hãng / TTBH.');
+        return back()->with('status', "Đã thêm {$center->name}.");
     }
 
     public function update(Request $request, ServiceCenter $serviceCenter): RedirectResponse
     {
-        $serviceCenter->update($this->validated($request));
+        $serviceCenter->update($this->validated($request, 'serviceCenter'.$serviceCenter->id));
 
-        return back()->with('status', 'Đã lưu hãng / TTBH.');
+        return back()->with('status', "Đã lưu {$serviceCenter->name}.");
     }
 
     public function toggle(ServiceCenter $serviceCenter): RedirectResponse
@@ -44,9 +44,9 @@ class ServiceCenterController extends Controller
     /**
      * @return array<string, mixed>
      */
-    private function validated(Request $request): array
+    private function validated(Request $request, string $bag): array
     {
-        return $request->validateWithBag('serviceCenter', [
+        return $request->validateWithBag($bag, [
             'name' => ['required', 'string', 'max:255'],
             'brands' => ['nullable', 'string', 'max:255'],
             'phone' => ['nullable', 'string', 'max:30'],

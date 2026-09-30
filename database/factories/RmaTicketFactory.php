@@ -28,6 +28,8 @@ class RmaTicketFactory extends Factory
             'onsite_location' => null,
             'warranty_status' => WarrantyStatus::OutOfWarranty,
             'customer_id' => Customer::factory(),
+            'contact_name' => fake()->name(),
+            'contact_phone' => fake()->numerify('09########'),
             'device_id' => Device::factory(),
             'technician_id' => null,
             'fault_description' => fake()->sentence(),

@@ -17,8 +17,7 @@ class CustomerFactory extends Factory
     {
         return [
             'name' => fake()->name(),
-            'contact_name' => null,
-            'phone' => fake()->numerify('09########'),
+            'phone' => null,
             'address' => fake()->address(),
             'note' => null,
         ];

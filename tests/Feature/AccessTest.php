@@ -11,6 +11,7 @@ use App\Models\User;
 use App\Services\AttachmentStorage;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
@@ -56,8 +57,32 @@ class AccessTest extends TestCase
         $admin = User::factory()->admin()->create();
 
         $this->actingAs($admin)->patch(route('users.toggle', $admin))->assertForbidden();
-        $this->actingAs($admin)->put(route('users.update', $admin), ['role' => 'user'])->assertSessionHasErrorsIn('user'.$admin->id, 'role');
+        $this->actingAs($admin)->put(route('users.update', $admin), ['name' => $admin->name, 'email' => $admin->email, 'role' => 'user'])
+            ->assertSessionHasErrorsIn('user'.$admin->id, 'role');
         $this->assertTrue($admin->refresh()->isAdmin());
+    }
+
+    public function test_admin_edits_name_email_role_and_password_in_the_edit_dialog(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $staff = User::factory()->create(['name' => 'Huy', 'email' => 'huy@sangy.vn']);
+        User::factory()->create(['email' => 'tam@sangy.vn']);
+
+        $this->actingAs($admin)->get(route('users.index'))
+            ->assertOk()
+            ->assertSee('data-dialog-open="user-'.$staff->id.'"', false);
+
+        $this->actingAs($admin)->put(route('users.update', $staff), ['name' => 'Huy', 'email' => 'tam@sangy.vn', 'role' => 'user'])
+            ->assertSessionHasErrorsIn('user'.$staff->id, 'email');
+
+        $this->actingAs($admin)->put(route('users.update', $staff), [
+            'name' => 'Nguyễn Quang Huy', 'email' => 'huy.nguyen@sangy.vn', 'role' => 'admin', 'password' => 'matkhaumoi1',
+        ])->assertSessionHasNoErrors();
+
+        $staff->refresh();
+        $this->assertSame(['Nguyễn Quang Huy', 'huy.nguyen@sangy.vn'], [$staff->name, $staff->email]);
+        $this->assertTrue($staff->isAdmin());
+        $this->assertTrue(Hash::check('matkhaumoi1', $staff->password));
     }
 
     public function test_users_may_add_catalog_entries_but_only_admins_hide_them(): void
@@ -92,10 +117,11 @@ class AccessTest extends TestCase
     {
         Storage::fake('local');
         $uploader = User::factory()->create();
-        $ticket = RmaTicket::factory()->create();
+        $colleague = User::factory()->create();
+        $ticket = RmaTicket::factory()->create(['created_by' => $uploader->id, 'technician_id' => $colleague->id]);
         $attachment = app(AttachmentStorage::class)->store($ticket, UploadedFile::fake()->image('may.jpg'), AttachmentType::Photo, AttachmentStage::Other, $uploader);
 
-        $this->actingAs(User::factory()->create())->delete(route('tickets.attachments.destroy', [$ticket, $attachment]))->assertForbidden();
+        $this->actingAs($colleague)->delete(route('tickets.attachments.destroy', [$ticket, $attachment]))->assertForbidden();
 
         $this->actingAs($uploader)->delete(route('tickets.attachments.destroy', [$ticket, $attachment]))->assertRedirect();
         $this->assertModelMissing($attachment);

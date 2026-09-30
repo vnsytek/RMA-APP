@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Enums\RepairWarrantyLevel;
 use App\Models\Customer;
 use App\Models\Device;
+use App\Models\RmaTicket;
 use App\Services\DeviceSummary;
 use App\Services\DeviceTracker;
 use Illuminate\Http\Request;
@@ -61,9 +62,14 @@ class DeviceController extends Controller
         ]);
     }
 
-    public function show(Device $device, DeviceTracker $tracker): View
+    public function show(Request $request, Device $device, DeviceTracker $tracker): View
     {
-        return view('devices.show', ['summary' => $tracker->for($device)]);
+        $summary = $tracker->for($device);
+
+        return view('devices.show', [
+            'summary' => $summary,
+            'tickets' => $summary->tickets->filter(fn (RmaTicket $ticket) => $request->user()->can('view', $ticket))->values(),
+        ]);
     }
 
     private function matches(DeviceSummary $item, string $filter): bool
@@ -83,7 +89,7 @@ class DeviceController extends Controller
     {
         $model = $item->device->productModel;
         $customers = $item->tickets->pluck('customer')->unique('id')
-            ->map(fn (Customer $customer) => "{$customer->name} {$customer->contact_name} {$customer->phone}")
+            ->map(fn (Customer $customer) => "{$customer->name} {$customer->tax_code} {$customer->phone}")
             ->implode(' ');
 
         return mb_strtolower("{$item->device->serial_number} {$model->code} {$model->brand->name} {$model->deviceType->name} {$customers}");

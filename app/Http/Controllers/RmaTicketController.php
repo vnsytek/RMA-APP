@@ -7,6 +7,7 @@ use App\Enums\TicketStatus;
 use App\Http\Requests\StoreRmaTicketRequest;
 use App\Models\Brand;
 use App\Models\Customer;
+use App\Models\CustomerContact;
 use App\Models\DeviceType;
 use App\Models\ProductModel;
 use App\Models\RmaTicket;
@@ -30,12 +31,18 @@ class RmaTicketController extends Controller
             'kind' => ['nullable', Rule::enum(TicketKind::class)],
             'status' => ['nullable', Rule::enum(TicketStatus::class)],
             'q' => ['nullable', 'string', 'max:100'],
+            'technician' => ['nullable', 'integer'],
         ]);
 
+        $user = $request->user();
         $kind = isset($filters['kind']) ? TicketKind::from($filters['kind']) : null;
         $status = isset($filters['status']) ? TicketStatus::from($filters['status']) : null;
+        $technician = $user->isAdmin() ? ($filters['technician'] ?? null) : null;
+        $visible = fn () => RmaTicket::query()
+            ->visibleTo($user)
+            ->when($technician, fn (Builder $query) => $query->where('technician_id', $technician));
 
-        $tickets = RmaTicket::query()
+        $tickets = $visible()
             ->ofKind($kind)
             ->when($status, fn (Builder $query) => $query->where('status', $status))
             ->search($filters['q'] ?? null)
@@ -49,8 +56,10 @@ class RmaTicketController extends Controller
             'kind' => $kind,
             'status' => $status,
             'search' => $filters['q'] ?? '',
-            'kindCounts' => collect(TicketKind::cases())->mapWithKeys(fn (TicketKind $type) => [$type->value => RmaTicket::query()->ofKind($type)->count()]),
-            'statusCounts' => RmaTicket::query()->ofKind($kind)->toBase()->selectRaw('status, count(*) as total')->groupBy('status')->pluck('total', 'status'),
+            'technician' => $technician,
+            'technicians' => $user->isAdmin() ? User::orderBy('name')->get(['id', 'name', 'is_active']) : collect(),
+            'kindCounts' => collect(TicketKind::cases())->mapWithKeys(fn (TicketKind $type) => [$type->value => $visible()->ofKind($type)->count()]),
+            'statusCounts' => $visible()->ofKind($kind)->toBase()->selectRaw('status, count(*) as total')->groupBy('status')->pluck('total', 'status'),
         ]);
     }
 
@@ -61,7 +70,9 @@ class RmaTicketController extends Controller
             'deviceTypes' => DeviceType::active()->orderBy('name')->get(),
             'brands' => Brand::active()->orderBy('name')->get(),
             'models' => ProductModel::active()->with('brand')->orderBy('code')->get(),
-            'customers' => Customer::orderBy('name')->get(['id', 'name', 'phone']),
+            'customers' => Customer::orderBy('name')->get(['id', 'name', 'phone', 'tax_code']),
+            'contacts' => CustomerContact::active()->orderBy('name')->get(['id', 'customer_id', 'name', 'phone'])
+                ->groupBy('customer_id')->map(fn ($group) => $group->map->only(['id', 'name', 'phone'])->values()),
             'technicians' => User::active()->orderBy('name')->get(),
             'serviceCenters' => ServiceCenter::active()->orderBy('name')->get(),
             'prefill' => $request->only(['serial', 'customer']),
@@ -96,17 +107,32 @@ class RmaTicketController extends Controller
         ]);
     }
 
+    /**
+     * Notes for everyone who works on the ticket; only an admin changes who is in charge.
+     */
     public function update(Request $request, RmaTicket $ticket): RedirectResponse
     {
-        abort_if($ticket->isClosed(), 403, 'Phiếu đã đóng, không sửa được.');
+        abort_if($ticket->isClosed() && ! $request->user()->isAdmin(), 403, 'Phiếu đã đóng, không sửa được.');
+
+        $canAssign = $request->user()->can('assign', $ticket);
 
         $data = $request->validate([
-            'technician_id' => ['nullable', 'integer', Rule::exists('users', 'id')->where('is_active', true)],
+            ...($canAssign ? ['technician_id' => ['nullable', 'integer', Rule::exists('users', 'id')->where('is_active', true)]] : []),
             'note' => ['nullable', 'string', 'max:2000'],
         ], attributes: ['technician_id' => 'nhân viên phụ trách', 'note' => 'ghi chú']);
 
         $ticket->update($data);
 
         return back()->with('status', 'Đã lưu thông tin phiếu.');
+    }
+
+    /**
+     * Admins remove a ticket opened by mistake. It is soft-deleted, so its number is never reused.
+     */
+    public function destroy(RmaTicket $ticket): RedirectResponse
+    {
+        $ticket->delete();
+
+        return redirect()->route('tickets.index')->with('status', "Đã xoá phiếu {$ticket->ticket_no}.");
     }
 }

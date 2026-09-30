@@ -30,8 +30,8 @@
         <div class="min-w-0 space-y-5">
             <section class="card p-5">
                 <dl class="grid gap-x-6 gap-y-3 text-sm sm:grid-cols-2 lg:grid-cols-3">
-                    <div><dt class="text-[11px] tracking-wider text-muted uppercase">Khách hàng</dt><dd class="font-medium"><a href="{{ route('customers.edit', $ticket->customer) }}" class="hover:underline">{{ $ticket->customer->name }}</a></dd></div>
-                    <div><dt class="text-[11px] tracking-wider text-muted uppercase">Liên hệ</dt><dd class="font-medium">{{ collect([$ticket->customer->contact_name, $ticket->customer->phone])->filter()->implode(' · ') }}</dd></div>
+                    <div><dt class="text-[11px] tracking-wider text-muted uppercase">Khách hàng</dt><dd class="font-medium"><a href="{{ route('customers.show', $ticket->customer) }}" class="hover:underline">{{ $ticket->customer->name }}</a></dd></div>
+                    <div><dt class="text-[11px] tracking-wider text-muted uppercase">Liên hệ</dt><dd class="font-medium">{{ $ticket->contactLabel() ?: '—' }}</dd></div>
                     <div><dt class="text-[11px] tracking-wider text-muted uppercase">Tình trạng bảo hành</dt><dd><x-pill :tone="$ticket->warranty_status->tone()">{{ $ticket->warranty_status->label() }}</x-pill></dd></div>
                     <div><dt class="text-[11px] tracking-wider text-muted uppercase">Thiết bị</dt><dd class="font-medium">{{ $ticket->device->displayName() }}</dd></div>
                     <div><dt class="text-[11px] tracking-wider text-muted uppercase">Serial nhận</dt><dd class="font-mono font-medium">{{ $ticket->device->serial_number }}</dd></div>
@@ -94,7 +94,7 @@
                 @if ($history->isNotEmpty())
                     <p class="mt-4 text-sm text-amber-800">Máy này đã từng gửi:
                         @foreach ($history as $previous)
-                            <a href="{{ route('tickets.show', $previous) }}" class="ticket-no">{{ $previous->ticket_no }}</a> ({{ vn_date($previous->received_date) }})@if (! $loop->last), @endif
+                            <x-ticket-link :ticket="$previous" /> ({{ vn_date($previous->received_date) }})@if (! $loop->last), @endif
                         @endforeach
                     </p>
                 @endif
@@ -103,7 +103,7 @@
             @if ($ticket->claimTicket)
                 <section class="card border-amber-300 p-5" id="yeu-cau-bao-hanh">
                     <div class="mb-3 flex flex-wrap items-center gap-2">
-                        <h2 class="font-semibold">Khách yêu cầu bảo hành sửa chữa theo phiếu <a href="{{ route('tickets.show', $ticket->claimTicket) }}" class="ticket-no">{{ $ticket->claimTicket->ticket_no }}</a></h2>
+                        <h2 class="font-semibold">Khách yêu cầu bảo hành sửa chữa theo phiếu <x-ticket-link :ticket="$ticket->claimTicket" /></h2>
                         @if ($ticket->claim_result)
                             <x-pill :tone="$ticket->claim_result->tone()">{{ $ticket->claim_result->label() }}</x-pill>
                         @else
@@ -268,7 +268,7 @@
                         <div class="mt-3 text-sm">
                             <span class="font-semibold">Khách đã quay lại bảo hành:</span>
                             @foreach ($ticket->claims as $claim)
-                                <a href="{{ route('tickets.show', $claim) }}" class="ticket-no">{{ $claim->ticket_no }}</a>
+                                <x-ticket-link :ticket="$claim" />
                                 ({{ $claim->claim_result?->label() ?? 'đang kiểm tra' }})@if (! $loop->last), @endif
                             @endforeach
                         </div>
@@ -466,18 +466,24 @@
         </div>
 
         <aside class="space-y-5">
-            @unless ($ticket->isClosed())
+            @if (! $ticket->isClosed() || auth()->user()->isAdmin())
                 <form method="POST" action="{{ route('tickets.update', $ticket) }}" class="card space-y-3 p-5">
                     @csrf @method('PUT')
-                    <h2 class="font-semibold">Phân công & ghi chú</h2>
+                    <h2 class="font-semibold">{{ auth()->user()->can('assign', $ticket) ? 'Phân công & ghi chú' : 'Ghi chú' }}</h2>
                     <div>
                         <label class="label" for="technician_id">Nhân viên phụ trách</label>
-                        <select class="input" name="technician_id" id="technician_id">
-                            <option value="">Chưa phân công</option>
-                            @foreach ($technicians as $technician)
-                                <option value="{{ $technician->id }}" @selected($ticket->technician_id === $technician->id)>{{ $technician->name }}</option>
-                            @endforeach
-                        </select>
+                        @can('assign', $ticket)
+                            <select class="input" name="technician_id" id="technician_id">
+                                <option value="">Chưa phân công</option>
+                                @foreach ($technicians as $technician)
+                                    <option value="{{ $technician->id }}" @selected($ticket->technician_id === $technician->id)>{{ $technician->name }}</option>
+                                @endforeach
+                            </select>
+                            <p class="mt-1 text-xs text-muted">Người lập phiếu: {{ $ticket->creator->name }}. Người được phân công sẽ thấy và xử lý tiếp phiếu này.</p>
+                        @else
+                            <p class="font-medium">{{ $ticket->technician?->name ?? 'Chưa phân công' }}</p>
+                            <p class="text-xs text-muted">Chỉ Admin đổi được người phụ trách.</p>
+                        @endcan
                     </div>
                     <div>
                         <label class="label" for="note">Ghi chú</label>
@@ -485,7 +491,16 @@
                     </div>
                     <button class="btn btn-secondary w-full">Lưu</button>
                 </form>
-            @endunless
+            @endif
+
+            @can('delete', $ticket)
+                <form method="POST" action="{{ route('tickets.destroy', $ticket) }}" class="card p-5" data-confirm="Xoá phiếu {{ $ticket->ticket_no }}? Phiếu sẽ không còn trong danh sách, số phiếu không được dùng lại.">
+                    @csrf @method('DELETE')
+                    <h2 class="mb-1 font-semibold">Xoá phiếu</h2>
+                    <p class="mb-3 text-xs text-muted">Dùng khi lập nhầm phiếu. Chỉ Admin thấy mục này.</p>
+                    <button class="btn btn-danger w-full">Xoá phiếu {{ $ticket->ticket_no }}</button>
+                </form>
+            @endcan
 
             <section class="card p-5">
                 <h2 class="mb-3 font-semibold">Lịch sử</h2>

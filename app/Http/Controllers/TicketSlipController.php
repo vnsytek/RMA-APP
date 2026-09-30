@@ -3,10 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Enums\TicketKind;
-use App\Enums\TicketResult;
 use App\Enums\TicketStatus;
 use App\Models\RmaTicket;
-use App\Models\RmaWarrantyItem;
 use App\Support\Spreadsheet\XlsxWriter;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -26,68 +24,42 @@ class TicketSlipController extends Controller
         $customer = $ticket->customer;
 
         $rows = [
-            [mb_strtoupper($company['name'])],
-            ['ĐC: '.$company['address']],
+            [mb_strtoupper($company['name']), null, null, null, mb_strtoupper($slip['title'])],
+            ['ĐC: '.$company['address'], null, null, null, 'Số phiếu: '.$ticket->ticket_no.' · Ngày '.vn_date($slip['date'])],
             ['Tel: '.($company['phone'] ?: '…………').'   Email: '.($company['email'] ?: '…………')],
             [],
-            [mb_strtoupper($slip['title'])],
-            ['Số phiếu: '.$ticket->ticket_no.'   Ngày '.vn_date($slip['date'])],
-            [],
-            ['Khách hàng:', $customer->name, null, 'Điện thoại:', $customer->phone],
-            ['Người liên hệ:', $customer->contact_name, null, 'Địa chỉ:', $customer->address],
+            ['Khách hàng:', $customer->name, null, 'Điện thoại:', $ticket->contact_phone ?? $customer->phone],
+            ['Người liên hệ:', $ticket->contact_name, null, 'Địa chỉ:', $customer->address],
             ['Hình thức:', $ticket->kind()->label(), null, 'Tình trạng BH:', $ticket->warranty_status->label()],
-            [],
-            $slip['head'],
-            $slip['row'],
         ];
-        $bold = [0, 4, 11];
+        $bold = [0];
 
-        foreach (array_filter([$slip['swapLine'], $slip['isReturn'] && $ticket->scrap_reason ? 'Lý do báo phế: '.$ticket->scrap_reason : null]) as $line) {
+        if ($slip['product']) {
             $rows[] = [];
-            $rows[] = [$line];
+            $bold[] = count($rows);
+            $rows[] = $slip['product']['head'];
+            $rows[] = $slip['product']['row'];
+        }
+
+        foreach (array_chunk($slip['details'], 2) as $pair) {
+            $rows[] = [$pair[0][0].':', $pair[0][1], null, isset($pair[1]) ? $pair[1][0].':' : null, $pair[1][1] ?? null];
         }
 
         if ($slip['lines']->isNotEmpty()) {
             $rows[] = [];
             $bold[] = count($rows);
-            $rows[] = ['STT', 'Nội dung sửa chữa', 'SL', 'Đơn giá', 'Thành tiền'];
+            $rows[] = ['STT', 'Nội dung sửa chữa', 'SL', 'Thành tiền'];
 
             foreach ($slip['lines'] as $index => $line) {
-                $rows[] = [$index + 1, $line->description, $line->quantity, $line->unit_price, $line->lineTotal()];
+                $rows[] = [$index + 1, $line->description, $line->quantity, $line->lineTotal()];
             }
 
             $bold[] = count($rows);
-            $rows[] = [null, null, null, 'Tổng cộng', $ticket->charge_amount];
+            $rows[] = [null, null, 'Tổng cộng', $ticket->charge_amount];
         } elseif ($slip['isReturn']) {
-            $rows[] = [];
             $rows[] = ['Chi phí:', 'Miễn phí'];
         }
 
-        if ($slip['warrantyLine']) {
-            $rows[] = [];
-            $rows[] = [$slip['warrantyLine']];
-        }
-
-        if ($slip['warrantyRows'] !== []) {
-            $bold[] = count($rows);
-            $rows[] = ['STT', 'Hạng mục bảo hành', 'Tháng', 'Đến ngày'];
-
-            foreach ($slip['warrantyRows'] as $index => $row) {
-                $rows[] = [$index + 1, $row['description'], $row['months'], vn_date($row['ends_on'])];
-            }
-        }
-
-        if ($slip['exclusions'] !== []) {
-            $rows[] = [];
-            $bold[] = count($rows);
-            $rows[] = ['Không bảo hành:'];
-
-            foreach ($slip['exclusions'] as $exclusion) {
-                $rows[] = [null, '- '.$exclusion];
-            }
-        }
-
-        $rows[] = [];
         $rows[] = [];
         $bold[] = count($rows);
         $rows[] = [null, 'KHÁCH HÀNG', null, null, $slip['isReturn'] ? 'NHÂN VIÊN TRẢ' : 'NHÂN VIÊN NHẬN'];
@@ -97,11 +69,13 @@ class TicketSlipController extends Controller
         $rows[] = [null, null, null, null, $slip['staff']?->name];
 
         return (new XlsxWriter)
-            ->addSheet($ticket->ticket_no, $rows, [16, 36, 6, 24, 30, 32], $bold, ['A1:F1', 'A2:F2', 'A3:F3', 'A5:F5', 'A6:F6'])
+            ->addSheet($ticket->ticket_no, $rows, [14, 40, 14, 18, 34, 22], $bold, ['A1:D1', 'A2:D2', 'A3:E3'], ['paper' => XlsxWriter::PAPER_A5, 'orientation' => 'landscape'])
             ->download(($slip['isReturn'] ? 'PhieuTra_' : 'PhieuNhan_').$ticket->ticket_no.'.xlsx');
     }
 
     /**
+     * Everything one A5 slip shows: the receipt keeps its product table; the return lists device, serials and paid repair lines.
+     *
      * @return array<string, mixed>
      */
     private function slip(Request $request, RmaTicket $ticket, string $type): array
@@ -112,7 +86,7 @@ class TicketSlipController extends Controller
         abort_if($isReturn && ! in_array($ticket->status, [TicketStatus::Ready, TicketStatus::Returned], true), 404, 'Phiếu chưa có kết quả để in phiếu trả.');
         abort_if(! $isReturn && $ticket->status === TicketStatus::Cancelled, 404, 'Phiếu đã hủy.');
 
-        $ticket->load('customer', 'device.productModel.brand', 'device.productModel.deviceType', 'returnedDevice.productModel.brand', 'returnedDevice.productModel.deviceType', 'technician', 'creator', 'quoteItems', 'warrantyItems', 'claimTicket', 'claimItem');
+        $ticket->load('customer', 'device.productModel.brand', 'device.productModel.deviceType', 'returnedDevice.productModel.brand', 'returnedDevice.productModel.deviceType', 'technician', 'creator', 'quoteItems');
 
         $date = $isReturn ? ($ticket->returned_date ?? today()) : $ticket->received_date;
         $isRepair = $ticket->kind() === TicketKind::Repair;
@@ -120,39 +94,31 @@ class TicketSlipController extends Controller
             ? ($isRepair ? 'Phiếu trả hàng sửa chữa' : 'Phiếu trả hàng bảo hành')
             : ($ticket->originalKind() === TicketKind::Repair ? 'Phiếu nhận hàng sửa chữa' : 'Phiếu nhận hàng bảo hành');
 
-        $serialOut = $ticket->currentDevice()->serial_number;
-        $swapped = $ticket->returnedDevice !== null;
-        $otherProduct = $ticket->isSwappedToOtherProduct();
+        $details = [];
+        $product = null;
 
-        $warrantyLine = null;
-        $warrantyRows = [];
-        $exclusions = [];
-
-        if ($isReturn && $isRepair && $ticket->result?->carriesRepairWarranty()) {
-            $warrantyRows = $ticket->warrantyItems
-                ->map(fn (RmaWarrantyItem $item) => ['description' => $item->description, 'months' => $item->months, 'ends_on' => $item->endsOn($date)])
-                ->all();
-            $covered = $ticket->warrantyItems->pluck('rma_quote_item_id')->filter()->all();
-            $exclusions = [
-                ...$ticket->quoteItems->reject(fn ($line) => in_array($line->id, $covered, true))->pluck('description')->all(),
-                ...$ticket->warrantyExclusionList(),
+        if (! $isReturn) {
+            $product = [
+                'head' => ['STT', 'Tên sản phẩm', 'SL', 'Serial', 'Tình trạng / lỗi khách báo', 'Phụ kiện kèm theo'],
+                'row' => [1, $ticket->device->displayName(), 1, $ticket->device->serial_number, $ticket->fault_description, $ticket->accessories ?: 'Không'],
             ];
+        } else {
+            $details[] = ['Thiết bị', $ticket->device->displayName(), false];
 
-            if ($warrantyRows === []) {
-                $endsOn = $ticket->repairWarrantyEndsOn($date);
-                $warrantyLine = $endsOn
-                    ? "Bảo hành sau sửa chữa: {$ticket->repair_warranty_months} tháng, đến ngày {$endsOn->format('d/m/Y')}."
-                    : 'Không bảo hành sau sửa chữa.';
+            if ($ticket->returnedDevice) {
+                $details[] = ['Seri lỗi', $ticket->device->serial_number, false];
+                $details[] = ['Seri trả', $ticket->returnedDevice->serial_number.($ticket->isSwappedToOtherProduct()
+                    ? ' (hãng đã đổi sang sản phẩm khác: '.$ticket->returnedDevice->displayName().')'
+                    : ' (hãng đổi máy mới cùng model)'), $ticket->isSwappedToOtherProduct()];
             } else {
-                $warrantyLine = 'Sang Y chỉ bảo hành đúng các hạng mục ghi thời hạn dưới đây, tính từ ngày trả máy. Khi bảo hành, quý khách vui lòng mang theo phiếu này.';
+                $details[] = ['Serial', $ticket->device->serial_number, false];
             }
-        }
 
-        if ($isReturn && $ticket->result === TicketResult::RepairWarranty && $ticket->claimTicket) {
-            $endsOn = $ticket->claimItem?->endsOn() ?? $ticket->claimTicket->repairWarrantyEndsOn();
-            $warrantyLine = "Bảo hành sửa chữa theo phiếu {$ticket->claimTicket->ticket_no}"
-                .($ticket->claimItem ? " (hạng mục: {$ticket->claimItem->description})" : '')
-                .': miễn phí. Thời hạn bảo hành giữ nguyên'.($endsOn ? ' đến ngày '.$endsOn->format('d/m/Y') : '').'.';
+            $details[] = ['Ngày nhận', vn_date($ticket->received_date), false];
+
+            if ($ticket->scrap_reason) {
+                $details[] = ['Lý do báo phế', $ticket->scrap_reason, true];
+            }
         }
 
         return [
@@ -162,19 +128,9 @@ class TicketSlipController extends Controller
             'title' => $title,
             'date' => $date,
             'staff' => $isReturn ? $request->user() : ($ticket->technician ?? $ticket->creator),
-            'head' => $isReturn
-                ? ['STT', 'Tên sản phẩm', 'SL', 'Seri lỗi', 'Seri trả', 'Kết quả']
-                : ['STT', 'Tên sản phẩm', 'SL', 'Serial', 'Tình trạng / lỗi khách báo', 'Phụ kiện kèm theo'],
-            'row' => $isReturn
-                ? [1, $ticket->device->displayName(), 1, $ticket->device->serial_number, $otherProduct ? "{$serialOut} ({$ticket->returnedDevice->displayName()})" : $serialOut, $ticket->result?->label()]
-                : [1, $ticket->device->displayName(), 1, $ticket->device->serial_number, $ticket->fault_description, $ticket->accessories ?: 'Không'],
-            'swapLine' => $isReturn && $swapped
-                ? 'Hãng đã đổi '.($otherProduct ? 'sang sản phẩm khác' : 'máy mới cùng model').": {$ticket->returnedDevice->displayName()}, serial {$serialOut}."
-                : null,
+            'details' => $details,
+            'product' => $product,
             'lines' => $isReturn && $ticket->is_chargeable ? $ticket->quoteItems : collect(),
-            'warrantyLine' => $warrantyLine,
-            'warrantyRows' => $warrantyRows,
-            'exclusions' => $exclusions,
             'company' => config('rma.company'),
         ];
     }

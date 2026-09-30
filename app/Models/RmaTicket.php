@@ -25,7 +25,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Collection;
 
 #[Fillable([
-    'ticket_no', 'service_type', 'original_service_type', 'onsite_location', 'warranty_status', 'customer_id', 'device_id',
+    'ticket_no', 'service_type', 'original_service_type', 'onsite_location', 'warranty_status', 'customer_id', 'customer_contact_id',
+    'contact_name', 'contact_phone', 'device_id',
     'returned_device_id', 'technician_id', 'fault_description', 'accessories', 'received_date', 'returned_date', 'status',
     'result', 'scrap_reason', 'repair_warranty_months', 'warranty_exclusions', 'claim_ticket_id', 'claim_item_id', 'claim_result',
     'claim_note', 'quote_status', 'quoted_at', 'quote_decided_at', 'is_chargeable', 'charge_amount', 'erp_receipt_no', 'erp_return_no',
@@ -57,6 +58,8 @@ class RmaTicket extends Model
             'is_chargeable' => 'boolean',
             'charge_amount' => 'integer',
             'repair_warranty_months' => 'integer',
+            'created_by' => 'integer',
+            'technician_id' => 'integer',
         ];
     }
 
@@ -71,6 +74,24 @@ class RmaTicket extends Model
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class);
+    }
+
+    /**
+     * The address-book entry of the person who sent the device; the ticket keeps its own copy of name and phone.
+     *
+     * @return BelongsTo<CustomerContact, $this>
+     */
+    public function contact(): BelongsTo
+    {
+        return $this->belongsTo(CustomerContact::class, 'customer_contact_id');
+    }
+
+    /**
+     * Who to call about this ticket, e.g. "Chị Nga · 0901 234 567".
+     */
+    public function contactLabel(): string
+    {
+        return collect([$this->contact_name, $this->contact_phone])->filter()->implode(' · ');
     }
 
     /**
@@ -298,6 +319,19 @@ class RmaTicket extends Model
             : null;
     }
 
+    /**
+     * Tickets the user may see: all of them for an admin, otherwise the ones they opened or are in charge of.
+     */
+    #[Scope]
+    protected function visibleTo(Builder $query, User $user): Builder
+    {
+        if ($user->isAdmin()) {
+            return $query;
+        }
+
+        return $query->where(fn (Builder $query) => $query->where('created_by', $user->id)->orWhere('technician_id', $user->id));
+    }
+
     #[Scope]
     protected function open(Builder $query): Builder
     {
@@ -328,12 +362,14 @@ class RmaTicket extends Model
 
         return $query->where(function (Builder $query) use ($like) {
             $query->where('ticket_no', 'like', $like)
+                ->orWhere('contact_name', 'like', $like)
+                ->orWhere('contact_phone', 'like', $like)
                 ->orWhere('erp_receipt_no', 'like', $like)
                 ->orWhere('erp_return_no', 'like', $like)
                 ->orWhereHas('customer', fn (Builder $customer) => $customer
                     ->where('name', 'like', $like)
-                    ->orWhere('contact_name', 'like', $like)
-                    ->orWhere('phone', 'like', $like))
+                    ->orWhere('phone', 'like', $like)
+                    ->orWhere('tax_code', 'like', $like))
                 ->orWhereHas('device', fn (Builder $device) => $device
                     ->where('serial_number', 'like', $like)
                     ->orWhereHas('productModel', fn (Builder $model) => $model->where('code', 'like', $like)))

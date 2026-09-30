@@ -18,8 +18,8 @@ enum UserRole: string
     public function description(): string
     {
         return match ($this) {
-            self::Admin => 'Toàn quyền, quản lý tài khoản, ẩn / hiện danh mục và TTBH',
-            self::User => 'Lập và xử lý phiếu, thêm khách hàng, danh mục, chứng từ',
+            self::Admin => 'Xem và sửa mọi phiếu, phân công lại phiếu, xoá phiếu lập nhầm, xem báo cáo, quản lý tài khoản, ẩn / hiện danh mục và TTBH',
+            self::User => 'Lập và xử lý phiếu của mình (tự là người phụ trách), chỉ thấy phiếu mình lập hoặc được Admin phân công',
         };
     }
 }

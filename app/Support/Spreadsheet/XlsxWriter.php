@@ -11,8 +11,14 @@ use ZipArchive;
  */
 class XlsxWriter
 {
+    /** Excel's paper size code for A4 */
+    public const PAPER_A4 = 9;
+
+    /** Excel's paper size code for A5 */
+    public const PAPER_A5 = 11;
+
     /**
-     * @var list<array{name: string, rows: list<list<string|int|float|null>>, widths: list<int>, bold: list<int>, merges: list<string>}>
+     * @var list<array{name: string, rows: list<list<string|int|float|null>>, widths: list<int>, bold: list<int>, merges: list<string>, print: ?array{paper: int, orientation: string}}>
      */
     private array $sheets = [];
 
@@ -21,8 +27,9 @@ class XlsxWriter
      * @param  list<int>  $widths  column widths in characters
      * @param  list<int>  $boldRows  zero-based row indexes to render in bold
      * @param  list<string>  $merges  ranges such as "A1:F1"
+     * @param  array{paper: int, orientation: string}|null  $print  paper size and orientation; the sheet is then fitted to one page
      */
-    public function addSheet(string $name, array $rows, array $widths = [], array $boldRows = [], array $merges = []): static
+    public function addSheet(string $name, array $rows, array $widths = [], array $boldRows = [], array $merges = [], ?array $print = null): static
     {
         $name = mb_substr(trim((string) preg_replace('/[\[\]:*?\/\\\\]/u', '', $name)) ?: 'Sheet', 0, 31);
         $taken = array_column($this->sheets, 'name');
@@ -32,7 +39,7 @@ class XlsxWriter
             $unique = mb_substr($name, 0, 28).' '.$suffix;
         }
 
-        $this->sheets[] = ['name' => $unique, 'rows' => $rows, 'widths' => $widths, 'bold' => $boldRows, 'merges' => $merges];
+        $this->sheets[] = ['name' => $unique, 'rows' => $rows, 'widths' => $widths, 'bold' => $boldRows, 'merges' => $merges, 'print' => $print];
 
         return $this;
     }
@@ -149,7 +156,7 @@ class XlsxWriter
     }
 
     /**
-     * @param  array{name: string, rows: list<list<string|int|float|null>>, widths: list<int>, bold: list<int>, merges: list<string>}  $sheet
+     * @param  array{name: string, rows: list<list<string|int|float|null>>, widths: list<int>, bold: list<int>, merges: list<string>, print: ?array{paper: int, orientation: string}}  $sheet
      */
     private function sheet(array $sheet): string
     {
@@ -186,11 +193,16 @@ class XlsxWriter
             .implode('', array_map(fn (string $range) => '<mergeCell ref="'.$range.'"/>', $sheet['merges']))
             .'</mergeCells>';
 
+        $print = $sheet['print'];
+
         return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
             .'<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
+            .($print ? '<sheetPr><pageSetUpPr fitToPage="1"/></sheetPr>' : '')
             .($cols === '' ? '' : '<cols>'.$cols.'</cols>')
             .'<sheetData>'.$rows.'</sheetData>'
             .$merges
+            .($print ? '<pageMargins left="0.3" right="0.3" top="0.3" bottom="0.3" header="0" footer="0"/>'
+                .'<pageSetup paperSize="'.$print['paper'].'" orientation="'.$this->escape($print['orientation']).'" fitToWidth="1" fitToHeight="1"/>' : '')
             .'</worksheet>';
     }
 

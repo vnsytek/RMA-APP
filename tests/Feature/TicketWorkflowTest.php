@@ -36,7 +36,7 @@ class TicketWorkflowTest extends TestCase
         parent::setUp();
 
         Storage::fake('local');
-        $this->user = User::factory()->create();
+        $this->user = User::factory()->admin()->create();
     }
 
     public function test_carry_in_ticket_goes_to_the_service_center_and_comes_back_as_another_product(): void
@@ -62,7 +62,7 @@ class TicketWorkflowTest extends TestCase
 
         $this->actingAs($this->user)->get(route('tickets.slips.show', [$ticket, 'return']))
             ->assertOk()
-            ->assertSeeText('Hãng đã đổi sang sản phẩm khác')
+            ->assertSeeText('hãng đã đổi sang sản phẩm khác')
             ->assertSeeText('NEW-SN');
 
         $this->act($ticket, TicketAction::ReturnToCustomer, ['returned_date' => today()->toDateString()]);
@@ -214,9 +214,9 @@ class TicketWorkflowTest extends TestCase
 
         $this->actingAs($this->user)->get(route('tickets.slips.show', [$ticket, 'return']))
             ->assertOk()
-            ->assertSeeText('Hạng mục bảo hành')
-            ->assertSeeText('Cài lại phần mềm')
-            ->assertSeeText('Vào nước');
+            ->assertSeeText('Panel')
+            ->assertDontSeeText('Không bảo hành')
+            ->assertDontSeeText('Kết quả');
     }
 
     public function test_free_repair_without_months_has_no_warranty(): void
@@ -276,7 +276,7 @@ class TicketWorkflowTest extends TestCase
 
         $this->actingAs($this->user)->get(route('tickets.slips.show', [$claim, 'return']))
             ->assertOk()
-            ->assertSeeText("Bảo hành sửa chữa theo phiếu {$original->ticket_no} (hạng mục: Board nguồn)");
+            ->assertSeeText('Chi phí: Miễn phí');
     }
 
     public function test_a_claim_outside_the_warranty_needs_a_reason_and_then_follows_the_normal_quote(): void
@@ -313,7 +313,7 @@ class TicketWorkflowTest extends TestCase
         $payload = [
             'warranty_status' => 'out_of_warranty', 'kind' => TicketKind::Repair->value, 'serial_number' => $original->device->serial_number,
             'device_type_id' => $model->device_type_id, 'brand_id' => $model->brand_id, 'product_model_id' => $model->id,
-            'customer_id' => $original->customer_id, 'fault_description' => 'Lại tự tắt', 'received_date' => today()->toDateString(),
+            'customer_id' => $original->customer_id, 'contact_name' => 'Chị Hà', 'contact_phone' => '0912888999', 'fault_description' => 'Lại tự tắt', 'received_date' => today()->toDateString(),
             'photos' => [UploadedFile::fake()->image('nhan.jpg')], 'claim_ticket_id' => $original->id,
         ];
 

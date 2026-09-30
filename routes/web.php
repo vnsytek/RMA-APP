@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\CatalogController;
+use App\Http\Controllers\CustomerContactController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\DeviceController;
 use App\Http\Controllers\LookupController;
@@ -28,9 +29,12 @@ Route::middleware('auth')->group(function () {
     Route::post('/logout', [LoginController::class, 'destroy'])->name('logout');
     Route::redirect('/', '/tickets');
 
-    Route::resource('tickets', RmaTicketController::class)->only(['index', 'create', 'store', 'show', 'update']);
+    Route::resource('tickets', RmaTicketController::class)
+        ->only(['index', 'create', 'store', 'show', 'update', 'destroy'])
+        ->middlewareFor(['show', 'update'], 'can:view,ticket')
+        ->middlewareFor('destroy', 'can:delete,ticket');
 
-    Route::prefix('tickets/{ticket}')->name('tickets.')->scopeBindings()->group(function () {
+    Route::prefix('tickets/{ticket}')->name('tickets.')->middleware('can:update,ticket')->scopeBindings()->group(function () {
         Route::post('actions/{action}', [TicketActionController::class, 'store'])->name('actions.store');
         Route::post('quote-items', [TicketQuoteItemController::class, 'store'])->name('quote-items.store');
         Route::delete('quote-items/{quoteItem}', [TicketQuoteItemController::class, 'destroy'])->name('quote-items.destroy');
@@ -46,7 +50,14 @@ Route::middleware('auth')->group(function () {
 
     Route::get('devices', [DeviceController::class, 'index'])->name('devices.index');
     Route::get('devices/{device}', [DeviceController::class, 'show'])->name('devices.show');
-    Route::resource('customers', CustomerController::class)->only(['index', 'store', 'edit', 'update']);
+    Route::resource('customers', CustomerController::class)
+        ->only(['index', 'store', 'show', 'update', 'destroy'])
+        ->middlewareFor('destroy', 'can:admin');
+    Route::prefix('customers/{customer}/contacts')->name('customers.contacts.')->scopeBindings()->group(function () {
+        Route::post('/', [CustomerContactController::class, 'store'])->name('store');
+        Route::put('{contact}', [CustomerContactController::class, 'update'])->name('update');
+        Route::patch('{contact}/toggle', [CustomerContactController::class, 'toggle'])->name('toggle');
+    });
     Route::resource('service-centers', ServiceCenterController::class)->only(['index', 'store', 'update']);
 
     Route::get('catalog', [CatalogController::class, 'index'])->name('catalog.index');
@@ -54,8 +65,6 @@ Route::middleware('auth')->group(function () {
     Route::post('catalog/brands', [CatalogController::class, 'storeBrand'])->name('catalog.brands.store');
     Route::post('catalog/product-models', [CatalogController::class, 'storeProductModel'])->name('catalog.product-models.store');
 
-    Route::get('reports', [ReportController::class, 'index'])->name('reports.index');
-    Route::get('reports/export', [ReportController::class, 'export'])->name('reports.export');
     Route::view('flows', 'flows')->name('flows');
     Route::get('sequences', [TicketSequenceController::class, 'index'])->name('sequences.index');
 
@@ -64,8 +73,12 @@ Route::middleware('auth')->group(function () {
 
     Route::get('lookup/models', [LookupController::class, 'models'])->name('lookup.models');
     Route::get('lookup/devices', [LookupController::class, 'device'])->name('lookup.devices');
+    Route::get('lookup/tax-code', [LookupController::class, 'taxCode'])->middleware('throttle:30,1')->name('lookup.tax-code');
 
     Route::middleware('can:admin')->group(function () {
+        Route::get('reports', [ReportController::class, 'index'])->name('reports.index');
+        Route::get('reports/export', [ReportController::class, 'export'])->name('reports.export');
+        Route::post('users/{user}/handover', [UserController::class, 'handover'])->name('users.handover');
         Route::resource('users', UserController::class)->only(['index', 'store', 'update']);
         Route::patch('users/{user}/toggle', [UserController::class, 'toggle'])->name('users.toggle');
         Route::patch('service-centers/{serviceCenter}/toggle', [ServiceCenterController::class, 'toggle'])->name('service-centers.toggle');

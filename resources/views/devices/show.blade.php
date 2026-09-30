@@ -17,8 +17,8 @@
                 <dt class="text-[11px] tracking-wider text-muted uppercase">Khách hàng gần nhất</dt>
                 <dd class="font-medium">
                     @if ($summary->customer)
-                        <a href="{{ route('customers.edit', $summary->customer) }}" class="hover:underline">{{ $summary->customer->name }}</a>
-                        <div class="font-mono text-xs text-muted">{{ collect([$summary->customer->contact_name, $summary->customer->phone])->filter()->implode(' · ') }}</div>
+                        <a href="{{ route('customers.show', $summary->customer) }}" class="hover:underline">{{ $summary->customer->name }}</a>
+                        <div class="font-mono text-xs text-muted">{{ $summary->tickets->first()?->contactLabel() }}</div>
                     @else
                         —
                     @endif
@@ -29,7 +29,7 @@
                 <dt class="text-[11px] tracking-wider text-muted uppercase">Đang xử lý</dt>
                 <dd class="font-medium">
                     @if ($summary->openTicket)
-                        <a href="{{ route('tickets.show', $summary->openTicket) }}" class="ticket-no">{{ $summary->openTicket->ticket_no }}</a> <x-status-pill :status="$summary->openTicket->status" />
+                        <x-ticket-link :ticket="$summary->openTicket" /> <x-status-pill :status="$summary->openTicket->status" />
                     @else
                         Không
                     @endif
@@ -55,11 +55,15 @@
     </section>
 
     <section class="card mt-5 overflow-x-auto">
-        <h2 class="px-5 pt-4 pb-2 font-semibold">Lịch sử phiếu của máy</h2>
+        <h2 class="px-5 pt-4 pb-2 font-semibold">Lịch sử phiếu của máy
+            @if ($tickets->count() < $summary->tickets->count())
+                <span class="text-sm font-normal text-muted">· hiện {{ $tickets->count() }}/{{ $summary->tickets->count() }} phiếu (chỉ phiếu bạn lập hoặc phụ trách)</span>
+            @endif
+        </h2>
         <table class="table">
             <thead><tr><th>Số phiếu</th><th>Hình thức</th><th>Khách hàng</th><th>Ngày nhận</th><th>Ngày trả</th><th>Kết quả</th><th>BH sau sửa</th><th>Trạng thái</th></tr></thead>
             <tbody>
-                @forelse ($summary->tickets as $ticket)
+                @forelse ($tickets as $ticket)
                     <tr data-href="{{ route('tickets.show', $ticket) }}">
                         <td><a href="{{ route('tickets.show', $ticket) }}" class="ticket-no">{{ $ticket->ticket_no }}</a></td>
                         <td><x-kind-tag :kind="$ticket->kind()" /><div class="text-xs text-muted">{{ $ticket->warranty_status->label() }}</div></td>

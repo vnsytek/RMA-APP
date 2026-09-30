@@ -2,13 +2,13 @@
 
 @php
     $nav = [
-        'Nghiệp vụ' => [
+        'Nghiệp vụ' => array_values(array_filter([
             ['tickets.*', 'tickets.index', 'Phiếu RMA'],
             ['devices.*', 'devices.index', 'Thiết bị'],
             ['customers.*', 'customers.index', 'Khách hàng'],
-            ['reports.*', 'reports.index', 'Báo cáo'],
+            auth()->user()->can('admin') ? ['reports.*', 'reports.index', 'Báo cáo'] : null,
             ['flows', 'flows', 'Quy trình'],
-        ],
+        ])),
         'Danh mục' => [
             ['service-centers.*', 'service-centers.index', 'Hãng / TTBH'],
             ['catalog.*', 'catalog.index', 'Loại · Hãng · Model'],
@@ -28,6 +28,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{{ $title }} · {{ config('app.name') }}</title>
+    <link rel="icon" type="image/png" href="{{ asset('images/favicon.png') }}">
     @fonts
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
@@ -35,7 +36,7 @@
     <div class="min-h-screen lg:grid lg:grid-cols-[236px_1fr]">
         <aside class="flex flex-col gap-4 bg-brand-dark px-4 py-4 text-side-text lg:sticky lg:top-0 lg:h-screen lg:gap-5 lg:py-6">
             <a href="{{ route('tickets.index') }}" class="flex items-center gap-2.5 px-2">
-                <span class="grid size-9 place-items-center border border-side-muted text-[13px] font-bold">SY</span>
+                <img src="{{ asset('images/logo-sangy-128.png') }}" alt="{{ config('rma.company.short_name') }}" class="size-10 shrink-0">
                 <span>
                     <span class="block text-[13px] font-bold tracking-[0.2em]">RMA</span>
                     <span class="block text-[11px] text-side-muted">{{ config('rma.company.short_name') }}</span>
@@ -81,6 +82,9 @@
                 @endisset
             </header>
 
+            @if (session('error'))
+                <div class="mb-4 rounded-md border border-red-300 bg-red-50 px-4 py-2.5 text-sm text-red-800" role="alert">{{ session('error') }}</div>
+            @endif
             @if (session('status'))
                 <div class="mb-4 rounded-md border border-emerald-300 bg-emerald-50 px-4 py-2.5 text-sm text-emerald-900" role="status">{{ session('status') }}</div>
             @endif

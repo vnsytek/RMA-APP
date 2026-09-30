@@ -1,0 +1,243 @@
+<title>Người liên hệ theo phiếu</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&family=Tinos:wght@400;700&display=swap">
+<style>
+    :root {
+        --brand: #1f4a3d; --brand-hover: #24574a; --brand-soft: #e2ede7;
+        --canvas: #f2f4f1; --surface: #ffffff; --panel: #f7f8f6; --line: #d8dfda;
+        --ink: #16211c; --muted: #5b6a62; --on-brand: #ffffff;
+        --warn-bg: #fdf1dc; --warn-ink: #8a5300; --ok-bg: #e3f3ea; --ok-ink: #17603f; --paper: #ffffff;
+        --sans: 'Be Vietnam Pro', ui-sans-serif, system-ui, 'Segoe UI', sans-serif;
+        --mono: 'JetBrains Mono', ui-monospace, Consolas, monospace;
+    }
+    @media (prefers-color-scheme: dark) {
+        :root:not([data-theme="light"]) {
+            color-scheme: dark;
+            --brand: #6fb99b; --brand-hover: #86c9ad; --brand-soft: #1d3129;
+            --canvas: #111714; --surface: #18201c; --panel: #1d2621; --line: #2c3a33;
+            --ink: #e4ece7; --muted: #9aaca2; --on-brand: #0e1512;
+            --warn-bg: #33270f; --warn-ink: #f1c878; --ok-bg: #173226; --ok-ink: #8fd6b1; --paper: #f6f6f2;
+        }
+    }
+    :root[data-theme="dark"] {
+        color-scheme: dark;
+        --brand: #6fb99b; --brand-hover: #86c9ad; --brand-soft: #1d3129;
+        --canvas: #111714; --surface: #18201c; --panel: #1d2621; --line: #2c3a33;
+        --ink: #e4ece7; --muted: #9aaca2; --on-brand: #0e1512;
+        --warn-bg: #33270f; --warn-ink: #f1c878; --ok-bg: #173226; --ok-ink: #8fd6b1; --paper: #f6f6f2;
+    }
+    * { box-sizing: border-box; }
+    body { background: var(--canvas); color: var(--ink); font: 14px/1.55 var(--sans); padding-inline: 16px; padding-block: 24px 48px; }
+    .wrap { max-width: 1180px; margin: 0 auto; display: grid; gap: 20px; }
+    h1, h2, h3 { margin: 0; text-wrap: balance; }
+    h1 { font-size: 24px; font-weight: 700; }
+    h2 { font-size: 16px; font-weight: 600; }
+    h3 { font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+    p { margin: 0; }
+    .muted { color: var(--muted); } .small { font-size: 12px; } .mono { font-family: var(--mono); }
+    .tag { display: inline-flex; border-radius: 999px; padding: 2px 10px; font-size: 12px; font-weight: 600; background: var(--brand-soft); color: var(--brand); }
+    .intro { max-width: 70ch; color: var(--muted); margin-top: 4px; }
+    .steps { display: flex; flex-wrap: wrap; gap: 8px; }
+    .steps button { font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 8px; padding: 8px 14px; }
+    .steps button[aria-selected="true"] { background: var(--brand); border-color: var(--brand); color: var(--on-brand); }
+    button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+    .layout { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 20px; align-items: start; }
+    @media (max-width: 900px) { .layout { grid-template-columns: minmax(0, 1fr); } }
+    .card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 20px; display: grid; gap: 14px; }
+    .note { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; display: grid; gap: 8px; font-size: 13px; }
+    .note ul { margin: 0; padding-left: 18px; display: grid; gap: 5px; }
+    .grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+    .field { display: grid; gap: 4px; }
+    .field > span { font-size: 12px; font-weight: 600; }
+    input, select { font: inherit; font-size: 13px; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; width: 100%; }
+    .btn { font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; border-radius: 6px; padding: 7px 14px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); white-space: nowrap; }
+    .btn-primary { background: var(--brand); border-color: var(--brand); color: var(--on-brand); }
+    .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+    .choices { display: grid; gap: 6px; }
+    .choice { display: flex; align-items: center; gap: 10px; border: 1px solid var(--line); border-radius: 8px; padding: 9px 12px; cursor: pointer; background: var(--surface); }
+    .choice:has(input:checked) { border-color: var(--brand); background: var(--brand-soft); }
+    .choice input { width: 16px; height: 16px; accent-color: var(--brand); }
+    .choice b { font-weight: 600; }
+    .hint { background: var(--ok-bg); color: var(--ink); border-radius: 8px; padding: 9px 12px; font-size: 13px; }
+    .table-scroll { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th { text-align: left; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); font-weight: 600; padding: 8px 10px; background: var(--panel); border-bottom: 1px solid var(--line); white-space: nowrap; }
+    td { padding: 9px 10px; border-bottom: 1px solid var(--line); }
+    .pill { display: inline-flex; border-radius: 999px; padding: 1px 9px; font-size: 12px; font-weight: 600; }
+    .pill.ok { background: var(--ok-bg); color: var(--ok-ink); } .pill.off { background: var(--panel); color: var(--muted); border: 1px solid var(--line); }
+    .slip { background: var(--paper); color: #111; border: 1px solid var(--line); border-radius: 4px; padding: 18px 22px; font: 14px/1.4 Tinos, 'Times New Roman', serif; display: grid; gap: 8px; }
+    .slip-head { display: flex; justify-content: space-between; gap: 12px; border-bottom: 1.5px solid #111; padding-bottom: 6px; flex-wrap: wrap; }
+    .slip h4 { margin: 0; font-size: 17px; text-transform: uppercase; }
+    .slip .meta { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 2px 14px; }
+    .slip mark { background: #fff3c4; color: #111; padding: 0 3px; border-radius: 2px; }
+    .schema { font-family: var(--mono); font-size: 12px; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; overflow-x: auto; white-space: pre; line-height: 1.6; }
+</style>
+
+<div class="wrap">
+    <header>
+        <span class="tag">Demo · chưa làm vào hệ thống</span>
+        <h1 style="margin-top:8px">Người liên hệ theo từng phiếu</h1>
+        <p class="intro">Pegatron chỉ là một khách hàng, nhưng mỗi lần gửi máy có thể là một người khác nhau. Mỗi người liên hệ chỉ có tên và SĐT. Bấm lần lượt các bước bên dưới.</p>
+    </header>
+
+    <nav class="steps" role="tablist" id="steps"></nav>
+
+    <div class="layout">
+        <main id="stage" aria-live="polite"></main>
+        <aside class="note" id="aside"></aside>
+    </div>
+
+    <section class="card">
+        <h2>Thay đổi dữ liệu dự kiến</h2>
+        <div class="schema">customer_contacts          (mới) danh bạ người liên hệ của mỗi khách
+  id, customer_id, name, phone, is_active
+
+rma_tickets
+  + contact_name             người liên hệ của phiếu này (lưu lại lúc lập phiếu)
+  + contact_phone
+  + customer_contact_id?     liên kết danh bạ, để tìm và thống kê
+
+customers
+  - contact_name, phone      chuyển thành người liên hệ đầu tiên trong danh bạ</div>
+    </section>
+</div>
+
+<script>
+const state = {
+    step: 'intake',
+    contacts: [
+        { id: 1, name: 'Chị Nga', phone: '0901 234 567', active: true },
+    ],
+    tickets: [
+        { no: '26090011', date: '30/09/2026', device: 'Màn hình DELL U2422H', contact: 'Chị Nga', phone: '0901 234 567' },
+    ],
+    choice: 'new',
+    newName: 'Chị Hà',
+    newPhone: '0912 888 999',
+};
+
+const STEPS = [
+    ['intake', '1. Lập phiếu tháng sau'],
+    ['customer', '2. Trang khách Pegatron'],
+    ['slip', '3. Phiếu nhận in ra'],
+];
+
+const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+
+function current() {
+    if (state.choice === 'new') {
+        return { name: state.newName.trim() || '(chưa nhập)', phone: state.newPhone.trim() };
+    }
+    const c = state.contacts.find((x) => String(x.id) === state.choice);
+    return { name: c.name, phone: c.phone };
+}
+
+function renderIntake() {
+    const options = state.contacts.filter((c) => c.active).map((c) => `
+        <label class="choice"><input type="radio" name="contact" value="${c.id}" ${state.choice === String(c.id) ? 'checked' : ''}>
+            <span><b>${esc(c.name)}</b> <span class="mono small muted">${esc(c.phone)}</span></span></label>`).join('');
+
+    return `<section class="card">
+        <div class="row" style="justify-content:space-between"><h2>Lập phiếu mới · 26100003</h2><span class="small muted">30/10/2026</span></div>
+        <div class="field"><span>Khách gửi máy</span>
+            <select id="customer" aria-label="Khách gửi máy"><option>CÔNG TY TNHH PEGATRON VIỆT NAM · MST 0202019370</option></select></div>
+        <div class="field"><span>Người liên hệ của phiếu này *</span>
+            <div class="choices">
+                ${options}
+                <label class="choice"><input type="radio" name="contact" value="new" ${state.choice === 'new' ? 'checked' : ''}><span><b>+ Người liên hệ mới</b></span></label>
+            </div>
+        </div>
+        ${state.choice === 'new' ? `<div class="grid2">
+            <label class="field"><span>Tên người liên hệ *</span><input id="newName" value="${esc(state.newName)}" placeholder="VD: Chị Hà"></label>
+            <label class="field"><span>Số điện thoại *</span><input id="newPhone" value="${esc(state.newPhone)}" inputmode="tel" placeholder="VD: 0912 888 999"></label>
+        </div>
+        <p class="hint">Người này sẽ được <b>lưu vào danh bạ của Pegatron</b>. Lần sau lập phiếu chỉ cần chọn.</p>` : ''}
+        <div class="row" style="justify-content:flex-end"><button class="btn btn-primary" type="button" data-save>Lập phiếu</button></div>
+    </section>`;
+}
+
+function renderCustomer() {
+    const rows = state.contacts.map((c) => `<tr>
+        <td><b>${esc(c.name)}</b></td><td class="mono">${esc(c.phone)}</td>
+        <td>${state.tickets.filter((t) => t.contact === c.name).length}</td>
+        <td><span class="pill ${c.active ? 'ok' : 'off'}">${c.active ? 'Đang dùng' : 'Ngừng dùng'}</span></td>
+        <td style="text-align:right"><button class="btn" type="button" data-toggle="${c.id}">${c.active ? 'Ngừng dùng' : 'Dùng lại'}</button></td>
+    </tr>`).join('');
+    const tickets = state.tickets.map((t) => `<tr><td class="mono">${t.no}</td><td>${t.date}</td><td>${esc(t.device)}</td><td><b>${esc(t.contact)}</b> <span class="mono small muted">${esc(t.phone)}</span></td></tr>`).join('');
+
+    return `<section class="card">
+        <div><h2>CÔNG TY TNHH PEGATRON VIỆT NAM</h2><p class="small muted">MST 0202019370 · Lô đất CN3A, KCN DEEP C 2A, P. Đông Hải, TP Hải Phòng</p></div>
+        <div class="row" style="justify-content:space-between"><h3>Người liên hệ</h3><button class="btn" type="button" disabled>+ Thêm người liên hệ</button></div>
+        <div class="table-scroll"><table><thead><tr><th>Tên</th><th>SĐT</th><th>Số phiếu</th><th>Trạng thái</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>
+        <h3>Các phiếu của khách</h3>
+        <div class="table-scroll"><table><thead><tr><th>Số phiếu</th><th>Ngày nhận</th><th>Thiết bị</th><th>Người liên hệ</th></tr></thead><tbody>${tickets}</tbody></table></div>
+    </section>`;
+}
+
+function renderSlip() {
+    const last = state.tickets[state.tickets.length - 1];
+    return `<section class="slip">
+        <div class="slip-head"><b>CÔNG TY TNHH DỊCH VỤ VÀ KỸ THUẬT SANG Y</b><div style="text-align:right"><h4>Phiếu nhận hàng sửa chữa</h4>Số phiếu: <b>${last.no}</b> · Ngày ${last.date}</div></div>
+        <div class="meta">
+            <div>Khách hàng: <b>CÔNG TY TNHH PEGATRON VIỆT NAM</b></div>
+            <div>Người liên hệ: <mark><b>${esc(last.contact)}</b></mark></div>
+            <div>Điện thoại: <mark>${esc(last.phone)}</mark></div>
+            <div>Địa chỉ: Lô đất CN3A, KCN DEEP C 2A, P. Đông Hải, TP Hải Phòng</div>
+        </div>
+        <p class="small" style="color:#555">Phiếu tháng trước (${esc(state.tickets[0].no)}) vẫn in <b>${esc(state.tickets[0].contact)} · ${esc(state.tickets[0].phone)}</b>, không bị đổi theo.</p>
+    </section>`;
+}
+
+const ASIDE = {
+    intake: `<h3>Khi lập phiếu</h3><ul>
+        <li>Chọn khách xong thì hiện <b>danh bạ người liên hệ</b> của khách đó.</li>
+        <li>Chưa có thì chọn <b>+ Người liên hệ mới</b>, nhập tên và SĐT. Tự lưu vào danh bạ.</li>
+        <li>Khách mới hoàn toàn thì nhập người liên hệ ngay trong form như hiện tại.</li></ul>
+        <p class="small muted">Thử chọn "Chị Nga" hoặc nhập người mới rồi bấm Lập phiếu, sau đó xem bước 2 và 3.</p>`,
+    customer: `<h3>Trang khách hàng</h3><ul>
+        <li>Mục <b>Người liên hệ</b>: thêm, sửa, <b>ngừng dùng</b> khi người đó nghỉ việc (không xoá, để giữ lịch sử).</li>
+        <li>Người đã ngừng dùng không hiện khi lập phiếu.</li>
+        <li>Danh sách phiếu có cột <b>Người liên hệ</b>, biết ngay phiếu nào ai gửi.</li></ul>`,
+    slip: `<h3>Phiếu in</h3><ul>
+        <li>In <b>đúng người liên hệ của phiếu đó</b>.</li>
+        <li>Sửa SĐT trong danh bạ không làm đổi phiếu cũ.</li>
+        <li>Tìm phiếu theo tên hoặc SĐT người liên hệ được.</li></ul>`,
+};
+
+function render() {
+    document.getElementById('steps').innerHTML = STEPS.map(([id, label]) => `<button type="button" role="tab" data-step="${id}" aria-selected="${state.step === id}">${label}</button>`).join('');
+    document.getElementById('stage').innerHTML = { intake: renderIntake, customer: renderCustomer, slip: renderSlip }[state.step]();
+    document.getElementById('aside').innerHTML = ASIDE[state.step];
+}
+
+document.addEventListener('click', (event) => {
+    const step = event.target.closest('[data-step]');
+    const toggle = event.target.closest('[data-toggle]');
+
+    if (step) { state.step = step.dataset.step; render(); }
+    if (toggle) { const c = state.contacts.find((x) => String(x.id) === toggle.dataset.toggle); c.active = !c.active; if (!c.active && state.choice === String(c.id)) state.choice = 'new'; render(); }
+    if (event.target.closest('[data-save]')) {
+        const who = current();
+        if (state.choice === 'new' && state.newName.trim()) {
+            const id = Math.max(...state.contacts.map((c) => c.id)) + 1;
+            state.contacts.push({ id, name: state.newName.trim(), phone: state.newPhone.trim(), active: true });
+            state.choice = String(id);
+        }
+        state.tickets.push({ no: '2610000' + (state.tickets.length + 2), date: '30/10/2026', device: 'Máy tính DELL Latitude 5440', contact: who.name, phone: who.phone });
+        state.step = 'customer';
+        render();
+    }
+});
+
+document.addEventListener('change', (event) => {
+    if (event.target.name === 'contact') { state.choice = event.target.value; render(); }
+});
+
+document.addEventListener('input', (event) => {
+    if (event.target.id === 'newName') state.newName = event.target.value;
+    if (event.target.id === 'newPhone') state.newPhone = event.target.value;
+});
+
+render();
+</script>

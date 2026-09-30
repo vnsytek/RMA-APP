@@ -73,7 +73,7 @@ class ReportController extends Controller
             ['Số phiếu', 'Hình thức', 'Tình trạng BH', 'Trạng thái', 'Khách hàng', 'Người liên hệ', 'SĐT', 'Thiết bị', 'Serial nhận', 'Serial trả', 'Nhân viên phụ trách', 'Ngày nhận', 'Ngày trả', 'Kết quả', 'BH sau sửa (tháng)', 'Số tiền', 'V223', 'V233', 'Hãng/TTBH', 'Mã hồ sơ hãng', 'Số lần gửi TTBH'],
             ...$report['received']->map(fn ($ticket) => [
                 $ticket->ticket_no, $ticket->kind()->label(), $ticket->warranty_status->label(), $ticket->status->label(), $ticket->customer->name,
-                $ticket->customer->contact_name, $ticket->customer->phone, $ticket->device->displayName(), $ticket->device->serial_number,
+                $ticket->contact_name, $ticket->contact_phone, $ticket->device->displayName(), $ticket->device->serial_number,
                 $ticket->returnedDevice ? $ticket->returnedDevice->serial_number.($ticket->isSwappedToOtherProduct() ? ' ('.$ticket->returnedDevice->productModel->shortName().')' : '') : null,
                 $ticket->technician?->name, vn_date($ticket->received_date), vn_date($ticket->returned_date), $ticket->result?->label(),
                 $ticket->hasRepairWarranty() ? $ticket->repair_warranty_months : null, $ticket->charge_amount, $ticket->erp_receipt_no,

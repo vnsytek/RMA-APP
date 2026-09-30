@@ -35,12 +35,12 @@ class DemoSeeder extends Seeder
         $this->call(DatabaseSeeder::class);
 
         $long = User::where('email', 'long.vu@sangy.vn')->firstOrFail();
-        $tuan = User::where('email', 'tuan.pham@sangy.vn')->firstOrFail();
+        $huy = User::where('email', 'huy@sangy.vn')->firstOrFail();
 
-        $pixelz = Customer::firstOrCreate(['name' => 'Branch of Pixelz Co., Ltd'], ['contact_name' => 'Chị Thu Anh', 'phone' => '0901 234 567', 'address' => 'Số 303 Lê Duẩn, Kiến An, Hải Phòng']);
-        $dung = Customer::firstOrCreate(['name' => 'Phạm Quốc Dũng'], ['phone' => '0903 123 456', 'address' => 'Lạch Tray, Ngô Quyền, Hải Phòng']);
-        $hanh = Customer::firstOrCreate(['name' => 'Võ Thị Hạnh'], ['phone' => '0987 654 321']);
-        $cangXanh = Customer::firstOrCreate(['name' => 'Công ty CP Cảng Xanh'], ['contact_name' => 'Anh Hoàng (IT)', 'phone' => '0225 3845 566', 'address' => 'Đình Vũ, Hải An, Hải Phòng']);
+        $pixelz = $this->customer('Branch of Pixelz Co., Ltd', ['address' => 'Số 303 Lê Duẩn, Kiến An, Hải Phòng'], ['Chị Thu Anh' => '0901 234 567', 'Anh Minh (Kho)' => '0904 555 666']);
+        $dung = $this->customer('Phạm Quốc Dũng', ['address' => 'Lạch Tray, Ngô Quyền, Hải Phòng'], ['Anh Dũng' => '0903 123 456']);
+        $hanh = $this->customer('Võ Thị Hạnh', [], ['Chị Hạnh' => '0987 654 321']);
+        $cangXanh = $this->customer('Công ty CP Cảng Xanh', ['phone' => '0225 3845 566', 'address' => 'Đình Vũ, Hải An, Hải Phòng'], ['Anh Hoàng (IT)' => '0912 345 678']);
 
         $dell = ServiceCenter::where('name', 'Dell Technologies Việt Nam')->firstOrFail();
         $lamHieu = ServiceCenter::where('name', 'Tin học Lâm Hiếu')->firstOrFail();
@@ -74,10 +74,10 @@ class DemoSeeder extends Seeder
         $this->step('2026-09-05', $monitor, TicketAction::VendorDoneAtCustomer, $long, ['done_date' => '2026-09-05', 'new_serial' => '2CRDF34', 'note' => 'Dell thay chân đế, đổi máy mới SRV. Tag 2CRDF34']);
 
         // Nhận về gửi TTBH: Lâm Hiếu đổi sang nguồn khác model, chờ trả khách.
-        $psu = $this->open('2026-09-08', $tuan, TicketKind::CarryIn, $pixelz, 'VSP', 'E550W', '0W00102IZ052500335', 'Bộ nguồn không lên, quạt không quay', ['accessories' => 'Dây nguồn']);
-        $this->step('2026-09-08', $psu, TicketAction::Inspect, $tuan);
-        $this->step('2026-09-09', $psu, TicketAction::SendToCenter, $tuan, ['service_center_id' => $lamHieu->id, 'sent_date' => '2026-09-09']);
-        $this->step('2026-09-20', $psu, TicketAction::ReceiveFromCenter, $tuan, [
+        $psu = $this->open('2026-09-08', $huy, TicketKind::CarryIn, $pixelz, 'VSP', 'E550W', '0W00102IZ052500335', 'Bộ nguồn không lên, quạt không quay', ['accessories' => 'Dây nguồn']);
+        $this->step('2026-09-08', $psu, TicketAction::Inspect, $huy);
+        $this->step('2026-09-09', $psu, TicketAction::SendToCenter, $huy, ['service_center_id' => $lamHieu->id, 'sent_date' => '2026-09-09']);
+        $this->step('2026-09-20', $psu, TicketAction::ReceiveFromCenter, $huy, [
             'back_date' => '2026-09-20', 'center_return_no' => 'LH-0912', 'new_serial' => 'P650W40102107250414',
             'new_model_id' => $this->model('VSP', 'E650W')->id, 'note' => 'Hết nguồn 550W, Lâm Hiếu đổi lên nguồn 650W',
         ], [$this->photo('NHAN VE TU TTBH - P650W40102107250414')]);
@@ -96,10 +96,10 @@ class DemoSeeder extends Seeder
         $this->step('2026-09-16', $laptop, TicketAction::SendToCenter, $long, ['service_center_id' => $asusCenter->id, 'sent_date' => '2026-09-16', 'vendor_case_no' => 'ASUS-HP-778812']);
 
         // Sửa chữa: chờ khách duyệt báo giá.
-        $printer = $this->open('2026-09-18', $tuan, TicketKind::Repair, $cangXanh, 'EPSON', 'LQ310', 'X3GY104522', 'In mờ, mất nét đầu kim');
-        $this->step('2026-09-18', $printer, TicketAction::Inspect, $tuan);
+        $printer = $this->open('2026-09-18', $huy, TicketKind::Repair, $cangXanh, 'EPSON', 'LQ310', 'X3GY104522', 'In mờ, mất nét đầu kim');
+        $this->step('2026-09-18', $printer, TicketAction::Inspect, $huy);
         $this->quote($printer, [['Đầu kim LQ-310', 1, 850000], ['Công thay và căn chỉnh', 1, 150000]]);
-        $this->step('2026-09-19', $printer, TicketAction::SendQuote, $tuan, ['note' => 'Đã báo giá qua điện thoại']);
+        $this->step('2026-09-19', $printer, TicketAction::SendQuote, $huy, ['note' => 'Đã báo giá qua điện thoại']);
 
         // Sửa chữa: báo phế.
         $pc = $this->open('2026-09-19', $long, TicketKind::Repair, $dung, 'HP', 'ProDesk 400 G7', '8CG1234XYZ', 'Không lên hình, nghi hỏng mainboard');
@@ -107,22 +107,22 @@ class DemoSeeder extends Seeder
         $this->step('2026-09-21', $pc, TicketAction::Scrap, $long, ['note' => 'Mainboard hỏng, hãng đã ngừng cung cấp linh kiện thay thế']);
 
         // Sửa chữa: lỗi đơn giản, miễn phí, bảo hành 1 tháng.
-        $laser = $this->open('2026-09-22', $tuan, TicketKind::Repair, $cangXanh, 'CANON', 'LBP2900', 'LBP-2231907', 'Kẹt giấy liên tục');
-        $this->step('2026-09-22', $laser, TicketAction::Inspect, $tuan);
-        $this->step('2026-09-23', $laser, TicketAction::MarkFree, $tuan, [
+        $laser = $this->open('2026-09-22', $huy, TicketKind::Repair, $cangXanh, 'CANON', 'LBP2900', 'LBP-2231907', 'Kẹt giấy liên tục');
+        $this->step('2026-09-22', $laser, TicketAction::Inspect, $huy);
+        $this->step('2026-09-23', $laser, TicketAction::MarkFree, $huy, [
             'warranty_items' => [['description' => 'Vệ sinh bao lụa, hết kẹt giấy', 'months' => 1]],
             'warranty_exclusions' => $laser->device->productModel->deviceType->warranty_exclusions,
             'note' => 'Vệ sinh bao lụa, hết kẹt giấy',
         ]);
 
         // Hãng bảo hành tại Sang Y: máy đã mang về, chờ Dell đến.
-        $this->open('2026-09-29', $tuan, TicketKind::OnsiteSangy, $cangXanh, 'DELL', 'Latitude 5440', '7HKQ2V3', 'Màn hình laptop chập chờn, sọc ngang khi mở gập', [
+        $this->open('2026-09-29', $huy, TicketKind::OnsiteSangy, $cangXanh, 'DELL', 'Latitude 5440', '7HKQ2V3', 'Màn hình laptop chập chờn, sọc ngang khi mở gập', [
             'accessories' => 'Sạc, túi chống sốc', 'service_center_id' => $dell->id, 'vendor_case_no' => '92471133580', 'appointment_date' => '2026-10-01',
             'note' => 'Nhận máy về Sang Y, đã mở case Dell',
         ]);
 
         // Sửa chữa: vừa nhận máy.
-        $this->open('2026-09-29', $tuan, TicketKind::Repair, $pixelz, 'DELL', 'Latitude 5440', '5440HX77Q', 'Liệt một số phím bàn phím', ['accessories' => 'Sạc']);
+        $this->open('2026-09-29', $huy, TicketKind::Repair, $pixelz, 'DELL', 'Latitude 5440', '5440HX77Q', 'Liệt một số phím bàn phím', ['accessories' => 'Sạc']);
 
         Carbon::setTestNow();
 
@@ -147,6 +147,7 @@ class DemoSeeder extends Seeder
             'brand_id' => $productModel->brand_id,
             'product_model_id' => $productModel->id,
             'customer_id' => $customer->id,
+            'contact_id' => $customer->contacts()->orderBy('id')->value('id'),
             'fault_description' => $fault,
             'received_date' => $date,
             'technician_id' => $user->id,
@@ -213,6 +214,21 @@ class DemoSeeder extends Seeder
         foreach ($lines as [$description, $quantity, $price]) {
             $ticket->quoteItems()->create(['description' => $description, 'quantity' => $quantity, 'unit_price' => $price]);
         }
+    }
+
+    /**
+     * @param  array<string, mixed>  $attributes
+     * @param  array<string, string>  $contacts  name => phone
+     */
+    private function customer(string $name, array $attributes, array $contacts): Customer
+    {
+        $customer = Customer::firstOrCreate(['name' => $name], $attributes);
+
+        foreach ($contacts as $contactName => $phone) {
+            $customer->contacts()->firstOrCreate(['phone' => $phone], ['name' => $contactName]);
+        }
+
+        return $customer;
     }
 
     private function model(string $brand, string $code): ProductModel

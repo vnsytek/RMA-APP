@@ -20,7 +20,7 @@
 
     <form method="POST" action="{{ route('tickets.store') }}" enctype="multipart/form-data" class="card max-w-5xl p-5" id="ticket-form"
           data-models-url="{{ route('lookup.models') }}" data-device-url="{{ route('lookup.devices') }}" data-claim-old="{{ old('claim_ticket_id') }}"
-          data-type-names='@json($deviceTypes->pluck('name'))' data-brand-names='@json($brands->pluck('name'))'>
+          data-type-names='@json($deviceTypes->pluck('name'))' data-brand-names='@json($brands->pluck('name'))' data-contacts='@json($contacts)'>
         @csrf
 
         <div class="section-title mt-0">Thiết bị</div>
@@ -103,31 +103,45 @@
         <div class="section-title">Khách hàng</div>
         <div class="grid gap-4 sm:grid-cols-2">
             <div class="sm:col-span-2">
-                <label class="label" for="customer_id">Khách gửi máy</label>
-                <select class="input" name="customer_id" id="customer_id">
+                <label class="label" for="customer_id-search">Khách gửi máy</label>
+                <select class="input" name="customer_id" id="customer_id" data-searchable data-new-label="+ Khách mới"
+                        data-placeholder="Gõ tên khách, MST, tên hoặc SĐT người liên hệ…">
                     <option value="new">+ Khách mới</option>
                     @foreach ($customers as $customer)
-                        <option value="{{ $customer->id }}" @selected($customerValue === (string) $customer->id)>{{ $customer->name }} · {{ $customer->phone }}</option>
+                        <option value="{{ $customer->id }}" @selected($customerValue === (string) $customer->id)
+                                data-detail="{{ collect([$customer->tax_code ? 'MST '.$customer->tax_code : null, ($contacts[$customer->id] ?? collect())->pluck('name')->implode(', ')])->filter()->implode(' · ') }}"
+                                data-search="{{ collect([$customer->tax_code, $customer->phone, ...($contacts[$customer->id] ?? collect())->flatMap(fn ($contact) => [$contact['name'], $contact['phone']])])->filter()->implode(' ') }}">{{ $customer->name }}</option>
                     @endforeach
                 </select>
             </div>
+            <x-tax-code-field name="customer_tax_code" :value="old('customer_tax_code')" class="sm:col-span-2" data-new-customer />
             <div data-new-customer>
                 <label class="label" for="customer_name">Tên khách / công ty *</label>
-                <input class="input" name="customer_name" id="customer_name" value="{{ old('customer_name') }}" maxlength="255">
+                <input class="input" name="customer_name" id="customer_name" value="{{ old('customer_name') }}" maxlength="255" data-tax-fill="name">
                 <x-field-error name="customer_name" />
             </div>
             <div data-new-customer>
-                <label class="label" for="customer_phone">Số điện thoại *</label>
-                <input class="input" name="customer_phone" id="customer_phone" value="{{ old('customer_phone') }}" maxlength="20" inputmode="tel">
-                <x-field-error name="customer_phone" />
-            </div>
-            <div data-new-customer>
-                <label class="label" for="customer_contact">Người liên hệ <span class="label-hint">(tuỳ chọn)</span></label>
-                <input class="input" name="customer_contact" id="customer_contact" value="{{ old('customer_contact') }}" maxlength="255">
-            </div>
-            <div data-new-customer>
                 <label class="label" for="customer_address">Địa chỉ <span class="label-hint">(tuỳ chọn)</span></label>
-                <input class="input" name="customer_address" id="customer_address" value="{{ old('customer_address') }}" maxlength="500">
+                <input class="input" name="customer_address" id="customer_address" value="{{ old('customer_address') }}" maxlength="500" data-tax-fill="address">
+            </div>
+        </div>
+
+        <div class="mt-4">
+            <span class="label">Người liên hệ của phiếu này *</span>
+            <div id="contact-choices" class="grid gap-1.5 sm:grid-cols-2" data-old="{{ old('contact_id') }}"></div>
+            <x-field-error name="contact_id" />
+            <div class="mt-2 grid gap-4 sm:grid-cols-2" data-new-contact>
+                <div>
+                    <label class="label" for="contact_name">Tên người liên hệ *</label>
+                    <input class="input" name="contact_name" id="contact_name" value="{{ old('contact_name') }}" maxlength="255" placeholder="VD: Chị Nga">
+                    <x-field-error name="contact_name" />
+                </div>
+                <div>
+                    <label class="label" for="contact_phone">Số điện thoại *</label>
+                    <input class="input" name="contact_phone" id="contact_phone" value="{{ old('contact_phone') }}" maxlength="20" inputmode="tel" placeholder="VD: 0901 234 567">
+                    <x-field-error name="contact_phone" />
+                </div>
+                <p class="text-xs text-muted sm:col-span-2" data-new-contact-hint>Người mới sẽ được lưu vào danh bạ của khách, lần sau chỉ cần chọn.</p>
             </div>
         </div>
 
@@ -149,12 +163,16 @@
             </div>
             <div>
                 <label class="label" for="technician_id">Nhân viên phụ trách</label>
+                @cannot('admin')
+                    <p class="input bg-panel text-muted">{{ auth()->user()->name }} (người lập phiếu)</p>
+                @else
                 <select class="input" name="technician_id" id="technician_id">
                     <option value="">Chưa phân công</option>
                     @foreach ($technicians as $technician)
                         <option value="{{ $technician->id }}" @selected((string) old('technician_id', auth()->id()) === (string) $technician->id)>{{ $technician->name }}</option>
                     @endforeach
                 </select>
+                @endcannot
             </div>
             <div>
                 <label class="label" for="note">Ghi chú <span class="label-hint">(tuỳ chọn)</span></label>

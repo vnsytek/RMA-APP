@@ -50,6 +50,22 @@ return [
     'overdue_days' => 7,
 
     /*
+    | Public tax-code (MST) lookup used to fill a company's registered name and address.
+    | Providers are tried in order; both are free and rate-limited, xinvoice allows more with its own keys.
+    */
+    'tax_lookup' => [
+        'providers' => array_filter(explode(',', (string) env('RMA_TAX_LOOKUP_PROVIDERS', 'xinvoice,vietqr'))),
+        'xinvoice' => [
+            'url' => env('XINVOICE_TAX_URL', 'https://api.xinvoice.vn/gdt-api/tax-payer'),
+            'client_id' => env('XINVOICE_CLIENT_ID'),
+            'api_key' => env('XINVOICE_API_KEY'),
+        ],
+        'vietqr' => [
+            'url' => env('VIETQR_TAX_URL', 'https://api.vietqr.io/v2/business'),
+        ],
+    ],
+
+    /*
     |--------------------------------------------------------------------------
     | Attachments
     |--------------------------------------------------------------------------
