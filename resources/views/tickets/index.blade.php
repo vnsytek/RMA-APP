@@ -34,7 +34,7 @@
     <form method="GET" class="mb-3 flex gap-2">
         @if ($kind) <input type="hidden" name="kind" value="{{ $kind->value }}"> @endif
         @if ($status) <input type="hidden" name="status" value="{{ $status->value }}"> @endif
-        <input type="search" name="q" value="{{ $search }}" class="input" placeholder="Tìm số phiếu, khách, SĐT, serial, model, mã hồ sơ hãng, số V223/V233…" aria-label="Tìm phiếu">
+        <input type="search" name="q" value="{{ $search }}" class="input" placeholder="Quét mã vạch hoặc tìm số phiếu, khách, SĐT, serial, model, mã hồ sơ hãng, số V223/V233…" aria-label="Tìm phiếu" autofocus>
         <button class="btn btn-secondary">Tìm</button>
     </form>
 

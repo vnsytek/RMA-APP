@@ -20,7 +20,7 @@ use Illuminate\Validation\ValidationException;
 
 class TicketWorkflow
 {
-    public function __construct(private AttachmentStorage $attachments) {}
+    public function __construct(private AttachmentStorage $attachments, private PartStock $stock) {}
 
     /**
      * @return list<TicketAction>
@@ -224,6 +224,7 @@ class TicketWorkflow
                 break;
 
             case TicketAction::MarkFree:
+                $this->restoreQuoteItemStock($ticket, $user, "Miễn phí, hoàn trả linh kiện báo giá của phiếu {$ticket->ticket_no}");
                 $ticket->quoteItems()->delete();
                 $ticket->result = TicketResult::Free;
                 $this->recordWarranty($ticket, $input);
@@ -235,6 +236,7 @@ class TicketWorkflow
                 break;
 
             case TicketAction::Scrap:
+                $this->restoreQuoteItemStock($ticket, $user, "Báo phế, hoàn trả linh kiện báo giá của phiếu {$ticket->ticket_no}");
                 $ticket->quoteItems()->delete();
                 $ticket->result = TicketResult::Scrap;
                 $ticket->scrap_reason = $input['note'];
@@ -248,6 +250,7 @@ class TicketWorkflow
                 break;
 
             case TicketAction::RejectQuote:
+                $this->restoreQuoteItemStock($ticket, $user, "Khách không đồng ý báo giá của phiếu {$ticket->ticket_no}");
                 $ticket->quote_status = QuoteStatus::Rejected;
                 $ticket->quote_decided_at = now();
                 $ticket->result = TicketResult::QuoteRejected;
@@ -279,12 +282,23 @@ class TicketWorkflow
                 break;
 
             case TicketAction::Cancel:
+                $this->restoreQuoteItemStock($ticket, $user, "Hủy phiếu {$ticket->ticket_no}");
                 $ticket->pendingShipment?->update(['outcome' => ShipmentOutcome::Cancelled]);
                 break;
 
             case TicketAction::Inspect:
                 break;
         }
+    }
+
+    /**
+     * Puts back any kho stock issued for this ticket's quote lines, before they're wiped or the ticket closes
+     * without using them (free repair, scrap, a rejected quote, or a cancelled ticket).
+     */
+    private function restoreQuoteItemStock(RmaTicket $ticket, User $user, string $note): void
+    {
+        $ticket->quoteItems()->whereNotNull('part_id')->with('part')->get()
+            ->each(fn (RmaQuoteItem $item) => $this->stock->restore($item->part, $item->quantity, $user, $note));
     }
 
     /**

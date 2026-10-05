@@ -216,11 +216,12 @@
                     </div>
                     <div class="overflow-x-auto">
                         <table class="table">
-                            <thead><tr><th>Nội dung</th><th class="text-right">SL</th><th class="text-right">Đơn giá</th><th class="text-right">Thành tiền</th>@if ($quoteEditable)<th></th>@endif</tr></thead>
+                            <thead><tr><th>Nội dung</th><th>Kho</th><th class="text-right">SL</th><th class="text-right">Đơn giá</th><th class="text-right">Thành tiền</th>@if ($quoteEditable)<th></th>@endif</tr></thead>
                             <tbody>
                                 @forelse ($ticket->quoteItems as $item)
                                     <tr>
                                         <td>{{ $item->description }}</td>
+                                        <td>{{ $item->part->name ?? '—' }}</td>
                                         <td class="text-right">{{ $item->quantity }}</td>
                                         <td class="text-right">{{ money_vnd($item->unit_price) }}</td>
                                         <td class="text-right">{{ money_vnd($item->lineTotal()) }}</td>
@@ -234,10 +235,10 @@
                                         @endif
                                     </tr>
                                 @empty
-                                    <tr><td colspan="5" class="text-muted">Chưa có dòng nào.</td></tr>
+                                    <tr><td colspan="6" class="text-muted">Chưa có dòng nào.</td></tr>
                                 @endforelse
                                 @if ($ticket->quoteItems->isNotEmpty())
-                                    <tr class="bg-panel font-semibold"><td colspan="3">Tổng cộng</td><td class="text-right">{{ money_vnd($ticket->quoteTotal()) }}</td>@if ($quoteEditable)<td></td>@endif</tr>
+                                    <tr class="bg-panel font-semibold"><td colspan="4">Tổng cộng</td><td class="text-right">{{ money_vnd($ticket->quoteTotal()) }}</td>@if ($quoteEditable)<td></td>@endif</tr>
                                 @endif
                             </tbody>
                         </table>
@@ -246,13 +247,21 @@
                         <form method="POST" action="{{ route('tickets.quote-items.store', $ticket) }}" class="mt-3 flex flex-wrap gap-2">
                             @csrf
                             <input class="input min-w-56 flex-1" name="description" placeholder="Nội dung (linh kiện / công) *" required maxlength="255" aria-label="Nội dung báo giá">
+                            <select class="input w-44" name="part_id" aria-label="Lấy từ kho">
+                                <option value="">Không lấy từ kho</option>
+                                @foreach ($parts as $part)
+                                    <option value="{{ $part->id }}">{{ $part->name }} (tồn {{ $part->quantity_on_hand }})</option>
+                                @endforeach
+                            </select>
                             <input class="input w-20" type="number" name="quantity" value="1" min="1" required aria-label="Số lượng">
                             <input class="input w-40" name="unit_price" placeholder="Đơn giá *" required inputmode="numeric" aria-label="Đơn giá">
                             <button class="btn btn-secondary">Thêm dòng</button>
                         </form>
                         <x-field-error name="description" bag="quote" />
+                        <x-field-error name="part_id" bag="quote" />
+                        <x-field-error name="quantity" bag="quote" />
                         <x-field-error name="unit_price" bag="quote" />
-                        <p class="mt-2 text-xs text-muted">Lỗi cần thay / sửa: lập bảng giá rồi bấm "Gửi báo giá cho khách". Giá chỉ báo một lần: khách đồng ý thì sửa, không đồng ý thì không sửa. Lỗi đơn giản chọn "Miễn phí", không sửa được chọn "Báo phế".</p>
+                        <p class="mt-2 text-xs text-muted">Lỗi cần thay / sửa: lập bảng giá rồi bấm "Gửi báo giá cho khách". Giá chỉ báo một lần: khách đồng ý thì sửa, không đồng ý thì không sửa. Lỗi đơn giản chọn "Miễn phí", không sửa được chọn "Báo phế". Chọn "Lấy từ kho" nếu dùng linh kiện có sẵn của Sang Y — kho sẽ tự trừ ngay.</p>
                     @endif
                     @if ($ticket->quoted_at)
                         <p class="mt-2 text-xs text-muted">Gửi báo giá {{ $ticket->quoted_at->format('d/m/Y H:i') }}@if ($ticket->quote_decided_at) · khách trả lời {{ $ticket->quote_decided_at->format('d/m/Y H:i') }}@endif</p>
@@ -365,9 +374,9 @@
                                             @case('warranty_items')
                                                 @php
                                                     $rows = $action === TicketAction::FinishRepair
-                                                        ? $ticket->quoteItems->map(fn ($item) => ['quote_item_id' => $item->id, 'description' => $item->description, 'price' => $item->lineTotal()])->all()
+                                                        ? $ticket->quoteItems->map(fn ($item) => ['quote_item_id' => $item->id, 'description' => $item->description, 'price' => $item->lineTotal(), 'default_months' => $item->part?->warranty_months])->all()
                                                         : [];
-                                                    $rows = [...$rows, ...array_fill(0, 3, ['quote_item_id' => null, 'description' => null, 'price' => null])];
+                                                    $rows = [...$rows, ...array_fill(0, 3, ['quote_item_id' => null, 'description' => null, 'price' => null, 'default_months' => null])];
                                                     $isOpen = $openAction === $action->value;
                                                 @endphp
                                                 <div class="overflow-x-auto rounded-md border border-line" id="{{ $id }}">
@@ -388,7 +397,7 @@
                                                                         @endif
                                                                     </td>
                                                                     <td>
-                                                                        <input class="input" type="number" name="{{ $name }}[{{ $i }}][months]" value="{{ $isOpen ? old("{$name}.{$i}.months") : '' }}"
+                                                                        <input class="input" type="number" name="{{ $name }}[{{ $i }}][months]" value="{{ $isOpen ? old("{$name}.{$i}.months", $row['default_months']) : $row['default_months'] }}"
                                                                                min="1" max="{{ config('rma.max_repair_warranty_months') }}" placeholder="Không BH" aria-label="Số tháng bảo hành hạng mục {{ $i + 1 }}">
                                                                     </td>
                                                                 </tr>
