@@ -6,6 +6,7 @@ use App\Http\Controllers\CustomerContactController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\DeviceController;
 use App\Http\Controllers\LookupController;
+use App\Http\Controllers\PartController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\RmaTicketController;
@@ -65,6 +66,11 @@ Route::middleware('auth')->group(function () {
     Route::post('catalog/brands', [CatalogController::class, 'storeBrand'])->name('catalog.brands.store');
     Route::post('catalog/product-models', [CatalogController::class, 'storeProductModel'])->name('catalog.product-models.store');
 
+    Route::get('parts', [PartController::class, 'index'])->name('parts.index');
+    Route::post('parts', [PartController::class, 'store'])->name('parts.store');
+    Route::post('parts/{part}/stock-in', [PartController::class, 'stockIn'])->name('parts.stock-in');
+    Route::post('parts/{part}/stock-out', [PartController::class, 'stockOut'])->name('parts.stock-out');
+
     Route::view('flows', 'flows')->name('flows');
     Route::get('sequences', [TicketSequenceController::class, 'index'])->name('sequences.index');
 
@@ -82,6 +88,8 @@ Route::middleware('auth')->group(function () {
         Route::resource('users', UserController::class)->only(['index', 'store', 'update']);
         Route::patch('users/{user}/toggle', [UserController::class, 'toggle'])->name('users.toggle');
         Route::patch('service-centers/{serviceCenter}/toggle', [ServiceCenterController::class, 'toggle'])->name('service-centers.toggle');
+        Route::patch('parts/{part}/toggle', [PartController::class, 'toggle'])->name('parts.toggle');
+        Route::post('parts/{part}/adjust', [PartController::class, 'adjust'])->name('parts.adjust');
         Route::put('catalog/device-types/{deviceType}', [CatalogController::class, 'updateDeviceType'])->name('catalog.device-types.update');
         Route::patch('catalog/device-types/{deviceType}/toggle', [CatalogController::class, 'toggleDeviceType'])->name('catalog.device-types.toggle');
         Route::patch('catalog/brands/{brand}/toggle', [CatalogController::class, 'toggleBrand'])->name('catalog.brands.toggle');

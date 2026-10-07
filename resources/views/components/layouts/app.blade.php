@@ -5,6 +5,7 @@
         'Nghiệp vụ' => array_values(array_filter([
             ['tickets.*', 'tickets.index', 'Phiếu RMA'],
             ['devices.*', 'devices.index', 'Thiết bị'],
+            ['parts.*', 'parts.index', 'Kho'],
             ['customers.*', 'customers.index', 'Khách hàng'],
             auth()->user()->can('admin') ? ['reports.*', 'reports.index', 'Báo cáo'] : null,
             ['flows', 'flows', 'Quy trình'],

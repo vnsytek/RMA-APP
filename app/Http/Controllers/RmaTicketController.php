@@ -9,6 +9,7 @@ use App\Models\Brand;
 use App\Models\Customer;
 use App\Models\CustomerContact;
 use App\Models\DeviceType;
+use App\Models\Part;
 use App\Models\ProductModel;
 use App\Models\RmaTicket;
 use App\Models\ServiceCenter;
@@ -25,7 +26,7 @@ use Illuminate\View\View;
 
 class RmaTicketController extends Controller
 {
-    public function index(Request $request): View
+    public function index(Request $request): View|RedirectResponse
     {
         $filters = $request->validate([
             'kind' => ['nullable', Rule::enum(TicketKind::class)],
@@ -41,6 +42,24 @@ class RmaTicketController extends Controller
         $visible = fn () => RmaTicket::query()
             ->visibleTo($user)
             ->when($technician, fn (Builder $query) => $query->where('technician_id', $technician));
+        $term = trim($filters['q'] ?? '');
+
+        // A scanned or typed ticket number / serial that matches exactly one ticket opens it straight away.
+        if ($term !== '') {
+            $exact = $visible()
+                ->ofKind($kind)
+                ->when($status, fn (Builder $query) => $query->where('status', $status))
+                ->where(fn (Builder $query) => $query
+                    ->where('ticket_no', $term)
+                    ->orWhereHas('device', fn (Builder $device) => $device->where('serial_number', $term))
+                    ->orWhereHas('returnedDevice', fn (Builder $device) => $device->where('serial_number', $term)))
+                ->limit(2)
+                ->pluck('ticket_no');
+
+            if ($exact->count() === 1) {
+                return redirect()->route('tickets.show', $exact->first());
+            }
+        }
 
         $tickets = $visible()
             ->ofKind($kind)
@@ -90,7 +109,7 @@ class RmaTicketController extends Controller
     {
         $ticket->load([
             'customer', 'device.productModel.brand', 'device.productModel.deviceType', 'returnedDevice.productModel.brand',
-            'returnedDevice.productModel.deviceType', 'technician', 'creator', 'shipments.serviceCenter', 'quoteItems',
+            'returnedDevice.productModel.deviceType', 'technician', 'creator', 'shipments.serviceCenter', 'quoteItems.part',
             'replacedParts.shipment', 'statusLogs.user', 'statusLogs.attachments', 'attachments.uploader', 'warrantyItems', 'claims', 'claimTicket.warrantyItems',
         ]);
 
@@ -104,6 +123,7 @@ class RmaTicketController extends Controller
             'serviceCenters' => ServiceCenter::active()->orderBy('name')->get(),
             'technicians' => User::active()->orderBy('name')->get(),
             'models' => ProductModel::active()->with('brand', 'deviceType')->get()->sortBy(fn (ProductModel $model) => $model->deviceType->name.' '.$model->shortName()),
+            'parts' => Part::active()->orderBy('name')->get(),
         ]);
     }
 

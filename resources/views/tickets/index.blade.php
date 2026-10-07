@@ -42,7 +42,7 @@
                 @endforeach
             </select>
         @endcan
-        <input type="search" name="q" value="{{ $search }}" class="input" placeholder="Tìm số phiếu, khách, SĐT, serial, model, mã hồ sơ hãng, số V223/V233…" aria-label="Tìm phiếu">
+        <input type="search" name="q" value="{{ $search }}" class="input" placeholder="Quét mã vạch hoặc tìm số phiếu, khách, SĐT, serial, model, mã hồ sơ hãng, số V223/V233…" aria-label="Tìm phiếu" autofocus>
         <button class="btn btn-secondary">Tìm</button>
     </form>
 

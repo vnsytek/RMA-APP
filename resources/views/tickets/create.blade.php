@@ -28,7 +28,7 @@
             <div class="sm:col-span-3">
                 <label class="label" for="serial_number">Số serial / Service Tag *</label>
                 <input class="input font-mono" name="serial_number" id="serial_number" value="{{ old('serial_number', $prefill['serial'] ?? '') }}" required maxlength="100"
-                       placeholder="Nhập serial trước: máy đã có sẽ tự điền loại, hãng, model" autocomplete="off">
+                       placeholder="Quét mã vạch hoặc nhập serial: máy đã có sẽ tự điền loại, hãng, model" autocomplete="off" autofocus>
                 <x-field-error name="serial_number" />
                 <div id="device-box" class="mt-2 text-sm" aria-live="polite"></div>
                 <x-field-error name="claim_ticket_id" />

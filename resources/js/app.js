@@ -689,6 +689,18 @@ if (form) {
     });
     serialInput.addEventListener('input', lookupSerial);
 
+    /* A barcode scanner "types" the serial then sends Enter: jump to the next field instead of submitting a half-filled form. */
+    serialInput.addEventListener('keydown', (event) => {
+        if (event.key !== 'Enter') {
+            return;
+        }
+
+        event.preventDefault();
+        clearTimeout(lookupTimer);
+        lookupSerial();
+        $('#fault_description').focus();
+    });
+
     syncKind();
     syncCustomer();
     syncNewInputs();
