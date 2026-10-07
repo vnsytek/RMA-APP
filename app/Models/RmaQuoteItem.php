@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-#[Fillable(['rma_ticket_id', 'part_id', 'description', 'quantity', 'unit_price'])]
+#[Fillable(['rma_ticket_id', 'description', 'quantity', 'unit_price'])]
 class RmaQuoteItem extends Model
 {
     /**
@@ -26,14 +26,6 @@ class RmaQuoteItem extends Model
     public function ticket(): BelongsTo
     {
         return $this->belongsTo(RmaTicket::class, 'rma_ticket_id');
-    }
-
-    /**
-     * @return BelongsTo<Part, $this>
-     */
-    public function part(): BelongsTo
-    {
-        return $this->belongsTo(Part::class);
     }
 
     public function lineTotal(): int

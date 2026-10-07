@@ -5,7 +5,6 @@
         'Nghiệp vụ' => [
             ['tickets.*', 'tickets.index', 'Phiếu RMA'],
             ['devices.*', 'devices.index', 'Thiết bị'],
-            ['parts.*', 'parts.index', 'Kho'],
             ['customers.*', 'customers.index', 'Khách hàng'],
             ['reports.*', 'reports.index', 'Báo cáo'],
             ['flows', 'flows', 'Quy trình'],

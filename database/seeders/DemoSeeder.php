@@ -2,13 +2,11 @@
 
 namespace Database\Seeders;
 
-use App\Enums\PartMovementType;
 use App\Enums\TicketAction;
 use App\Enums\TicketKind;
 use App\Enums\WarrantyStatus;
 use App\Models\Brand;
 use App\Models\Customer;
-use App\Models\Part;
 use App\Models\ProductModel;
 use App\Models\RmaTicket;
 use App\Models\ServiceCenter;
@@ -47,18 +45,6 @@ class DemoSeeder extends Seeder
         $dell = ServiceCenter::where('name', 'Dell Technologies Việt Nam')->firstOrFail();
         $lamHieu = ServiceCenter::where('name', 'Tin học Lâm Hiếu')->firstOrFail();
         $asusCenter = ServiceCenter::where('name', 'TTBH ASUS Hải Phòng')->firstOrFail();
-
-        // Vài linh kiện hay thay, giữ sẵn tồn kho để sửa nhanh.
-        foreach ([
-            ['NGUON-E550W', 'Bộ nguồn VSP E550W', 'cái', 5, 2],
-            ['KEO-TAN-NHIET', 'Keo tản nhiệt', 'tuýp', 20, 5],
-            ['DAU-KIM-LQ310', 'Đầu kim máy in LQ-310', 'cái', 1, 2],
-            ['RAM-DDR4-8G', 'RAM DDR4 8GB', 'thanh', 8, 3],
-        ] as [$code, $name, $unit, $quantity, $min]) {
-            $part = Part::firstOrCreate(['code' => $code], ['name' => $name, 'unit' => $unit, 'min_quantity' => $min]);
-            $part->update(['quantity_on_hand' => $quantity]);
-            $part->movements()->firstOrCreate(['type' => PartMovementType::In], ['quantity' => $quantity, 'note' => 'Nhập kho ban đầu', 'created_by' => $long->id]);
-        }
 
         // Sửa chữa có phí, đã trả khách: bảo hành vệ sinh tản nhiệt 3 tháng, cài Win 1 tháng (đã hết hạn).
         $laptopRepair = $this->open('2026-08-20', $long, TicketKind::Repair, $dung, 'ASUS', 'P500MV', 'R7NRKD012345', 'Máy nóng, tự tắt khi chạy nặng', ['accessories' => 'Sạc zin']);

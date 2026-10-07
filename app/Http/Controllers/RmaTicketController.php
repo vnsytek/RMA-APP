@@ -8,7 +8,6 @@ use App\Http\Requests\StoreRmaTicketRequest;
 use App\Models\Brand;
 use App\Models\Customer;
 use App\Models\DeviceType;
-use App\Models\Part;
 use App\Models\ProductModel;
 use App\Models\RmaTicket;
 use App\Models\ServiceCenter;
@@ -100,7 +99,7 @@ class RmaTicketController extends Controller
     {
         $ticket->load([
             'customer', 'device.productModel.brand', 'device.productModel.deviceType', 'returnedDevice.productModel.brand',
-            'returnedDevice.productModel.deviceType', 'technician', 'creator', 'shipments.serviceCenter', 'quoteItems.part',
+            'returnedDevice.productModel.deviceType', 'technician', 'creator', 'shipments.serviceCenter', 'quoteItems',
             'replacedParts.shipment', 'statusLogs.user', 'statusLogs.attachments', 'edits.user', 'attachments.uploader',
             'warrantyItems', 'claims', 'claimTicket.warrantyItems',
         ]);
@@ -121,7 +120,6 @@ class RmaTicketController extends Controller
             'serviceCenters' => ServiceCenter::active()->orderBy('name')->get(),
             'technicians' => User::active()->orderBy('name')->get(),
             'models' => ProductModel::active()->with('brand', 'deviceType')->get()->sortBy(fn (ProductModel $model) => $model->deviceType->name.' '.$model->shortName()),
-            'parts' => Part::active()->orderBy('name')->get(),
         ]);
     }
 
