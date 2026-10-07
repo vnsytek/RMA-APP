@@ -8,8 +8,9 @@
         @csrf @method('PUT')
         <div><label class="label" for="name">Tên khách / công ty *</label><input class="input" name="name" id="name" required maxlength="255" value="{{ old('name', $customer->name) }}"><x-field-error name="name" bag="customer" /></div>
         <div><label class="label" for="contact_name">Người liên hệ</label><input class="input" name="contact_name" id="contact_name" maxlength="255" value="{{ old('contact_name', $customer->contact_name) }}"></div>
-        <div><label class="label" for="phone">Số điện thoại *</label><input class="input" name="phone" id="phone" required maxlength="20" value="{{ old('phone', $customer->phone) }}"><x-field-error name="phone" bag="customer" /></div>
-        <div><label class="label" for="address">Địa chỉ</label><input class="input" name="address" id="address" maxlength="500" value="{{ old('address', $customer->address) }}"></div>
+        <div><label class="label" for="phone">Số điện thoại *</label><input class="input" type="tel" inputmode="tel" name="phone" id="phone" required maxlength="20" placeholder="VD: 0901 234 567" value="{{ old('phone', $customer->phone) }}"><x-field-error name="phone" bag="customer" /></div>
+        <div><label class="label" for="address">Địa chỉ <span class="label-hint">(đăng ký / MST)</span></label><input class="input" name="address" id="address" maxlength="500" value="{{ old('address', $customer->address) }}"></div>
+        <div><label class="label" for="shipping_address">Địa chỉ nhận/trả máy <span class="label-hint">(để trống nếu giống địa chỉ trên)</span></label><input class="input" name="shipping_address" id="shipping_address" maxlength="500" value="{{ old('shipping_address', $customer->shipping_address) }}"><x-field-error name="shipping_address" bag="customer" /></div>
         <div class="sm:col-span-2"><label class="label" for="note">Ghi chú</label><textarea class="input min-h-20" name="note" id="note" maxlength="2000">{{ old('note', $customer->note) }}</textarea></div>
         <div class="flex justify-end sm:col-span-2"><button class="btn btn-primary">Lưu</button></div>
     </form>

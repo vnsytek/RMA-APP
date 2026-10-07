@@ -35,11 +35,17 @@ class TicketQuoteItemController extends Controller
             'unit_price' => ['required', 'integer', 'min:0', 'max:999999999999'],
         ], attributes: ['part_id' => 'linh kiện trong kho', 'description' => 'nội dung', 'quantity' => 'số lượng', 'unit_price' => 'đơn giá']);
 
-        DB::transaction(function () use ($ticket, $data, $part, $stock, $request): void {
-            $ticket->quoteItems()->create($data);
+        $wasSent = $ticket->status === TicketStatus::Quoted;
+
+        DB::transaction(function () use ($ticket, $data, $part, $stock, $request, $wasSent): void {
+            $item = $ticket->quoteItems()->create($data);
 
             if ($part) {
                 $stock->issue($part, $data['quantity'], $request->user(), "Dùng cho phiếu {$ticket->ticket_no}");
+            }
+
+            if ($wasSent) {
+                $this->logQuoteEdit($ticket, $request, null, $item);
             }
         });
 
@@ -50,8 +56,14 @@ class TicketQuoteItemController extends Controller
     {
         $this->ensureEditable($ticket);
 
+        $wasSent = $ticket->status === TicketStatus::Quoted;
+
         if ($quoteItem->part_id) {
             $stock->restore($quoteItem->part, $quoteItem->quantity, $request->user(), "Xoá dòng báo giá của phiếu {$ticket->ticket_no}");
+        }
+
+        if ($wasSent) {
+            $this->logQuoteEdit($ticket, $request, $quoteItem, null);
         }
 
         $quoteItem->delete();
@@ -60,16 +72,35 @@ class TicketQuoteItemController extends Controller
     }
 
     /**
-     * The quote is priced once, while IT is inspecting; once sent it is locked.
+     * The quote is priced once, while IT is inspecting. Once sent it would normally be locked,
+     * but a line can still be corrected after the fact (price changed, wrong part quoted) — see
+     * the logging below, which keeps that correction visible on the ticket's timeline.
      */
     private function ensureEditable(RmaTicket $ticket): void
     {
         abort_unless(
-            $ticket->service_type === ServiceType::Repair && $ticket->status === TicketStatus::Inspecting,
+            $ticket->service_type === ServiceType::Repair && in_array($ticket->status, [TicketStatus::Inspecting, TicketStatus::Quoted], true),
             403,
-            'Chỉ sửa được báo giá khi phiếu sửa chữa đang ở bước IT kiểm tra.',
+            'Chỉ sửa được báo giá khi phiếu sửa chữa đang ở bước IT kiểm tra hoặc đã gửi báo giá (chưa được khách chốt).',
         );
 
         abort_if($ticket->claimPending(), 403, 'Kết luận yêu cầu bảo hành sửa chữa trước (trong hay ngoài phạm vi) rồi mới lập báo giá.');
+    }
+
+    /**
+     * Normal line management while still inspecting needs no log — it's the quote being built,
+     * not a correction. Once the quote has already been sent, a line added or removed is a real
+     * correction and goes on the ticket's timeline.
+     */
+    private function logQuoteEdit(RmaTicket $ticket, Request $request, ?RmaQuoteItem $before, ?RmaQuoteItem $after): void
+    {
+        $describe = fn (RmaQuoteItem $item) => "{$item->description} ({$item->quantity} x ".money_vnd($item->unit_price).')';
+
+        $ticket->edits()->create([
+            'user_id' => $request->user()->id,
+            'field' => 'Báo giá (sau khi đã gửi)',
+            'old_value' => $before ? $describe($before) : null,
+            'new_value' => $after ? $describe($after) : null,
+        ]);
     }
 }

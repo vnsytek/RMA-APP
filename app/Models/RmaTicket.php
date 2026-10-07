@@ -156,6 +156,14 @@ class RmaTicket extends Model
     }
 
     /**
+     * @return HasMany<RmaTicketEdit, $this>
+     */
+    public function edits(): HasMany
+    {
+        return $this->hasMany(RmaTicketEdit::class)->orderBy('id');
+    }
+
+    /**
      * @return HasMany<Attachment, $this>
      */
     public function attachments(): HasMany

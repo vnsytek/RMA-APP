@@ -12,10 +12,11 @@
                                     @csrf @method('PUT')
                                     <input class="input" name="name" value="{{ $center->name }}" required maxlength="255" aria-label="Tên">
                                     <input class="input" name="brands" value="{{ $center->brands }}" placeholder="Nhận hãng nào" maxlength="255" aria-label="Nhận hãng nào">
-                                    <input class="input" name="phone" value="{{ $center->phone }}" placeholder="SĐT" maxlength="30" aria-label="SĐT">
+                                    <input class="input" type="tel" inputmode="tel" name="phone" value="{{ $center->phone }}" placeholder="SĐT, VD: 0225 3845 566" maxlength="30" aria-label="SĐT">
                                     <input class="input" name="address" value="{{ $center->address }}" placeholder="Địa chỉ" maxlength="500" aria-label="Địa chỉ">
                                     <button class="btn btn-secondary btn-sm justify-self-start">Lưu</button>
                                 </form>
+                                <x-field-error name="phone" bag="serviceCenter" />
                             </details>
                         </td>
                         <td>{{ $center->brands ?? '—' }}</td>
@@ -43,11 +44,12 @@
             @csrf
             <div><label class="label" for="sc-name">Tên *</label><input class="input" name="name" id="sc-name" required maxlength="255"></div>
             <div><label class="label" for="sc-brands">Nhận hãng nào</label><input class="input" name="brands" id="sc-brands" placeholder="VD: DELL, HP" maxlength="255"></div>
-            <div><label class="label" for="sc-phone">SĐT</label><input class="input" name="phone" id="sc-phone" maxlength="30"></div>
+            <div><label class="label" for="sc-phone">SĐT</label><input class="input" type="tel" inputmode="tel" name="phone" id="sc-phone" placeholder="VD: 0225 3845 566" maxlength="30"></div>
             <div><label class="label" for="sc-address">Địa chỉ</label><input class="input" name="address" id="sc-address" maxlength="500"></div>
             <button class="btn btn-primary">Thêm</button>
         </form>
         <x-field-error name="name" bag="serviceCenter" />
+        <x-field-error name="phone" bag="serviceCenter" />
         <p class="mt-3 text-xs text-muted">Không xoá, chỉ ẩn (quyền Admin) để phiếu cũ vẫn hiển thị đúng.</p>
     </section>
 </x-layouts.app>

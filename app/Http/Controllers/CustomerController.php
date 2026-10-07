@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Customer;
+use App\Rules\VietnamesePhoneNumber;
 use App\Services\DeviceSummary;
 use App\Services\DeviceTracker;
 use Illuminate\Database\Eloquent\Builder;
@@ -68,9 +69,10 @@ class CustomerController extends Controller
         return $request->validateWithBag('customer', [
             'name' => ['required', 'string', 'max:255'],
             'contact_name' => ['nullable', 'string', 'max:255'],
-            'phone' => ['required', 'string', 'max:20'],
+            'phone' => ['required', 'string', 'max:20', new VietnamesePhoneNumber()],
             'address' => ['nullable', 'string', 'max:500'],
+            'shipping_address' => ['nullable', 'string', 'max:500'],
             'note' => ['nullable', 'string', 'max:2000'],
-        ], attributes: ['name' => 'tên khách', 'contact_name' => 'người liên hệ', 'phone' => 'số điện thoại', 'address' => 'địa chỉ', 'note' => 'ghi chú']);
+        ], attributes: ['name' => 'tên khách', 'contact_name' => 'người liên hệ', 'phone' => 'số điện thoại', 'address' => 'địa chỉ', 'shipping_address' => 'địa chỉ nhận/trả máy', 'note' => 'ghi chú']);
     }
 }

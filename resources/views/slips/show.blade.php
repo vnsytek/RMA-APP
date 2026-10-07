@@ -63,7 +63,7 @@
             <div>Khách hàng: <b>{{ $ticket->customer->name }}</b></div>
             <div>Điện thoại: {{ $ticket->customer->phone }}</div>
             <div>Người liên hệ: {{ $ticket->customer->contact_name ?: '……………………' }}</div>
-            <div>Địa chỉ: {{ $ticket->customer->address ?: '……………………………' }}</div>
+            <div>Địa chỉ: {{ $ticket->customer->shippingAddress() ?: '……………………………' }}</div>
             <div>Hình thức: {{ $ticket->kind()->label() }}</div>
             <div>Tình trạng bảo hành: {{ $ticket->warranty_status->label() }}</div>
             @if ($isReturn)

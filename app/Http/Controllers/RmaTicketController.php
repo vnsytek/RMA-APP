@@ -14,12 +14,15 @@ use App\Models\RmaTicket;
 use App\Models\ServiceCenter;
 use App\Models\User;
 use App\Services\DeviceTracker;
+use App\Services\TicketEditor;
 use App\Services\TicketIntake;
 use App\Services\TicketNumberGenerator;
 use App\Services\TicketWorkflow;
+use Closure;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
@@ -98,16 +101,23 @@ class RmaTicketController extends Controller
         $ticket->load([
             'customer', 'device.productModel.brand', 'device.productModel.deviceType', 'returnedDevice.productModel.brand',
             'returnedDevice.productModel.deviceType', 'technician', 'creator', 'shipments.serviceCenter', 'quoteItems.part',
-            'replacedParts.shipment', 'statusLogs.user', 'statusLogs.attachments', 'attachments.uploader', 'warrantyItems', 'claims', 'claimTicket.warrantyItems',
+            'replacedParts.shipment', 'statusLogs.user', 'statusLogs.attachments', 'edits.user', 'attachments.uploader',
+            'warrantyItems', 'claims', 'claimTicket.warrantyItems',
         ]);
 
         $summary = $tracker->for($ticket->currentDevice());
+
+        $timeline = $ticket->statusLogs->map(fn ($log) => ['type' => 'status', 'at' => $log->created_at, 'data' => $log])
+            ->concat($ticket->edits->map(fn ($edit) => ['type' => 'edit', 'at' => $edit->created_at, 'data' => $edit]))
+            ->sortBy('at')
+            ->values();
 
         return view('tickets.show', [
             'ticket' => $ticket,
             'actions' => $workflow->availableActions($ticket),
             'device' => $summary,
             'history' => $summary->tickets->reject(fn (RmaTicket $other) => $other->is($ticket))->values(),
+            'timeline' => $timeline,
             'serviceCenters' => ServiceCenter::active()->orderBy('name')->get(),
             'technicians' => User::active()->orderBy('name')->get(),
             'models' => ProductModel::active()->with('brand', 'deviceType')->get()->sortBy(fn (ProductModel $model) => $model->deviceType->name.' '.$model->shortName()),
@@ -127,5 +137,31 @@ class RmaTicketController extends Controller
         $ticket->update($data);
 
         return back()->with('status', 'Đã lưu thông tin phiếu.');
+    }
+
+    /**
+     * Correct a data-entry mistake (wrong serial, typo'd fault description, wrong date) on an
+     * existing ticket, open or closed. Unlike update(), every change here is logged, not silently
+     * overwritten — see TicketEditor.
+     */
+    public function correct(Request $request, RmaTicket $ticket, TicketEditor $editor): RedirectResponse
+    {
+        $data = $request->validateWithBag('correct', [
+            'serial_number' => ['required', 'string', 'max:100'],
+            'fault_description' => ['required', 'string', 'max:2000'],
+            'received_date' => [
+                'required', 'date', 'before_or_equal:today',
+                function (string $attribute, mixed $value, Closure $fail) use ($ticket): void {
+                    if ($ticket->returned_date && Carbon::parse($value)->gt($ticket->returned_date)) {
+                        $fail('Ngày không được sau ngày trả ('.vn_date($ticket->returned_date).').');
+                    }
+                },
+            ],
+            'note' => ['nullable', 'string', 'max:500'],
+        ], attributes: ['serial_number' => 'serial', 'fault_description' => 'lỗi khách báo', 'received_date' => 'ngày nhận', 'note' => 'lý do sửa']);
+
+        $editor->correct($ticket, $data, $request->user(), $data['note'] ?? null);
+
+        return redirect()->route('tickets.show', $ticket)->with('status', "Đã cập nhật thông tin phiếu {$ticket->ticket_no}.");
     }
 }

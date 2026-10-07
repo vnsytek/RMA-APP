@@ -2,6 +2,29 @@ const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
 const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 
+/* Money inputs: format with Vietnamese thousand separators (1.000, 10.000, 100.000) as the user types. */
+document.addEventListener('input', (event) => {
+    const input = event.target;
+
+    if (!input.matches('[data-money]')) {
+        return;
+    }
+
+    const digitsBeforeCaret = input.value.slice(0, input.selectionStart ?? input.value.length).replace(/\D/g, '').length;
+    const digits = input.value.replace(/\D/g, '');
+    input.value = digits ? Number(digits).toLocaleString('vi-VN') : '';
+
+    let caret = 0;
+    let seen = 0;
+    while (caret < input.value.length && seen < digitsBeforeCaret) {
+        if (/\d/.test(input.value[caret])) {
+            seen++;
+        }
+        caret++;
+    }
+    input.setSelectionRange(caret, caret);
+});
+
 /* Table rows that open a page. Clicks on links, buttons and form controls keep their own behaviour. */
 document.addEventListener('click', (event) => {
     const row = event.target.closest('tr[data-href]');

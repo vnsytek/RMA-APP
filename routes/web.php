@@ -38,6 +38,7 @@ Route::middleware('auth')->group(function () {
         Route::post('replaced-parts', [TicketReplacedPartController::class, 'store'])->name('replaced-parts.store');
         Route::delete('replaced-parts/{replacedPart}', [TicketReplacedPartController::class, 'destroy'])->name('replaced-parts.destroy');
         Route::put('erp', [TicketErpController::class, 'update'])->name('erp.update');
+        Route::put('correct', [RmaTicketController::class, 'correct'])->name('correct');
         Route::post('attachments', [TicketAttachmentController::class, 'store'])->name('attachments.store');
         Route::get('attachments/{attachment}', [TicketAttachmentController::class, 'show'])->name('attachments.show');
         Route::delete('attachments/{attachment}', [TicketAttachmentController::class, 'destroy'])->name('attachments.destroy');

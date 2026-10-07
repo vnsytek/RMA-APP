@@ -6,6 +6,7 @@ use App\Enums\AttachmentStage;
 use App\Enums\TicketKind;
 use App\Enums\WarrantyStatus;
 use App\Models\RmaTicket;
+use App\Rules\VietnamesePhoneNumber;
 use App\Services\AttachmentStorage;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -47,7 +48,7 @@ class StoreRmaTicketRequest extends FormRequest
 
             'customer_id' => $newCustomer ? ['required'] : ['required', 'integer', Rule::exists('customers', 'id')],
             'customer_name' => [Rule::requiredIf($newCustomer), 'nullable', 'string', 'max:255'],
-            'customer_phone' => [Rule::requiredIf($newCustomer), 'nullable', 'string', 'max:20'],
+            'customer_phone' => [Rule::requiredIf($newCustomer), 'nullable', 'string', 'max:20', new VietnamesePhoneNumber()],
             'customer_contact' => ['nullable', 'string', 'max:255'],
             'customer_address' => ['nullable', 'string', 'max:500'],
 

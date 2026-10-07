@@ -118,7 +118,7 @@
             </div>
             <div data-new-customer>
                 <label class="label" for="customer_phone">Số điện thoại *</label>
-                <input class="input" name="customer_phone" id="customer_phone" value="{{ old('customer_phone') }}" maxlength="20" inputmode="tel">
+                <input class="input" type="tel" name="customer_phone" id="customer_phone" value="{{ old('customer_phone') }}" maxlength="20" inputmode="tel" placeholder="VD: 0901 234 567">
                 <x-field-error name="customer_phone" />
             </div>
             <div data-new-customer>

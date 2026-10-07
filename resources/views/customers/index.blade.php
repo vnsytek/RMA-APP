@@ -38,7 +38,7 @@
             @csrf
             <div><label class="label" for="name">Tên khách / công ty *</label><input class="input" name="name" id="name" required maxlength="255" value="{{ old('name') }}"></div>
             <div><label class="label" for="contact_name">Người liên hệ</label><input class="input" name="contact_name" id="contact_name" maxlength="255" value="{{ old('contact_name') }}"></div>
-            <div><label class="label" for="phone">Số điện thoại *</label><input class="input" name="phone" id="phone" required maxlength="20" value="{{ old('phone') }}"></div>
+            <div><label class="label" for="phone">Số điện thoại *</label><input class="input" type="tel" inputmode="tel" name="phone" id="phone" required maxlength="20" placeholder="VD: 0901 234 567" value="{{ old('phone') }}"></div>
             <div><label class="label" for="address">Địa chỉ</label><input class="input" name="address" id="address" maxlength="500" value="{{ old('address') }}"></div>
             <button class="btn btn-primary">Thêm</button>
         </form>
