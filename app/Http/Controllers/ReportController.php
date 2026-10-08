@@ -39,7 +39,7 @@ class ReportController extends Controller
     public function export(Request $request, ReportBuilder $builder): BinaryFileResponse
     {
         [$from, $to, $kind] = $this->period($request);
-        $report = $builder->build($from, $to, $kind);
+        $report = $builder->build($from, $to, $kind, paginateBacklog: false);
 
         $company = mb_strtoupper(config('rma.company.name'));
         $period = 'Kỳ báo cáo: '.$from->format('d/m/Y').' – '.$to->format('d/m/Y').($kind ? ' · '.$kind->label() : '');

@@ -14,6 +14,8 @@ use App\Models\ServiceCenter;
 use App\Models\User;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
@@ -24,6 +26,10 @@ use Illuminate\Support\Collection;
  */
 class ReportBuilder
 {
+    private const BACKLOG_PER_PAGE = 25;
+
+    public function __construct(private Request $request) {}
+
     /**
      * @return array{
      *     kpis: list<array{label: string, value: string, sub: string}>,
@@ -31,8 +37,10 @@ class ReportBuilder
      *     sections: list<array{id: string, title: string, note: string, wide: bool, columns: list<array{0: string, 1: string}>, rows: list<array{cells: list<mixed>, ticket?: string, total?: bool}>}>,
      *     received: Collection<int, RmaTicket>
      * }
+     *
+     * @param  bool  $paginateBacklog  false for the Excel export, which wants every open ticket, not just one page.
      */
-    public function build(CarbonInterface $from, CarbonInterface $to, ?TicketKind $kind): array
+    public function build(CarbonInterface $from, CarbonInterface $to, ?TicketKind $kind, bool $paginateBacklog = true): array
     {
         $from = Carbon::instance($from)->startOfDay();
         $to = Carbon::instance($to)->endOfDay();
@@ -113,27 +121,43 @@ class ReportBuilder
             ],
         ];
 
+        $backlogRows = $open->sortByDesc(fn (RmaTicket $ticket) => $days($ticket->received_date, today()))->map(function (RmaTicket $ticket) use ($days, $overdueDays) {
+            $age = $days($ticket->received_date, today());
+            $pending = $ticket->shipments->firstWhere('outcome', ShipmentOutcome::Pending);
+            $note = match (true) {
+                $ticket->status === TicketStatus::AtCenter && $pending !== null => 'Ở '.$pending->serviceCenter->name.' '.$days($pending->sent_date, today()).' ngày',
+                $ticket->status === TicketStatus::Scheduled && $pending?->appointment_date !== null => 'Hẹn hãng ngày '.$pending->appointment_date->format('d/m/Y'),
+                $ticket->status === TicketStatus::Quoted => 'Chờ khách duyệt báo giá: '.money_vnd($ticket->quoteTotal()),
+                $ticket->status === TicketStatus::Ready => 'Báo khách đến lấy máy',
+                default => '',
+            };
+
+            return ['ticket' => $ticket->ticket_no, 'cells' => [
+                $ticket->ticket_no, $ticket->kind(), $ticket->customer->name, $ticket->device->displayName(), $ticket->status,
+                $ticket->technician?->name, $ticket->received_date, $age,
+                $age <= 3 ? ['ok', 'Trong hạn'] : ($age <= $overdueDays ? ['warn', 'Cần theo dõi'] : ['bad', "Quá {$overdueDays} ngày"]),
+                $note,
+            ]];
+        })->values()->all();
+
+        $backlogPaginator = null;
+
+        if ($paginateBacklog) {
+            $page = LengthAwarePaginator::resolveCurrentPage('backlog_page');
+            $backlogPaginator = (new LengthAwarePaginator(
+                array_slice($backlogRows, ($page - 1) * self::BACKLOG_PER_PAGE, self::BACKLOG_PER_PAGE),
+                count($backlogRows),
+                self::BACKLOG_PER_PAGE,
+                $page,
+                ['path' => $this->request->url(), 'pageName' => 'backlog_page'],
+            ))->withQueryString();
+        }
+
         $sections[] = [
             'id' => 'backlog', 'title' => 'Phiếu tồn', 'note' => 'Phiếu chưa đóng, tính đến ngày '.today()->format('d/m/Y'), 'wide' => true,
             'columns' => [['Số phiếu', 'ticket'], ['Hình thức', 'kind'], ['Khách hàng', 'text'], ['Thiết bị', 'text'], ['Trạng thái', 'status'], ['Phụ trách', 'text'], ['Ngày nhận', 'date'], ['Số ngày', 'num'], ['Tình trạng', 'severity'], ['Ghi chú', 'text']],
-            'rows' => $open->sortByDesc(fn (RmaTicket $ticket) => $days($ticket->received_date, today()))->map(function (RmaTicket $ticket) use ($days, $overdueDays) {
-                $age = $days($ticket->received_date, today());
-                $pending = $ticket->shipments->firstWhere('outcome', ShipmentOutcome::Pending);
-                $note = match (true) {
-                    $ticket->status === TicketStatus::AtCenter && $pending !== null => 'Ở '.$pending->serviceCenter->name.' '.$days($pending->sent_date, today()).' ngày',
-                    $ticket->status === TicketStatus::Scheduled && $pending?->appointment_date !== null => 'Hẹn hãng ngày '.$pending->appointment_date->format('d/m/Y'),
-                    $ticket->status === TicketStatus::Quoted => 'Chờ khách duyệt báo giá: '.money_vnd($ticket->quoteTotal()),
-                    $ticket->status === TicketStatus::Ready => 'Báo khách đến lấy máy',
-                    default => '',
-                };
-
-                return ['ticket' => $ticket->ticket_no, 'cells' => [
-                    $ticket->ticket_no, $ticket->kind(), $ticket->customer->name, $ticket->device->displayName(), $ticket->status,
-                    $ticket->technician?->name, $ticket->received_date, $age,
-                    $age <= 3 ? ['ok', 'Trong hạn'] : ($age <= $overdueDays ? ['warn', 'Cần theo dõi'] : ['bad', "Quá {$overdueDays} ngày"]),
-                    $note,
-                ]];
-            })->values()->all(),
+            'rows' => $backlogPaginator?->items() ?? $backlogRows,
+            'paginator' => $backlogPaginator,
         ];
 
         $shipments = RmaCenterShipment::query()
