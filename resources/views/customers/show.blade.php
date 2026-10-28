@@ -1,7 +1,7 @@
-<x-layouts.app :title="$customer->name" :subtitle="$customer->tax_code ? 'MST '.$customer->tax_code : 'Khách hàng'">
+<x-layouts.app :title="$customer->name" :subtitle="$customer->tax_code ? 'MST '.$customer->tax_code : null" :parent="['Khách hàng', route('customers.index')]">
     <x-slot:actions>
-        <a href="{{ route('tickets.create', ['customer' => $customer->id]) }}" class="btn btn-primary">+ Lập phiếu cho khách</a>
-        <button type="button" class="btn btn-secondary" data-dialog-open="customer-edit">Sửa</button>
+        <a href="{{ route('tickets.create', ['customer' => $customer->id]) }}" class="btn btn-primary"><x-icon name="plus" />Lập phiếu cho khách</a>
+        <button type="button" class="btn btn-secondary" data-dialog-open="customer-edit"><x-icon name="pencil" />Sửa thông tin</button>
         @can('admin')
             @if ($ticketCount === 0)
                 <form method="POST" action="{{ route('customers.destroy', $customer) }}" data-confirm="Xoá khách hàng {{ $customer->name }}? Không khôi phục được.">
@@ -12,19 +12,20 @@
                 <button type="button" class="btn btn-secondary" disabled title="Khách đã có {{ $ticketCount }} phiếu nên không xoá được, để giữ lịch sử.">Xoá</button>
             @endif
         @endcan
-        <a href="{{ route('customers.index') }}" class="btn btn-secondary">← Danh sách</a>
     </x-slot:actions>
 
     <section class="card p-5">
         <dl class="grid gap-x-6 gap-y-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
-            <div class="sm:col-span-2"><dt class="text-[11px] tracking-wider text-muted uppercase">Tên khách / công ty</dt><dd class="font-medium">{{ $customer->name }}</dd></div>
-            <div><dt class="text-[11px] tracking-wider text-muted uppercase">Mã số thuế</dt><dd class="font-mono font-medium">{{ $customer->tax_code ?? '—' }}</dd></div>
-            <div><dt class="text-[11px] tracking-wider text-muted uppercase">Phiếu</dt><dd class="font-medium">{{ $ticketCount }}@if ($openCount) <span class="text-amber-700">· {{ $openCount }} đang xử lý</span>@endif</dd></div>
-            <div><dt class="text-[11px] tracking-wider text-muted uppercase">SĐT công ty</dt><dd class="font-mono font-medium">{{ $customer->phone ?? '—' }}</dd></div>
-            <div><dt class="text-[11px] tracking-wider text-muted uppercase">Người liên hệ</dt><dd class="font-medium">{{ $contacts->where('is_active', true)->count() }} người</dd></div>
-            <div class="sm:col-span-2"><dt class="text-[11px] tracking-wider text-muted uppercase">Địa chỉ</dt><dd class="font-medium">{{ $customer->address ?? '—' }}</dd></div>
+            <div><dt class="meta-label">Mã khách</dt><dd class="meta-value font-mono">{{ $customer->code ?? '—' }}</dd></div>
+            <div><dt class="meta-label">Tên viết tắt</dt><dd class="meta-value">{{ $customer->short_name ?? '—' }}</dd></div>
+            <div class="sm:col-span-2"><dt class="meta-label">Tên khách / công ty</dt><dd class="meta-value">{{ $customer->name }}</dd></div>
+            <div><dt class="meta-label">Mã số thuế</dt><dd class="meta-value font-mono">{{ $customer->tax_code ?? '—' }}</dd></div>
+            <div><dt class="meta-label">Phiếu</dt><dd class="meta-value">{{ $ticketCount }}@if ($openCount) <span class="text-amber-700">· {{ $openCount }} đang xử lý</span>@endif</dd></div>
+            <div><dt class="meta-label">SĐT công ty</dt><dd class="meta-value font-mono">{{ $customer->phone ?? '—' }}</dd></div>
+            <div><dt class="meta-label">Người liên hệ</dt><dd class="meta-value">{{ $contacts->where('is_active', true)->count() }} người</dd></div>
+            <div class="sm:col-span-2"><dt class="meta-label">Địa chỉ</dt><dd class="meta-value">{{ $customer->address ?? '—' }}</dd></div>
             @if ($customer->note)
-                <div class="sm:col-span-2 lg:col-span-4"><dt class="text-[11px] tracking-wider text-muted uppercase">Ghi chú</dt><dd class="whitespace-pre-line">{{ $customer->note }}</dd></div>
+                <div class="sm:col-span-2 lg:col-span-4"><dt class="meta-label">Ghi chú</dt><dd class="whitespace-pre-line">{{ $customer->note }}</dd></div>
             @endif
         </dl>
         <div class="mt-4 flex flex-wrap gap-2 border-t border-line pt-3 text-sm">
@@ -33,9 +34,9 @@
     </section>
 
     <section class="card mt-5 overflow-x-auto" id="nguoi-lien-he">
-        <div class="flex flex-wrap items-center justify-between gap-2 px-5 pt-4 pb-2">
+        <div class="card-head">
             <h2 class="font-semibold">Người liên hệ <span class="text-sm font-normal text-muted">· mỗi phiếu lưu lại người đã gửi máy</span></h2>
-            <button type="button" class="btn btn-secondary btn-sm" data-dialog-open="contact-new">+ Thêm người liên hệ</button>
+            <button type="button" class="btn btn-secondary btn-sm" data-dialog-open="contact-new"><x-icon name="plus" />Thêm người liên hệ</button>
         </div>
         <table class="table">
             <thead><tr><th>Tên</th><th>Số điện thoại</th><th class="text-right">Số phiếu</th><th>Trạng thái</th><th></th></tr></thead>
@@ -56,14 +57,14 @@
                         </td>
                     </tr>
                 @empty
-                    <tr><td colspan="5" class="text-muted">Chưa có người liên hệ. Lập phiếu đầu tiên hoặc bấm "+ Thêm người liên hệ".</td></tr>
+                    <tr><td colspan="5" class="text-muted">Chưa có người liên hệ. Lập phiếu đầu tiên hoặc bấm "Thêm người liên hệ".</td></tr>
                 @endforelse
             </tbody>
         </table>
     </section>
 
     <section class="card mt-5 overflow-x-auto">
-        <h2 class="px-5 pt-4 pb-2 font-semibold">Các phiếu của khách
+        <h2 class="card-head font-semibold">Các phiếu của khách
             @if ($tickets->count() < $ticketCount)
                 <span class="text-sm font-normal text-muted">· hiện {{ $tickets->count() }}/{{ $ticketCount }} (chỉ phiếu bạn lập hoặc phụ trách)</span>
             @endif

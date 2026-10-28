@@ -10,10 +10,20 @@
 @endphp
 
 <div class="grid gap-3 sm:grid-cols-2">
+    <div>
+        <label class="label" for="{{ $prefix }}-code">Mã khách</label>
+        <input class="input font-mono uppercase" name="code" id="{{ $prefix }}-code" maxlength="10" value="{{ $value('code') }}" placeholder="VD: AFM">
+        <x-field-error name="code" bag="customer" />
+    </div>
+    <div>
+        <label class="label" for="{{ $prefix }}-short_name">Tên viết tắt</label>
+        <input class="input" name="short_name" id="{{ $prefix }}-short_name" maxlength="20" value="{{ $value('short_name') }}" placeholder="VD: AFM FoRST">
+        <x-field-error name="short_name" bag="customer" />
+    </div>
     <x-tax-code-field :id="$prefix.'-tax_code'" :value="$value('tax_code')" bag="customer" class="sm:col-span-2"
                       :data-except="$customer?->id" />
     <div class="sm:col-span-2">
-        <label class="label" for="{{ $prefix }}-name">Tên khách / công ty *</label>
+        <label class="label" for="{{ $prefix }}-name">Tên khách / công ty <span class="req">*</span></label>
         <input class="input" name="name" id="{{ $prefix }}-name" required maxlength="255" value="{{ $value('name') }}" data-tax-fill="name">
         <x-field-error name="name" bag="customer" />
     </div>

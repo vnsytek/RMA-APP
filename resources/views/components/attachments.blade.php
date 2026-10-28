@@ -27,9 +27,9 @@
 
     @forelse ($groups as $group)
         <div>
-            <h3 class="mb-2 flex flex-wrap items-baseline gap-x-2 text-xs font-semibold tracking-wider text-muted uppercase">
+            <h3 class="mb-2 flex flex-wrap items-baseline gap-x-2 text-[13px] font-semibold">
                 {{ $group['stage']->label() }}
-                <span class="font-normal tracking-normal normal-case">· {{ $group['items']->count() }} tệp</span>
+                <span class="font-normal text-muted">· {{ $group['items']->count() }} tệp</span>
             </h3>
             <div class="grid gap-2 sm:grid-cols-2">
                 @foreach ($group['items'] as $attachment)

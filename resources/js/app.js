@@ -34,13 +34,158 @@ document.addEventListener('click', (event) => {
     }
 });
 
-/* Forms that need a confirmation before submitting. */
-document.addEventListener('submit', (event) => {
-    const message = event.target.dataset.confirm;
+/* Forms that need a confirmation before submitting: data-confirm holds the question, the dialog's
+   accept button repeats the label of the button that was pressed, so "Khoá" asks and then says "Khoá". */
+const confirmDialog = $('#confirm-dialog');
+let confirming = null;
 
-    if (message && !window.confirm(message)) {
-        event.preventDefault();
+document.addEventListener('submit', (event) => {
+    const form = event.target;
+    const message = form.dataset.confirm;
+
+    if (!message || form.dataset.confirmed) {
+        delete form.dataset.confirmed;
+
+        return;
     }
+
+    event.preventDefault();
+    const submitter = event.submitter ?? $('button:not([type=button])', form);
+
+    if (!confirmDialog) {
+        if (window.confirm(message)) {
+            form.dataset.confirmed = '1';
+            form.requestSubmit(submitter);
+        }
+
+        return;
+    }
+
+    const danger = submitter?.classList.contains('btn-danger') || submitter?.classList.contains('btn-danger-solid');
+    const accept = $('[data-confirm-accept]', confirmDialog);
+    $('[data-confirm-text]', confirmDialog).textContent = message;
+    accept.textContent = submitter?.textContent.trim().replace(/\s+/g, ' ') || 'Đồng ý';
+    accept.className = `btn ${danger ? 'btn-danger-solid' : 'btn-primary'}`;
+    $('[data-confirm-icon]', confirmDialog).className = `grid size-9 shrink-0 place-items-center rounded-full ${danger ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-800'}`;
+    confirming = { form, submitter };
+    confirmDialog.showModal();
+    accept.focus();
+});
+
+confirmDialog?.querySelector('[data-confirm-accept]').addEventListener('click', () => {
+    const { form, submitter } = confirming ?? {};
+    confirming = null;
+    confirmDialog.close();
+
+    if (form) {
+        form.dataset.confirmed = '1';
+        form.requestSubmit(submitter?.form === form ? submitter : null);
+    }
+});
+
+/* Sent forms: the pressed button shows a spinner and the form cannot be sent twice.
+   Buttons are disabled a tick later, so the browser still submits the pressed button's name/value. */
+document.addEventListener('submit', (event) => {
+    const form = event.target;
+
+    if (event.defaultPrevented || form.target === '_blank') {
+        return;
+    }
+
+    const submitter = event.submitter ?? $('button:not([type=button])', form);
+    submitter?.classList.add('is-loading');
+    form.setAttribute('aria-busy', 'true');
+    setTimeout(() => $$('button:not([type=button])', form).forEach((button) => (button.disabled = true)));
+});
+
+/* Back/forward cache restores the page as it was left: give the buttons back. */
+window.addEventListener('pageshow', (event) => {
+    if (event.persisted) {
+        $$('form[aria-busy]').forEach((form) => {
+            form.removeAttribute('aria-busy');
+            $$('button', form).forEach((button) => {
+                button.disabled = false;
+                button.classList.remove('is-loading');
+            });
+        });
+    }
+});
+
+/* Phone / tablet menu drawer. */
+const navOpeners = $$('[data-nav-open]');
+const navBackdrop = $('div[data-nav-close]');
+
+function setNav(open) {
+    document.documentElement.dataset.nav = open ? 'open' : '';
+    navBackdrop && (navBackdrop.hidden = !open);
+    navOpeners.forEach((button) => button.setAttribute('aria-expanded', String(open)));
+
+    if (open) {
+        $('#sidebar .nav-item')?.focus();
+    }
+}
+
+navOpeners.forEach((button) => button.addEventListener('click', () => setNav(true)));
+$$('[data-nav-close]').forEach((element) => element.addEventListener('click', () => setNav(false)));
+document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && document.documentElement.dataset.nav === 'open') {
+        setNav(false);
+        navOpeners[0]?.focus();
+    }
+});
+
+/* Desktop: fold the sidebar to icons; the choice is remembered on this computer. */
+$$('[data-sidebar-toggle]').forEach((button) => {
+    const sync = () => {
+        const collapsed = document.documentElement.dataset.sidebar === 'collapsed';
+        button.setAttribute('aria-expanded', String(!collapsed));
+        button.title = collapsed ? 'Mở rộng menu' : 'Thu gọn menu';
+    };
+
+    sync();
+    button.addEventListener('click', () => {
+        const collapsed = document.documentElement.dataset.sidebar !== 'collapsed';
+        document.documentElement.dataset.sidebar = collapsed ? 'collapsed' : '';
+        try {
+            localStorage.setItem('sidebar', collapsed ? 'collapsed' : 'expanded');
+        } catch {}
+        sync();
+    });
+});
+
+/* <details data-menu> pop-up menus close on an outside click or Esc. */
+document.addEventListener('click', (event) => {
+    $$('details[data-menu][open]').forEach((menu) => menu.contains(event.target) || menu.removeAttribute('open'));
+});
+document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') {
+        $$('details[data-menu][open]').forEach((menu) => {
+            menu.removeAttribute('open');
+            $('summary', menu).focus();
+        });
+    }
+});
+
+/* Dismissable flash messages. */
+document.addEventListener('click', (event) => {
+    event.target.closest('[data-dismiss]')?.closest('[data-flash]')?.remove();
+});
+
+/* Show / hide password. */
+document.addEventListener('click', (event) => {
+    const button = event.target.closest('[data-password-toggle]');
+
+    if (!button) {
+        return;
+    }
+
+    const input = document.getElementById(button.dataset.passwordToggle);
+    const show = input.type === 'password';
+    input.type = show ? 'text' : 'password';
+    button.setAttribute('aria-pressed', String(show));
+    button.setAttribute('aria-label', show ? 'Ẩn mật khẩu' : 'Hiện mật khẩu');
+    $$('svg', button).forEach((icon) => icon.toggleAttribute('hidden', icon.dataset.state !== (show ? 'shown' : 'hidden')));
+    input.focus();
 });
 
 /* Selects that submit their form as soon as they change. */
@@ -731,4 +876,110 @@ if (form) {
     if (serialInput.value.trim()) {
         lookupSerial();
     }
+}
+
+/* Tabs (reports, catalogue): the open tab lives in the URL hash (#tab-backlog) so reloads and pagination land back on it.
+   data-tabs-force (a form came back with errors) wins over the hash; data-tabs-default is used when there is none. */
+const tabs = $('[data-tabs]');
+let showTab = () => {};
+
+if (tabs) {
+    const exists = (key) => key && $(`[data-tab-panel="${key}"]`, tabs);
+    showTab = (key, focus = false) => {
+        if (!exists(key)) return;
+        $$('[data-tab]', tabs).forEach((button) => button.setAttribute('aria-selected', String(button.dataset.tab === key)));
+        $$('[data-tab-panel]', tabs).forEach((panel) => (panel.hidden = panel.dataset.tabPanel !== key));
+        history.replaceState(null, '', `#tab-${key}`);
+        if (focus) tabs.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    };
+
+    $$('[data-tab]', tabs).forEach((button) => button.addEventListener('click', () => showTab(button.dataset.tab)));
+    $$('[data-tab-link]').forEach((link) => link.addEventListener('click', (event) => {
+        event.preventDefault();
+        showTab(link.dataset.tabLink, true);
+    }));
+    showTab([tabs.dataset.tabsForce, location.hash.replace('#tab-', ''), tabs.dataset.tabsDefault, $('[data-tab]', tabs).dataset.tab].find(exists));
+}
+
+/* Filterable lists: a search box (accent-insensitive), optional selects matched against data-* on each [data-row],
+   and a "show hidden" checkbox for rows with data-active="0". */
+$$('[data-filterable]').forEach((box) => {
+    const rows = $$('[data-row]', box);
+    const search = $('[data-filter-search]', box);
+    const selects = $$('select[data-filter]', box);
+    const showHidden = $('[data-filter-hidden]', box);
+    const empty = $('[data-filter-empty]', box);
+
+    const apply = () => {
+        const query = fold(search?.value).trim();
+        let shown = 0;
+
+        rows.forEach((row) => {
+            const match = (!query || fold(row.dataset.search).includes(query))
+                && selects.every((select) => !select.value || row.dataset[select.dataset.filter] === select.value)
+                && (showHidden?.checked || row.dataset.active !== '0');
+            row.hidden = !match;
+            shown += match ? 1 : 0;
+        });
+
+        if (empty) empty.hidden = shown > 0;
+    };
+
+    search?.addEventListener('input', apply);
+    [...selects, showHidden].forEach((control) => control?.addEventListener('change', apply));
+    apply();
+});
+
+/* "5 model" links: jump to another tab with one of its filters already set. */
+document.addEventListener('click', (event) => {
+    const link = event.target.closest('[data-filter-goto]');
+
+    if (!link) return;
+
+    const panel = $(`[data-tab-panel="${link.dataset.filterGoto}"]`);
+    const select = panel && $(`select[data-filter="${link.dataset.filterKey}"]`, panel);
+
+    if (select) {
+        $$('select[data-filter]', panel).forEach((other) => (other.value = ''));
+        const searchBox = $('[data-filter-search]', panel);
+        if (searchBox) searchBox.value = '';
+        select.value = link.dataset.filterValue;
+        select.dispatchEvent(new Event('change'));
+        showTab(link.dataset.filterGoto, true);
+    }
+});
+
+/* Report filters: a custom date range replaces the preset; picking a kind applies right away. */
+const reportFilter = $('[data-report-filter]');
+
+if (reportFilter) {
+    $$('input[type="date"]', reportFilter).forEach((input) => input.addEventListener('change', () => $('input[name="preset"]', reportFilter)?.remove()));
+    $('#kind', reportFilter)?.addEventListener('change', () => reportFilter.requestSubmit());
+}
+
+/* Chart tooltips: any element with data-tip (multi-line text) shows a floating label on hover or focus. */
+if ($('[data-tip]')) {
+    const tip = document.createElement('div');
+    tip.className = 'pointer-events-none fixed z-50 max-w-64 rounded-md bg-ink px-2.5 py-1.5 text-xs leading-relaxed whitespace-pre-line text-white shadow-lg';
+    tip.hidden = true;
+    tip.setAttribute('role', 'tooltip');
+    document.body.append(tip);
+
+    const place = (target, x, y) => {
+        tip.textContent = target.dataset.tip;
+        tip.hidden = false;
+        const left = Math.min(x + 14, window.innerWidth - tip.offsetWidth - 8);
+        const top = y - tip.offsetHeight - 12 < 8 ? y + 16 : y - tip.offsetHeight - 12;
+        tip.style.left = `${Math.max(8, left)}px`;
+        tip.style.top = `${top}px`;
+    };
+
+    $$('[data-tip]').forEach((target) => {
+        target.addEventListener('mousemove', (event) => place(target, event.clientX, event.clientY));
+        target.addEventListener('focus', () => {
+            const box = target.getBoundingClientRect();
+            place(target, box.left + box.width / 2, box.top);
+        });
+        ['mouseleave', 'blur'].forEach((type) => target.addEventListener(type, () => (tip.hidden = true)));
+    });
 }

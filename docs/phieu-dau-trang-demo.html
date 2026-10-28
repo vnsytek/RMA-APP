@@ -1,0 +1,370 @@
+<title>Khách hàng và ngày trên đầu phiếu</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap">
+<style>
+    /* Layout: one reading column; the proposed ticket tag is the centrepiece, with a scenario switcher above it,
+       then the current layout for comparison, the list column order, and the questions to settle. */
+    :root {
+        --brand: #1f4a3d;
+        --brand-soft: #e3eee8;
+        --brand-tint: #f1f7f3;
+        --canvas: #f3f5f3;
+        --surface: #ffffff;
+        --panel: #f7f9f7;
+        --line: #dbe2dd;
+        --line-strong: #c4cec7;
+        --ink: #16211c;
+        --muted: #5a6961;
+        --faint: #8b978f;
+        --ok-bg: #e7f6ee; --ok-fg: #17663f;
+        --warn-bg: #fdf1d6; --warn-fg: #8a5a00;
+        --bad-bg: #fde8e6; --bad-fg: #a42a20;
+        --amber-bg: #fef3c7; --amber-fg: #92400e;
+        --sky-bg: #e0f2fe; --sky-fg: #075985;
+        --violet-bg: #ede9fe; --violet-fg: #5b21b6;
+        --gray-bg: #e7e5e4; --gray-fg: #44403c;
+        --mark: #fff3bf;
+        --font-sans: 'Be Vietnam Pro', ui-sans-serif, system-ui, 'Segoe UI', sans-serif;
+        --font-mono: 'JetBrains Mono', ui-monospace, Consolas, monospace;
+    }
+    @media (prefers-color-scheme: dark) {
+        :root:not([data-theme="light"]) {
+            --brand: #8fd1ad; --brand-soft: #1f3b31; --brand-tint: #17261f;
+            --canvas: #0f1713; --surface: #16211c; --panel: #1b2822; --line: #2b3a33; --line-strong: #3a4b43;
+            --ink: #e6efe9; --muted: #a3b3aa; --faint: #74857b;
+            --ok-bg: #143523; --ok-fg: #8ee0b1; --warn-bg: #3a2d0c; --warn-fg: #f5c661; --bad-bg: #3d1714; --bad-fg: #ff9d92;
+            --amber-bg: #3a2b0b; --amber-fg: #fbbf5a; --sky-bg: #0c2a3d; --sky-fg: #8fd0f7;
+            --violet-bg: #2a2146; --violet-fg: #c7b8ff; --gray-bg: #2c2a28; --gray-fg: #d6d3d1; --mark: #4a3f10;
+            color-scheme: dark;
+        }
+    }
+    :root[data-theme="dark"] {
+        --brand: #8fd1ad; --brand-soft: #1f3b31; --brand-tint: #17261f;
+        --canvas: #0f1713; --surface: #16211c; --panel: #1b2822; --line: #2b3a33; --line-strong: #3a4b43;
+        --ink: #e6efe9; --muted: #a3b3aa; --faint: #74857b;
+        --ok-bg: #143523; --ok-fg: #8ee0b1; --warn-bg: #3a2d0c; --warn-fg: #f5c661; --bad-bg: #3d1714; --bad-fg: #ff9d92;
+        --amber-bg: #3a2b0b; --amber-fg: #fbbf5a; --sky-bg: #0c2a3d; --sky-fg: #8fd0f7;
+        --violet-bg: #2a2146; --violet-fg: #c7b8ff; --gray-bg: #2c2a28; --gray-fg: #d6d3d1; --mark: #4a3f10;
+        color-scheme: dark;
+    }
+
+    * { box-sizing: border-box; }
+    body { background: var(--canvas); color: var(--ink); font: 15px/1.55 var(--font-sans); -webkit-font-smoothing: antialiased; }
+    .wrap { max-width: 64rem; margin: 0 auto; padding-block: 40px 72px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: grid; gap: 40px; }
+    h1, h2, h3 { text-wrap: balance; margin: 0; }
+    h1 { font-size: 1.75rem; line-height: 1.2; font-weight: 600; letter-spacing: -0.01em; }
+    h2 { font-size: 1.15rem; font-weight: 600; }
+    p { margin: 0; }
+    .lede { color: var(--muted); max-width: 62ch; margin-top: 8px; }
+    .section { display: grid; gap: 14px; min-width: 0; }
+    .section > p { color: var(--muted); max-width: 65ch; }
+    .mono { font-family: var(--font-mono); }
+    .muted { color: var(--muted); }
+
+    /* Scenario switcher */
+    .switch { display: flex; flex-wrap: wrap; gap: 4px; padding: 4px; border: 1px solid var(--line); background: var(--panel); border-radius: 10px; width: fit-content; max-width: 100%; }
+    .switch button { font: inherit; font-size: 13.5px; border: 0; background: transparent; color: var(--muted); padding: 7px 12px; border-radius: 7px; cursor: pointer; }
+    .switch button:hover { color: var(--ink); }
+    .switch button[aria-pressed="true"] { background: var(--surface); color: var(--ink); font-weight: 600; box-shadow: 0 0 0 1px var(--line-strong); }
+    .switch button:focus-visible, .toggle:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+
+    /* The ticket tag */
+    .tag { display: grid; grid-template-columns: 3.25rem minmax(0, 1fr); background: var(--surface); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+    .stub { position: relative; border-right: 1px dashed var(--line-strong); background: var(--panel); }
+    .stub::before { content: ""; position: absolute; top: 28px; left: 50%; width: 16px; height: 16px; transform: translateX(-50%); border-radius: 50%; border: 1px solid var(--line-strong); background: var(--canvas); }
+    .tag-body { padding: 20px 22px; min-width: 0; display: grid; gap: 18px; }
+    .row1 { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px 24px; align-items: flex-start; }
+    .ticket-no { font: 600 1.9rem/1 var(--font-mono); letter-spacing: -0.01em; }
+    .title-line { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+    .device { margin-top: 10px; font-weight: 500; }
+    .device .mono { font-size: 13px; font-weight: 500; color: var(--muted); margin-left: 4px; }
+    .pill { display: inline-block; border-radius: 999px; padding: 3px 11px; font-size: 13px; font-weight: 600; white-space: nowrap; }
+    .kind { display: inline-block; border: 1px solid currentColor; border-radius: 5px; padding: 0 6px; font-size: 11.5px; font-weight: 600; margin-right: 6px; vertical-align: 1px; }
+    .btn { font: inherit; font-size: 14px; font-weight: 600; border: 1px solid var(--line-strong); background: var(--surface); color: var(--ink); padding: 8px 14px; border-radius: 9px; white-space: nowrap; }
+
+    /* New: the key facts band */
+    .facts { display: grid; grid-template-columns: minmax(0, 2.2fr) minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr); gap: 14px 24px; padding: 16px 18px; background: var(--brand-tint); border: 1px solid color-mix(in oklab, var(--brand) 22%, transparent); border-radius: 11px; position: relative; }
+    .fact { min-width: 0; }
+    .fact dt { font-size: 12.5px; font-weight: 500; color: var(--muted); }
+    .fact dd { margin: 3px 0 0; font-weight: 600; overflow-wrap: anywhere; }
+    .fact dd small { display: block; font-size: 13px; font-weight: 400; color: var(--muted); margin-top: 2px; }
+    .fact .date { font-variant-numeric: tabular-nums; font-size: 1.05rem; }
+    .age { display: inline-flex; align-items: center; gap: 5px; margin-top: 6px; border-radius: 999px; padding: 2px 9px; font-size: 12.5px; font-weight: 600; }
+    .age.ok { background: var(--ok-bg); color: var(--ok-fg); }
+    .age.warn { background: var(--warn-bg); color: var(--warn-fg); }
+    .age.bad { background: var(--bad-bg); color: var(--bad-fg); }
+    .age.done { background: var(--gray-bg); color: var(--gray-fg); }
+    .new-badge { position: absolute; top: -10px; right: 14px; background: var(--mark); color: var(--ink); font-size: 11.5px; font-weight: 600; padding: 1px 8px; border-radius: 6px; border: 1px solid var(--line-strong); }
+
+    /* Steps */
+    .steps-wrap { border-top: 1px solid var(--line); padding-top: 18px; }
+    .steps { display: flex; list-style: none; margin: 0; padding: 0; }
+    .step { position: relative; flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; font-size: 12px; color: var(--muted); }
+    .step::before { content: ""; position: absolute; top: 10px; right: 50%; left: -50%; height: 2px; background: var(--line); }
+    .step:first-child::before { display: none; }
+    .dot { position: relative; z-index: 1; width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--line-strong); background: var(--surface); display: grid; place-items: center; font-size: 11px; font-weight: 700; }
+    .step.done::before, .step.current::before { background: var(--brand); }
+    .step.done .dot { background: var(--brand); border-color: var(--brand); color: var(--surface); }
+    .step.current { color: var(--ink); font-weight: 600; }
+    .step.current .dot { border-color: var(--brand); box-shadow: 0 0 0 4px color-mix(in oklab, var(--brand) 18%, transparent); }
+    .step.current .dot::after { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--brand); }
+    .step.skipped { color: var(--faint); }
+    .step.skipped .dot { border-style: dashed; background: var(--panel); }
+    .step-mobile { display: none; font-size: 13px; color: var(--muted); margin-bottom: 10px; }
+
+    .below { display: grid; gap: 10px; }
+    .ghost { border: 1px dashed var(--line-strong); border-radius: 12px; padding: 14px 18px; color: var(--muted); font-size: 14px; background: color-mix(in oklab, var(--surface) 60%, transparent); }
+    .ghost b { color: var(--ink); font-weight: 600; }
+    .ghost.next { border-style: solid; border-color: color-mix(in oklab, var(--brand) 40%, transparent); box-shadow: inset 4px 0 0 var(--brand); background: var(--surface); }
+
+    /* Current layout, small */
+    .compare { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+    .mini { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px; display: grid; gap: 8px; font-size: 13px; align-content: start; min-width: 0; }
+    .mini h3 { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+    .mini .blk { border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; color: var(--muted); }
+    .mini .blk.hit { border-color: var(--bad-fg); color: var(--bad-fg); background: var(--bad-bg); font-weight: 600; }
+    .mini .blk.good { border-color: color-mix(in oklab, var(--brand) 45%, transparent); background: var(--brand-tint); color: var(--ink); font-weight: 600; }
+
+    /* List column order */
+    .table-box { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; }
+    table { border-collapse: collapse; width: 100%; font-size: 14px; font-variant-numeric: tabular-nums; }
+    th { text-align: left; font-size: 12.5px; font-weight: 600; color: var(--muted); background: var(--panel); padding: 10px 14px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+    td { padding: 11px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+    tr:last-child td { border-bottom: 0; }
+    th.moved { background: var(--mark); color: var(--ink); }
+    td .sub { display: block; font-size: 12.5px; color: var(--muted); }
+
+    .note-print { display: flex; gap: 12px; align-items: flex-start; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; }
+    .note-print .check { flex: none; width: 24px; height: 24px; border-radius: 50%; background: var(--ok-bg); color: var(--ok-fg); display: grid; place-items: center; font-weight: 700; font-size: 13px; }
+
+    ol.questions { margin: 0; padding-left: 1.3em; display: grid; gap: 10px; max-width: 68ch; }
+    ol.questions li::marker { font-weight: 600; color: var(--muted); }
+    ol.questions .rec { color: var(--muted); font-size: 14px; display: block; }
+
+    @media (max-width: 760px) {
+        .facts { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+        .facts .fact.wide { grid-column: 1 / -1; }
+        .compare { grid-template-columns: minmax(0, 1fr); }
+    }
+    @media (max-width: 560px) {
+        .tag { grid-template-columns: minmax(0, 1fr); }
+        .stub { display: none; }
+        .tag-body { padding: 18px 16px; }
+        .ticket-no { font-size: 1.6rem; }
+        .step span.lbl { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+        .step-mobile { display: block; }
+    }
+    @media (prefers-reduced-motion: no-preference) {
+        .facts { transition: background-color .2s ease; }
+    }
+</style>
+
+<div class="wrap">
+    <header>
+        <h1>Đưa khách hàng và ngày lên đầu phiếu</h1>
+        <p class="lede">Bản xem trước cho trang chi tiết phiếu RMA. Vừa mở phiếu là thấy ngay khách nào, liên hệ ai, nhận máy ngày nào và đã giữ máy bao lâu. Chưa sửa code; dữ liệu trên trang là ví dụ.</p>
+    </header>
+
+    <section class="section" aria-labelledby="s1">
+        <h2 id="s1">Đầu trang chi tiết phiếu</h2>
+        <p>Bấm các ví dụ để xem cách hiển thị thay đổi theo từng loại phiếu và số ngày giữ máy. Phần tô nền xanh là phần mới.</p>
+        <div class="switch" role="group" aria-label="Chọn phiếu ví dụ">
+            <button type="button" data-case="repair" aria-pressed="true">Sửa chữa, 2 ngày</button>
+            <button type="button" data-case="center" aria-pressed="false">Gửi TTBH, 6 ngày</button>
+            <button type="button" data-case="late" aria-pressed="false">Quá hạn, 11 ngày</button>
+            <button type="button" data-case="returned" aria-pressed="false">Đã trả khách</button>
+            <button type="button" data-case="onsite" aria-pressed="false">Hãng tại nhà khách</button>
+        </div>
+
+        <article class="tag" aria-live="polite">
+            <div class="stub" aria-hidden="true"></div>
+            <div class="tag-body">
+                <div class="row1">
+                    <div style="min-width:0">
+                        <div class="title-line">
+                            <span class="ticket-no" id="t-no">RMA-2610-012</span>
+                            <span class="pill" id="t-status">IT kiểm tra</span>
+                        </div>
+                        <p class="device"><span id="t-device">Máy in Canon LBP2900</span><span class="mono" id="t-serial">LBP-7731QX</span></p>
+                    </div>
+                    <span class="btn" id="t-print">In phiếu nhận</span>
+                </div>
+
+                <dl class="facts" style="margin:0">
+                    <span class="new-badge">Mới</span>
+                    <div class="fact wide">
+                        <dt>Khách hàng</dt>
+                        <dd><span id="t-customer">Công ty TNHH Bao bì Minh An</span><small id="t-address">Lô B4, KCN Đình Vũ, Hải An, Hải Phòng</small></dd>
+                    </div>
+                    <div class="fact wide">
+                        <dt>Người liên hệ</dt>
+                        <dd><span id="t-contact">Chị Hương</span><small class="mono" id="t-phone">0912 345 678</small></dd>
+                    </div>
+                    <div class="fact">
+                        <dt id="t-in-label">Ngày nhận</dt>
+                        <dd><span class="date" id="t-in">26/10/2026</span><br><span class="age ok" id="t-age">2 ngày</span></dd>
+                    </div>
+                    <div class="fact">
+                        <dt id="t-out-label">Ngày trả</dt>
+                        <dd><span class="date" id="t-out">Chưa trả</span><small id="t-out-sub"></small></dd>
+                    </div>
+                </dl>
+
+                <div class="steps-wrap">
+                    <p class="step-mobile" id="t-step-mobile"></p>
+                    <ol class="steps" id="t-steps" aria-label="Tiến trình xử lý"></ol>
+                </div>
+            </div>
+        </article>
+
+        <div class="below" aria-label="Các phần phía dưới giữ nguyên">
+            <div class="ghost next" id="t-next"><b>Bước tiếp theo</b> · các nút thao tác như hiện tại</div>
+            <div class="ghost"><b>Thông tin chi tiết</b> · thiết bị, phụ kiện, lỗi khách báo, phụ trách. Khung khách hàng ở đây được bỏ vì đã lên đầu trang.</div>
+            <div class="ghost"><b>Báo giá, linh kiện, ảnh và chứng từ, lịch sử</b> · giữ nguyên</div>
+        </div>
+    </section>
+
+    <section class="section" aria-labelledby="s2">
+        <h2 id="s2">So với hiện tại</h2>
+        <div class="compare">
+            <div class="mini">
+                <h3>Hiện tại</h3>
+                <div class="blk">Số phiếu, trạng thái, thiết bị. Tên khách nằm trong dòng chữ nhỏ</div>
+                <div class="blk">Thanh tiến trình</div>
+                <div class="blk">Bước tiếp theo</div>
+                <div class="blk">Báo giá, ERP</div>
+                <div class="blk hit">Khách hàng, liên hệ, địa chỉ, ngày nhận, ngày trả: phải cuộn xuống</div>
+                <div class="blk">Ảnh, lịch sử…</div>
+            </div>
+            <div class="mini">
+                <h3>Đề xuất</h3>
+                <div class="blk">Số phiếu, trạng thái, thiết bị</div>
+                <div class="blk good">Khách hàng, liên hệ, ngày nhận, ngày trả, số ngày giữ máy</div>
+                <div class="blk">Thanh tiến trình</div>
+                <div class="blk">Bước tiếp theo</div>
+                <div class="blk">Báo giá, ERP, chi tiết thiết bị</div>
+                <div class="blk">Ảnh, lịch sử…</div>
+            </div>
+        </div>
+    </section>
+
+    <section class="section" aria-labelledby="s3">
+        <h2 id="s3">Số ngày giữ máy</h2>
+        <p>Tính từ ngày nhận đến hôm nay, hoặc đến ngày trả nếu phiếu đã xong. Màu dùng cùng ngưỡng với trang Báo cáo, để sếp nhìn là biết phiếu nào đang tồn lâu.</p>
+        <div style="display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center">
+            <span class="age ok">2 ngày</span><span class="muted" style="font-size:14px">Trong hạn, tối đa 3 ngày</span>
+            <span class="age warn">6 ngày</span><span class="muted" style="font-size:14px">Cần theo dõi, 4 đến 7 ngày</span>
+            <span class="age bad">11 ngày · quá hạn</span><span class="muted" style="font-size:14px">Quá 7 ngày</span>
+            <span class="age done">Xong sau 6 ngày</span><span class="muted" style="font-size:14px">Phiếu đã đóng</span>
+        </div>
+    </section>
+
+    <section class="section" aria-labelledby="s4">
+        <h2 id="s4">Danh sách phiếu: đưa ngày lên trước</h2>
+        <p>Cột ngày nhận chuyển lên ngay sau số phiếu, kèm số ngày giữ máy. Khách hàng nằm kế bên. Các cột còn lại giữ nguyên thứ tự.</p>
+        <div class="table-box">
+            <table>
+                <thead><tr><th>Số phiếu</th><th class="moved">Ngày nhận</th><th>Khách hàng</th><th>Thiết bị</th><th>Phụ trách</th><th>Trạng thái</th></tr></thead>
+                <tbody>
+                    <tr><td class="mono" style="font-weight:600">RMA-2610-012</td><td>26/10/2026<span class="sub"><span class="age ok" style="margin:2px 0 0">2 ngày</span></span></td><td>Công ty TNHH Bao bì Minh An<span class="sub">Chị Hương · 0912 345 678</span></td><td>Máy in<span class="sub">Canon LBP2900</span></td><td>Huy</td><td><span class="pill" style="background:var(--amber-bg);color:var(--amber-fg);font-size:12px">IT kiểm tra</span></td></tr>
+                    <tr><td class="mono" style="font-weight:600">RMA-2610-008</td><td>17/10/2026<span class="sub"><span class="age bad" style="margin:2px 0 0">11 ngày</span></span></td><td>Công ty CP Nhựa Hồng Phát<span class="sub">Anh Tuấn · 0987 112 233</span></td><td>Màn hình<span class="sub">Dell U2723QE</span></td><td>Tâm</td><td><span class="pill" style="background:var(--violet-bg);color:var(--violet-fg);font-size:12px">Đang ở TTBH</span></td></tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section class="section" aria-labelledby="s5">
+        <h2 id="s5">Phiếu in nhận và trả máy</h2>
+        <div class="note-print">
+            <span class="check" aria-hidden="true">✓</span>
+            <p>Phiếu in đã có số phiếu và ngày ở góc trên bên phải, ngay dưới là khách hàng, điện thoại, người liên hệ và địa chỉ, rồi mới tới thiết bị. Đề xuất giữ nguyên, không cần sửa.</p>
+        </div>
+    </section>
+
+    <section class="section" aria-labelledby="s6">
+        <h2 id="s6">Cần sếp chốt</h2>
+        <ol class="questions">
+            <li>Hiện những ngày nào trên đầu phiếu?<span class="rec">Đề xuất: ngày nhận, ngày trả và số ngày giữ máy có màu cảnh báo.</span></li>
+            <li>Có bỏ khung khách hàng bị lặp ở phần chi tiết phía dưới không?<span class="rec">Đề xuất: bỏ, vì thông tin đã nằm trên đầu.</span></li>
+            <li>Danh sách phiếu có đưa cột ngày nhận lên trước không?<span class="rec">Đề xuất: có, kèm số ngày giữ máy.</span></li>
+            <li>Ngưỡng quá hạn 7 ngày có phù hợp không?<span class="rec">Đề xuất: giữ 7 ngày như trang Báo cáo; đổi được trong cấu hình.</span></li>
+        </ol>
+    </section>
+</div>
+
+<script>
+    const tones = {
+        blue: ['var(--sky-bg)', 'var(--sky-fg)'], amber: ['var(--amber-bg)', 'var(--amber-fg)'],
+        violet: ['var(--violet-bg)', 'var(--violet-fg)'], gray: ['var(--gray-bg)', 'var(--gray-fg)'],
+    };
+    // Example tickets. "today" is 28/10/2026.
+    const cases = {
+        repair: {
+            no: 'RMA-2610-012', status: ['IT kiểm tra', 'amber'], device: 'Máy in Canon LBP2900', serial: 'LBP-7731QX', print: 'In phiếu nhận',
+            customer: 'Công ty TNHH Bao bì Minh An', address: 'Lô B4, KCN Đình Vũ, Hải An, Hải Phòng', contact: 'Chị Hương', phone: '0912 345 678',
+            inLabel: 'Ngày nhận', inDate: '26/10/2026', outLabel: 'Ngày trả', outDate: 'Chưa trả', outSub: '', age: ['2 ngày', 'ok'],
+            steps: [['Đã nhận máy', 'done'], ['IT kiểm tra', 'current'], ['Chờ duyệt báo giá', ''], ['Đang sửa', ''], ['Chờ trả khách', ''], ['Đã trả', '']],
+        },
+        center: {
+            no: 'RMA-2610-010', status: ['Đang ở TTBH', 'violet'], device: 'Máy tính xách tay Dell Latitude 5440', serial: '7HQ2KX3', print: 'In phiếu nhận',
+            customer: 'Công ty CP Thương mại Hải Long', address: '18 Trần Phú, Ngô Quyền, Hải Phòng', contact: 'Anh Đức', phone: '0904 556 120',
+            inLabel: 'Ngày nhận', inDate: '22/10/2026', outLabel: 'Ngày trả', outDate: 'Chưa trả', outSub: 'Gửi TTBH ngày 23/10', age: ['6 ngày', 'warn'],
+            steps: [['Đã nhận máy', 'done'], ['IT kiểm tra', 'done'], ['Đang ở TTBH', 'current'], ['Chờ trả khách', ''], ['Đã trả', '']],
+        },
+        late: {
+            no: 'RMA-2610-008', status: ['Đang ở TTBH', 'violet'], device: 'Màn hình Dell U2723QE', serial: 'CN-0XK2-74', print: 'In phiếu nhận',
+            customer: 'Công ty CP Nhựa Hồng Phát', address: 'KCN Nomura, An Dương, Hải Phòng', contact: 'Anh Tuấn', phone: '0987 112 233',
+            inLabel: 'Ngày nhận', inDate: '17/10/2026', outLabel: 'Ngày trả', outDate: 'Chưa trả', outSub: 'Gửi TTBH ngày 18/10', age: ['11 ngày · quá hạn', 'bad'],
+            steps: [['Đã nhận máy', 'done'], ['IT kiểm tra', 'done'], ['Đang ở TTBH', 'current'], ['Chờ trả khách', ''], ['Đã trả', '']],
+        },
+        returned: {
+            no: 'RMA-2610-004', status: ['Đã trả', 'gray'], device: 'Bộ nguồn VSP 650W', serial: 'VSP650-22918', print: 'In phiếu trả',
+            customer: 'Công ty TNHH Điện tử Bắc Hà', address: '5 Lạch Tray, Ngô Quyền, Hải Phòng', contact: 'Chị Lan', phone: '0936 778 004',
+            inLabel: 'Ngày nhận', inDate: '09/10/2026', outLabel: 'Ngày trả', outDate: '15/10/2026', outSub: 'Miễn phí', age: ['Xong sau 6 ngày', 'done'],
+            steps: [['Đã nhận máy', 'done'], ['IT kiểm tra', 'done'], ['Chờ duyệt báo giá', 'skipped'], ['Đang sửa', 'skipped'], ['Chờ trả khách', 'done'], ['Đã trả', 'done']],
+        },
+        onsite: {
+            no: 'RMA-2610-011', status: ['Chờ hãng đến', 'blue'], device: 'Máy tính để bàn HP ProDesk 400 G7', serial: '4CE1209XYZ', print: null,
+            customer: 'Trường THPT Lê Quý Đôn', address: 'Văn Cao, Hải An, Hải Phòng (hãng đến tận nơi)', contact: 'Thầy Bình', phone: '0913 220 845',
+            inLabel: 'Ngày yêu cầu', inDate: '25/10/2026', outLabel: 'Ngày hoàn tất', outDate: 'Chưa xong', outSub: 'Hẹn hãng đến 29/10', age: ['3 ngày', 'ok'],
+            steps: [['Chờ hãng đến', 'current'], ['Hoàn tất', '']],
+        },
+    };
+
+    const $ = (id) => document.getElementById(id);
+
+    function show(key) {
+        const c = cases[key];
+        $('t-no').textContent = c.no;
+        const [bg, fg] = tones[c.status[1]];
+        Object.assign($('t-status').style, { background: bg, color: fg });
+        $('t-status').textContent = c.status[0];
+        $('t-device').textContent = c.device;
+        $('t-serial').textContent = c.serial;
+        $('t-print').hidden = !c.print;
+        $('t-print').textContent = c.print ?? '';
+        $('t-customer').textContent = c.customer;
+        $('t-address').textContent = c.address;
+        $('t-contact').textContent = c.contact;
+        $('t-phone').textContent = c.phone;
+        $('t-in-label').textContent = c.inLabel;
+        $('t-in').textContent = c.inDate;
+        $('t-out-label').textContent = c.outLabel;
+        $('t-out').textContent = c.outDate;
+        $('t-out-sub').textContent = c.outSub;
+        $('t-age').textContent = c.age[0];
+        $('t-age').className = 'age ' + c.age[1];
+
+        $('t-steps').innerHTML = c.steps.map(([label, state]) =>
+            `<li class="step ${state}"${state === 'current' ? ' aria-current="step"' : ''}><span class="dot">${state === 'done' ? '✓' : ''}</span><span class="lbl">${label}</span></li>`).join('');
+        const at = c.steps.findIndex(([, state]) => state === 'current');
+        $('t-step-mobile').innerHTML = at >= 0 ? `Bước ${at + 1}/${c.steps.length}: <b>${c.steps[at][0]}</b>` : `Đã hoàn tất ${c.steps.length} bước`;
+        $('t-next').hidden = key === 'returned';
+
+        document.querySelectorAll('[data-case]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.case === key)));
+    }
+
+    document.querySelectorAll('[data-case]').forEach((b) => b.addEventListener('click', () => show(b.dataset.case)));
+    show('repair');
+</script>

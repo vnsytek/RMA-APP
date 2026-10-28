@@ -7,7 +7,7 @@
 
 <div class="grid gap-3 sm:grid-cols-2">
     <div class="sm:col-span-2">
-        <label class="label" for="{{ $prefix }}-name">Tên *</label>
+        <label class="label" for="{{ $prefix }}-name">Tên <span class="req">*</span></label>
         <input class="input" name="name" id="{{ $prefix }}-name" required maxlength="255" value="{{ $value('name') }}" placeholder="VD: TTBH ASUS Hải Phòng">
         <x-field-error name="name" :bag="$bag" />
     </div>
@@ -17,7 +17,8 @@
     </div>
     <div>
         <label class="label" for="{{ $prefix }}-phone">Số điện thoại</label>
-        <input class="input" name="phone" id="{{ $prefix }}-phone" maxlength="30" inputmode="tel" value="{{ $value('phone') }}">
+        <input class="input" name="phone" id="{{ $prefix }}-phone" maxlength="30" inputmode="tel" value="{{ $value('phone') }}" placeholder="VD: 0225 3845 566">
+        <x-field-error name="phone" :bag="$bag" />
     </div>
     <div class="sm:col-span-2">
         <label class="label" for="{{ $prefix }}-address">Địa chỉ</label>

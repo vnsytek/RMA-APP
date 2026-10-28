@@ -4,7 +4,7 @@
 
 <x-layouts.app title="Người dùng" subtitle="Tài khoản đăng nhập và quyền. Nhân viên nghỉ: bấm Sửa → Chuyển phiếu để giao phiếu đang mở cho người khác.">
     <x-slot:actions>
-        <button type="button" class="btn btn-primary" data-dialog-open="user-new">+ Thêm tài khoản</button>
+        <button type="button" class="btn btn-primary" data-dialog-open="user-new"><x-icon name="plus" />Thêm tài khoản</button>
     </x-slot:actions>
 
     <div class="card overflow-x-auto">
@@ -57,17 +57,17 @@
                 <button type="button" class="modal-x" data-dialog-close aria-label="Đóng">×</button>
             </div>
             <div class="grid gap-3 sm:grid-cols-2">
-                <div class="sm:col-span-2"><label class="label" for="new-name">Họ tên *</label><input class="input" name="name" id="new-name" required maxlength="255" value="{{ $newErrors->any() ? old('name') : '' }}"></div>
-                <div class="sm:col-span-2"><label class="label" for="new-email">Email đăng nhập *</label><input class="input" type="email" name="email" id="new-email" required maxlength="255" value="{{ $newErrors->any() ? old('email') : '' }}"></div>
+                <div class="sm:col-span-2"><label class="label" for="new-name">Họ tên <span class="req">*</span></label><input class="input" name="name" id="new-name" required maxlength="255" value="{{ $newErrors->any() ? old('name') : '' }}"></div>
+                <div class="sm:col-span-2"><label class="label" for="new-email">Email đăng nhập <span class="req">*</span></label><input class="input" type="email" name="email" id="new-email" required maxlength="255" value="{{ $newErrors->any() ? old('email') : '' }}"></div>
                 <div>
-                    <label class="label" for="new-role">Quyền *</label>
+                    <label class="label" for="new-role">Quyền <span class="req">*</span></label>
                     <select class="input" name="role" id="new-role">
                         @foreach ($roles as $role)
                             <option value="{{ $role->value }}" @selected(($newErrors->any() ? old('role') : 'user') === $role->value)>{{ $role->label() }}</option>
                         @endforeach
                     </select>
                 </div>
-                <div><label class="label" for="new-password">Mật khẩu *</label><input class="input" type="password" name="password" id="new-password" required minlength="8" autocomplete="new-password"></div>
+                <div><label class="label" for="new-password">Mật khẩu <span class="req">*</span></label><input class="input" type="password" name="password" id="new-password" required minlength="8" autocomplete="new-password"></div>
             </div>
             @foreach (['name', 'email', 'role', 'password'] as $field)
                 <x-field-error :name="$field" bag="user" />
@@ -99,10 +99,10 @@
 
                 <form method="POST" action="{{ route('users.update', $user) }}" class="grid gap-3 sm:grid-cols-2">
                     @csrf @method('PUT')
-                    <div class="sm:col-span-2"><label class="label" for="u{{ $user->id }}-name">Họ tên *</label><input class="input" name="name" id="u{{ $user->id }}-name" required maxlength="255" value="{{ $failed ? old('name') : $user->name }}"></div>
-                    <div class="sm:col-span-2"><label class="label" for="u{{ $user->id }}-email">Email đăng nhập *</label><input class="input" type="email" name="email" id="u{{ $user->id }}-email" required maxlength="255" value="{{ $failed ? old('email') : $user->email }}"></div>
+                    <div class="sm:col-span-2"><label class="label" for="u{{ $user->id }}-name">Họ tên <span class="req">*</span></label><input class="input" name="name" id="u{{ $user->id }}-name" required maxlength="255" value="{{ $failed ? old('name') : $user->name }}"></div>
+                    <div class="sm:col-span-2"><label class="label" for="u{{ $user->id }}-email">Email đăng nhập <span class="req">*</span></label><input class="input" type="email" name="email" id="u{{ $user->id }}-email" required maxlength="255" value="{{ $failed ? old('email') : $user->email }}"></div>
                     <div>
-                        <label class="label" for="u{{ $user->id }}-role">Quyền *</label>
+                        <label class="label" for="u{{ $user->id }}-role">Quyền <span class="req">*</span></label>
                         <select class="input" name="role" id="u{{ $user->id }}-role" @disabled($isSelf)>
                             @foreach ($roles as $role)
                                 <option value="{{ $role->value }}" @selected(($failed ? old('role') : $user->role->value) === $role->value)>{{ $role->label() }}</option>

@@ -9,11 +9,11 @@
         [TicketKind::CarryIn, ['IT nhận máy', 'IT kiểm tra', 'Gửi TTBH', 'Nhận về công ty', 'Trả khách'],
             ['IT tự xử lý được thì bỏ qua TTBH.', 'Nhận về mà vẫn lỗi: gửi TTBH lại, mỗi lần gửi được lưu riêng.', 'TTBH từ chối bảo hành: phiếu chuyển sang Sửa chữa, giữ nguyên số phiếu.']],
         [TicketKind::Repair, ['IT nhận máy', 'IT kiểm tra lỗi', 'Miễn phí / Báo giá / Báo phế', 'Trả khách'],
-            ['Báo giá một lần: khách đồng ý thì sửa (có phí, nhập ERP V223 / V233), không đồng ý thì trả máy không sửa.', 'Bấm "Sửa xong" hoặc "Miễn phí" thì nhập thời gian bảo hành sau sửa (tháng). Hạn tính từ ngày trả và in lên phiếu trả.']],
+            ['Báo giá một lần: khách đồng ý thì sửa (có phí: số phiếu là V223, nhập thêm V233), không đồng ý thì trả máy không sửa.', 'Bấm "Sửa xong" hoặc "Miễn phí" thì nhập thời gian bảo hành sau sửa (tháng). Hạn tính từ ngày trả và in lên phiếu trả.']],
     ];
 @endphp
 
-<x-layouts.app title="Quy trình" subtitle="4 hình thức xử lý phiếu RMA">
+<x-layouts.app title="Quy trình xử lý" subtitle="4 hình thức xử lý phiếu RMA, từ lúc nhận đến lúc trả khách">
     <div class="grid gap-4 xl:grid-cols-2">
         @foreach ($flows as [$kind, $steps, $notes])
             <section class="card p-5">

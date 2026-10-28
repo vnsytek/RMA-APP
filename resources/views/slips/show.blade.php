@@ -67,15 +67,15 @@
             </div>
             <div class="title">
                 <h1>{{ $title }}</h1>
-                <div>Số phiếu: <b>{{ $ticket->ticket_no }}</b> · Ngày {{ vn_date($date) }}</div>
+                <div>Số phiếu (V223): <b>{{ $ticket->ticket_no }}</b>@if ($isReturn && $ticket->erp_return_no) · V233: <b>{{ $ticket->erp_return_no }}</b>@endif · Ngày {{ vn_date($date) }}</div>
             </div>
         </div>
 
         <div class="meta">
             <div>Khách hàng: <b>{{ $ticket->customer->name }}</b></div>
-            <div>Điện thoại: {{ $ticket->contact_phone ?? $ticket->customer->phone }}</div>
+            <div>Điện thoại: <b>{{ $ticket->contact_phone ?? $ticket->customer->phone }}</b></div>
             <div>Hình thức: {{ $ticket->kind()->label() }}</div>
-            <div>Người liên hệ: {{ $ticket->contact_name ?: '……………………' }}</div>
+            <div>Người liên hệ: <b>{{ $ticket->contact_name ?: '……………………' }}</b></div>
             <div>Địa chỉ: {{ $ticket->customer->shippingAddress() ?: '……………………' }}</div>
             <div>Tình trạng BH: {{ $ticket->warranty_status->label() }}</div>
         </div>

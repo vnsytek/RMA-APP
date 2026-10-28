@@ -3,18 +3,17 @@
     $model = $device->productModel;
 @endphp
 
-<x-layouts.app :title="$model->shortName().' '.$device->serial_number" :subtitle="$model->deviceType->name.($model->name ? ' · '.$model->name : '')">
+<x-layouts.app :title="$model->shortName().' '.$device->serial_number" :subtitle="$model->deviceType->name.($model->name ? ' · '.$model->name : '')" :parent="['Thiết bị', route('devices.index')]">
     <x-slot:actions>
         @if ($summary->replacements->isEmpty())
-            <a href="{{ route('tickets.create', array_filter(['serial' => $device->serial_number, 'customer' => $summary->customer?->id])) }}" class="btn btn-primary">+ Lập phiếu mới cho máy này</a>
+            <a href="{{ route('tickets.create', array_filter(['serial' => $device->serial_number, 'customer' => $summary->customer?->id])) }}" class="btn btn-primary"><x-icon name="plus" />Lập phiếu cho máy này</a>
         @endif
-        <a href="{{ route('devices.index') }}" class="btn btn-secondary">← Danh sách thiết bị</a>
     </x-slot:actions>
 
     <section class="card p-5">
         <dl class="grid gap-x-6 gap-y-4 text-sm sm:grid-cols-2 lg:grid-cols-4">
             <div>
-                <dt class="text-[11px] tracking-wider text-muted uppercase">Khách hàng gần nhất</dt>
+                <dt class="meta-label">Khách hàng gần nhất</dt>
                 <dd class="font-medium">
                     @if ($summary->customer)
                         <a href="{{ route('customers.show', $summary->customer) }}" class="hover:underline">{{ $summary->customer->name }}</a>
@@ -24,9 +23,9 @@
                     @endif
                 </dd>
             </div>
-            <div><dt class="text-[11px] tracking-wider text-muted uppercase">Số lần gửi</dt><dd class="font-medium">{{ $summary->tickets->count() }}</dd></div>
+            <div><dt class="meta-label">Số lần gửi</dt><dd class="meta-value">{{ $summary->tickets->count() }}</dd></div>
             <div>
-                <dt class="text-[11px] tracking-wider text-muted uppercase">Đang xử lý</dt>
+                <dt class="meta-label">Đang xử lý</dt>
                 <dd class="font-medium">
                     @if ($summary->openTicket)
                         <x-ticket-link :ticket="$summary->openTicket" /> <x-status-pill :status="$summary->openTicket->status" />
@@ -35,7 +34,7 @@
                     @endif
                 </dd>
             </div>
-            <div><dt class="text-[11px] tracking-wider text-muted uppercase">Bảo hành sau sửa chữa</dt><dd><x-repair-warranty :warranty="$summary->repairWarranty" /></dd></div>
+            <div><dt class="meta-label">Bảo hành sau sửa chữa</dt><dd><x-repair-warranty :warranty="$summary->repairWarranty" /></dd></div>
         </dl>
 
         @if ($summary->replacedFrom)
@@ -55,7 +54,7 @@
     </section>
 
     <section class="card mt-5 overflow-x-auto">
-        <h2 class="px-5 pt-4 pb-2 font-semibold">Lịch sử phiếu của máy
+        <h2 class="card-head font-semibold">Lịch sử phiếu của máy
             @if ($tickets->count() < $summary->tickets->count())
                 <span class="text-sm font-normal text-muted">· hiện {{ $tickets->count() }}/{{ $summary->tickets->count() }} phiếu (chỉ phiếu bạn lập hoặc phụ trách)</span>
             @endif

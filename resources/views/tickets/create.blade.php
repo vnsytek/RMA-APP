@@ -13,10 +13,7 @@
     $customerValue = (string) old('customer_id', $prefill['customer'] ?? 'new');
 @endphp
 
-<x-layouts.app title="Lập phiếu mới" :subtitle="'Số phiếu dự kiến: '.$nextTicketNo.' · Ngày '.today()->format('d/m/Y')">
-    <x-slot:actions>
-        <a href="{{ route('tickets.index') }}" class="btn btn-secondary">← Danh sách phiếu</a>
-    </x-slot:actions>
+<x-layouts.app title="Lập phiếu mới" :subtitle="'Số phiếu dự kiến '.$nextTicketNo.', ngày '.today()->format('d/m/Y')" :parent="['Phiếu RMA', route('tickets.index')]">
 
     <form method="POST" action="{{ route('tickets.store') }}" enctype="multipart/form-data" class="card max-w-5xl p-5" id="ticket-form"
           data-models-url="{{ route('lookup.models') }}" data-device-url="{{ route('lookup.devices') }}" data-claim-old="{{ old('claim_ticket_id') }}"
@@ -26,7 +23,7 @@
         <div class="section-title mt-0">Tiếp nhận</div>
         <div class="grid gap-4 sm:grid-cols-2">
             <div>
-                <label class="label" for="received_date"><span data-date-label>Ngày nhận máy</span> *</label>
+                <label class="label" for="received_date"><span data-date-label>Ngày nhận máy</span> <span class="req">*</span></label>
                 <input class="input" type="date" name="received_date" id="received_date" value="{{ old('received_date', today()->toDateString()) }}" max="{{ today()->toDateString() }}" required>
                 <x-field-error name="received_date" />
             </div>
@@ -44,7 +41,7 @@
                 @endcannot
             </div>
             <div class="sm:col-span-2">
-                <label class="label" for="fault_description">Lỗi khách báo *</label>
+                <label class="label" for="fault_description">Lỗi khách báo <span class="req">*</span></label>
                 <textarea class="input min-h-20" name="fault_description" id="fault_description" required maxlength="2000">{{ old('fault_description') }}</textarea>
                 <x-field-error name="fault_description" />
             </div>
@@ -58,25 +55,25 @@
             </div>
         </div>
 
-        <div class="mt-6 rounded-lg border border-red-700 bg-red-50 p-4">
-            <h2 class="text-base font-bold text-red-400">Khách hàng</h2>
+        <div class="customer-box mt-7">
+            <h2 class="text-base font-semibold">Khách hàng</h2>
             <div class="mt-3">
             <div class="grid gap-4 sm:grid-cols-2">
                 <div class="sm:col-span-2">
                     <label class="label" for="customer_id-search">Khách gửi máy</label>
                     <select class="input" name="customer_id" id="customer_id" data-searchable data-new-label="+ Khách mới"
-                            data-placeholder="Gõ tên khách, MST, tên hoặc SĐT người liên hệ…">
+                            data-placeholder="Gõ mã khách, tên khách, MST, tên hoặc SĐT người liên hệ…">
                         <option value="new">+ Khách mới</option>
                         @foreach ($customers as $customer)
                             <option value="{{ $customer->id }}" @selected($customerValue === (string) $customer->id)
-                                    data-detail="{{ collect([$customer->tax_code ? 'MST '.$customer->tax_code : null, ($contacts[$customer->id] ?? collect())->pluck('name')->implode(', ')])->filter()->implode(' · ') }}"
-                                    data-search="{{ collect([$customer->tax_code, $customer->phone, ...($contacts[$customer->id] ?? collect())->flatMap(fn ($contact) => [$contact['name'], $contact['phone']])])->filter()->implode(' ') }}">{{ $customer->name }}</option>
+                                    data-detail="{{ collect([$customer->code, $customer->short_name, $customer->tax_code ? 'MST '.$customer->tax_code : null, ($contacts[$customer->id] ?? collect())->pluck('name')->implode(', ')])->filter()->implode(' · ') }}"
+                                    data-search="{{ collect([$customer->code, $customer->short_name, $customer->tax_code, $customer->phone, ...($contacts[$customer->id] ?? collect())->flatMap(fn ($contact) => [$contact['name'], $contact['phone']])])->filter()->implode(' ') }}">{{ $customer->name }}</option>
                         @endforeach
                     </select>
                 </div>
                 <x-tax-code-field name="customer_tax_code" :value="old('customer_tax_code')" class="sm:col-span-2" data-new-customer />
                 <div data-new-customer>
-                    <label class="label" for="customer_name">Tên khách / công ty *</label>
+                    <label class="label" for="customer_name">Tên khách / công ty <span class="req">*</span></label>
                     <input class="input" name="customer_name" id="customer_name" value="{{ old('customer_name') }}" maxlength="255" data-tax-fill="name">
                     <x-field-error name="customer_name" />
                 </div>
@@ -87,17 +84,17 @@
             </div>
 
             <div class="mt-4">
-                <span class="label">Người liên hệ của phiếu này *</span>
+                <span class="label">Người liên hệ của phiếu này <span class="req">*</span></span>
                 <div id="contact-choices" class="grid gap-1.5 sm:grid-cols-2" data-old="{{ old('contact_id') }}"></div>
                 <x-field-error name="contact_id" />
                 <div class="mt-2 grid gap-4 sm:grid-cols-2" data-new-contact>
                     <div>
-                        <label class="label" for="contact_name">Tên người liên hệ *</label>
+                        <label class="label" for="contact_name">Tên người liên hệ <span class="req">*</span></label>
                         <input class="input" name="contact_name" id="contact_name" value="{{ old('contact_name') }}" maxlength="255" placeholder="VD: Chị Nga">
                         <x-field-error name="contact_name" />
                     </div>
                     <div>
-                        <label class="label" for="contact_phone">Số điện thoại *</label>
+                        <label class="label" for="contact_phone">Số điện thoại <span class="req">*</span></label>
                         <input class="input" name="contact_phone" id="contact_phone" value="{{ old('contact_phone') }}" maxlength="20" inputmode="tel" placeholder="VD: 0901 234 567">
                         <x-field-error name="contact_phone" />
                     </div>
@@ -110,7 +107,7 @@
         <div class="section-title">Thiết bị</div>
         <div class="grid gap-4 sm:grid-cols-3">
             <div class="sm:col-span-3">
-                <label class="label" for="serial_number">Số serial / Service Tag *</label>
+                <label class="label" for="serial_number">Số serial / Service Tag <span class="req">*</span></label>
                 <input class="input font-mono" name="serial_number" id="serial_number" value="{{ old('serial_number', $prefill['serial'] ?? '') }}" required maxlength="100"
                        placeholder="Quét mã vạch hoặc nhập serial: máy đã có sẽ tự điền loại, hãng, model" autocomplete="off" autofocus>
                 <x-field-error name="serial_number" />
@@ -118,7 +115,7 @@
                 <x-field-error name="claim_ticket_id" />
             </div>
             <div>
-                <label class="label" for="device_type_id">Loại thiết bị *</label>
+                <label class="label" for="device_type_id">Loại thiết bị <span class="req">*</span></label>
                 <select class="input" name="device_type_id" id="device_type_id" required>
                     <option value="">Chọn loại…</option>
                     @foreach ($deviceTypes as $type)
@@ -132,7 +129,7 @@
                 <x-field-error name="new_device_type" />
             </div>
             <div>
-                <label class="label" for="brand_id">Hãng *</label>
+                <label class="label" for="brand_id">Hãng <span class="req">*</span></label>
                 <select class="input" name="brand_id" id="brand_id" required>
                     <option value="">Chọn hãng…</option>
                     @foreach ($brands as $brand)
@@ -146,7 +143,7 @@
                 <x-field-error name="new_brand" />
             </div>
             <div>
-                <label class="label" for="product_model_id">Model *</label>
+                <label class="label" for="product_model_id">Model <span class="req">*</span></label>
                 <select class="input" name="product_model_id" id="product_model_id" required @disabled($typeValue === '' || $brandValue === '')>
                     @if ($typeValue === '' || $brandValue === '')
                         <option value="">Chọn loại và hãng trước</option>
@@ -167,7 +164,7 @@
             </div>
         </div>
 
-        <div class="section-title">Tình trạng bảo hành <span class="font-normal tracking-normal normal-case">· nhân viên tự chọn</span></div>
+        <div class="section-title">Tình trạng bảo hành <span class="font-normal text-muted">· nhân viên tự chọn</span></div>
         <div class="segmented" role="radiogroup" aria-label="Tình trạng bảo hành">
             @foreach (WarrantyStatus::cases() as $status)
                 <label><input type="radio" name="warranty_status" value="{{ $status->value }}" class="sr-only" @checked($warranty === $status->value)>{{ $status->label() }}</label>
@@ -188,7 +185,7 @@
             <div class="section-title">Hãng đến bảo hành</div>
             <div class="grid gap-4 sm:grid-cols-3">
                 <div>
-                    <label class="label" for="service_center_id">Hãng / TTBH *</label>
+                    <label class="label" for="service_center_id">Hãng / TTBH <span class="req">*</span></label>
                     <select class="input" name="service_center_id" id="service_center_id">
                         <option value="">Chọn…</option>
                         @foreach ($serviceCenters as $center)
@@ -211,8 +208,8 @@
 
         <div class="section-title">
             <label for="photos">
-                <span data-photo-required>Ảnh tình trạng máy khi nhận <span class="text-red-700">*</span> <span class="font-normal tracking-normal normal-case">· bắt buộc ít nhất 1 ảnh</span></span>
-                <span data-photo-optional hidden>Ảnh / chứng từ <span class="font-normal tracking-normal normal-case">· tuỳ chọn (hãng xử lý tại nhà khách, Sang Y không nhận máy)</span></span>
+                <span data-photo-required>Ảnh tình trạng máy khi nhận <span class="req">*</span> <span class="font-normal text-muted">· bắt buộc ít nhất 1 ảnh</span></span>
+                <span data-photo-optional hidden>Ảnh / chứng từ <span class="font-normal text-muted">· tuỳ chọn (hãng xử lý tại nhà khách, Sang Y không nhận máy)</span></span>
             </label>
         </div>
         <input type="file" name="photos[]" id="photos" multiple accept="image/*,application/pdf" class="input py-1.5" data-file-preview="photos-preview" required>
@@ -225,7 +222,8 @@
 
         <x-field-error name="ticket" class="mt-4" />
 
-        <div class="mt-6 flex justify-end gap-2 border-t border-line pt-4">
+        <div class="sticky bottom-0 -mx-5 mt-7 -mb-5 flex flex-wrap items-center justify-end gap-2 rounded-b-xl border-t border-line bg-white/95 px-5 py-4 backdrop-blur">
+            <p class="mr-auto text-xs text-muted">Ô có dấu <span class="req">*</span> là bắt buộc.</p>
             <a href="{{ route('tickets.index') }}" class="btn btn-secondary">Hủy bỏ</a>
             <button class="btn btn-primary">Lập phiếu</button>
         </div>
