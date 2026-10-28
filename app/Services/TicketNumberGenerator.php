@@ -9,7 +9,7 @@ use Illuminate\Validation\ValidationException;
 class TicketNumberGenerator
 {
     /**
-     * Reserve the next ticket number for the month of the given date, e.g. "26090001".
+     * Reserve the next ticket number for the month of the given date, e.g. "RMA-2609-001".
      *
      * The sequence row is locked until the surrounding transaction commits, so two
      * people creating tickets at the same time can never receive the same number.
@@ -45,7 +45,7 @@ class TicketNumberGenerator
                 ->where('period', $period)
                 ->update(['last_number' => $next]);
 
-            return $period.str_pad((string) $next, 4, '0', STR_PAD_LEFT);
+            return $this->format($period, $next);
         });
     }
 
@@ -60,6 +60,11 @@ class TicketNumberGenerator
             ->where('period', $period)
             ->value('last_number');
 
-        return $period.str_pad((string) ($last + 1), 4, '0', STR_PAD_LEFT);
+        return $this->format($period, $last + 1);
+    }
+
+    private function format(string $period, int $number): string
+    {
+        return 'RMA-'.$period.'-'.str_pad((string) $number, 3, '0', STR_PAD_LEFT);
     }
 }

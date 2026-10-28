@@ -38,10 +38,10 @@ class TicketIntakeTest extends TestCase
     {
         $numbers = app(TicketNumberGenerator::class);
 
-        $this->assertSame('26090001', $numbers->next(Carbon::parse('2026-09-03')));
-        $this->assertSame('26090002', $numbers->next(Carbon::parse('2026-09-28')));
-        $this->assertSame('26100001', $numbers->next(Carbon::parse('2026-10-01')));
-        $this->assertSame('26090003', $numbers->peek(Carbon::parse('2026-09-30')));
+        $this->assertSame('RMA-2609-001', $numbers->next(Carbon::parse('2026-09-03')));
+        $this->assertSame('RMA-2609-002', $numbers->next(Carbon::parse('2026-09-28')));
+        $this->assertSame('RMA-2610-001', $numbers->next(Carbon::parse('2026-10-01')));
+        $this->assertSame('RMA-2609-003', $numbers->peek(Carbon::parse('2026-09-30')));
     }
 
     public function test_repair_ticket_creates_new_customer_catalog_entries_and_stores_intake_photos(): void
@@ -188,7 +188,7 @@ class TicketIntakeTest extends TestCase
         $this->assertSame(2, $customer->tickets()->count());
         $this->assertSame(1, $model->devices()->count());
         $period = today()->format('ym');
-        $this->assertSame([$period.'0001', $period.'0002'], RmaTicket::orderBy('id')->pluck('ticket_no')->all());
+        $this->assertSame(["RMA-{$period}-001", "RMA-{$period}-002"], RmaTicket::orderBy('id')->pluck('ticket_no')->all());
     }
 
     /**

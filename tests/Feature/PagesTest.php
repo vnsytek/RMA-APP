@@ -39,6 +39,13 @@ class PagesTest extends TestCase
         }
     }
 
+    public function test_searching_an_exact_ticket_number_jumps_straight_to_the_ticket(): void
+    {
+        $ticket = RmaTicket::where('ticket_no', 'RMA-2608-001')->sole();
+
+        $this->get(route('tickets.index', ['q' => $ticket->ticket_no]))->assertRedirect(route('tickets.show', $ticket));
+    }
+
     public function test_every_ticket_device_and_customer_page_renders(): void
     {
         foreach (RmaTicket::all() as $ticket) {
@@ -87,7 +94,7 @@ class PagesTest extends TestCase
         $this->getJson(route('lookup.devices', ['serial' => 'R7NRKD012345']))
             ->assertOk()
             ->assertJsonPath('0.tickets_count', 3)
-            ->assertJsonPath('0.repair_warranty.ticket_no', '26080001')
+            ->assertJsonPath('0.repair_warranty.ticket_no', 'RMA-2608-001')
             ->assertJsonPath('0.warranty_claims.0.items.0.description', 'Vệ sinh, thay keo tản nhiệt')
             ->assertJsonPath('0.warranty_claims.0.items.1.level', 'expired');
     }

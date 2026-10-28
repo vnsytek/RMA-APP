@@ -22,7 +22,7 @@ class RmaTicketFactory extends Factory
     public function definition(): array
     {
         return [
-            'ticket_no' => today()->format('ym').fake()->unique()->numerify('####'),
+            'ticket_no' => 'RMA-'.today()->format('ym').'-'.fake()->unique()->numerify('###'),
             'service_type' => TicketKind::Repair->serviceType(),
             'original_service_type' => TicketKind::Repair->serviceType(),
             'onsite_location' => null,

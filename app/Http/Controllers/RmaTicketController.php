@@ -48,7 +48,7 @@ class RmaTicketController extends Controller
                     ->orWhereHas('device', fn (Builder $device) => $device->where('serial_number', $term))
                     ->orWhereHas('returnedDevice', fn (Builder $device) => $device->where('serial_number', $term)))
                 ->limit(2)
-                ->pluck('id');
+                ->pluck('ticket_no');
 
             if ($exact->count() === 1) {
                 return redirect()->route('tickets.show', $exact->first());
