@@ -33,7 +33,8 @@ class ReportBuilder
     /**
      * @param  bool  $paginateBacklog  false for the Excel export, which wants every open ticket, not just one page.
      * @return array{
-     *     kpis: list<array{label: string, value: string, sub: string}>,
+     *     kpis: list<array{label: string, value: string, sub: string, tone?: string}>,
+     *     backlog_health: array{ok: int, warn: int, bad: int},
      *     months: list<array{label: string, ym: string, total: int, by_kind: array<string, int>, in_period: bool}>,
      *     sections: list<array{id: string, title: string, note: string, wide: bool, columns: list<array{0: string, 1: string}>, rows: list<array{cells: list<mixed>, ticket?: string, total?: bool}>}>,
      *     received: Collection<int, RmaTicket>
@@ -82,9 +83,13 @@ class ReportBuilder
         $kinds = $kind ? [$kind] : TicketKind::cases();
 
         $kpis = [
-            ['label' => 'Phiếu nhận trong kỳ', 'value' => (string) $all['received'], 'sub' => collect(TicketKind::cases())->map(fn (TicketKind $type) => $type->shortLabel().' '.$received->filter(fn (RmaTicket $ticket) => $ticket->kind() === $type)->count())->implode(' · ')],
+            ['label' => 'Phiếu nhận trong kỳ', 'value' => (string) $all['received'], 'sub' => collect(TicketKind::cases())
+                ->map(fn (TicketKind $type) => [$type->shortLabel(), $received->filter(fn (RmaTicket $ticket) => $ticket->kind() === $type)->count()])
+                ->filter(fn (array $pair) => $pair[1] > 0)
+                ->map(fn (array $pair) => "{$pair[0]} {$pair[1]}")
+                ->implode(' · ') ?: 'Chưa có phiếu nào'],
             ['label' => 'Hoàn tất trong kỳ', 'value' => (string) $all['finished'], 'sub' => 'Đã trả khách hoặc hãng xử lý xong'],
-            ['label' => 'Đang xử lý', 'value' => (string) $open->count(), 'sub' => $overdue ? "{$overdue} phiếu quá {$overdueDays} ngày" : "Không có phiếu quá {$overdueDays} ngày"],
+            ['label' => 'Đang xử lý', 'value' => (string) $open->count(), 'sub' => $overdue ? "{$overdue} phiếu quá {$overdueDays} ngày" : "Không có phiếu quá {$overdueDays} ngày", 'tone' => $overdue ? 'bad' : 'ok'],
             ['label' => 'Doanh thu sửa chữa', 'value' => money_vnd($all['revenue']), 'sub' => $finished->where('is_chargeable', true)->count().' phiếu có phí đã trả'],
             ['label' => 'Thời gian xử lý TB', 'value' => $all['avg_days'] === null ? '—' : number_format($all['avg_days'], 1, ',', '.').' ngày', 'sub' => 'Từ ngày nhận đến ngày trả'],
         ];
@@ -139,6 +144,12 @@ class ReportBuilder
             ]];
         })->values()->all();
 
+        $backlogHealth = ['ok' => 0, 'warn' => 0, 'bad' => 0];
+
+        foreach ($backlogRows as $row) {
+            $backlogHealth[$row['cells'][8][0]]++;
+        }
+
         $backlogPaginator = null;
 
         if ($paginateBacklog) {
@@ -149,7 +160,7 @@ class ReportBuilder
                 self::BACKLOG_PER_PAGE,
                 $page,
                 ['path' => $this->request->url(), 'pageName' => 'backlog_page'],
-            ))->withQueryString();
+            ))->withQueryString()->fragment('tab-backlog');
         }
 
         $sections[] = [
@@ -202,8 +213,8 @@ class ReportBuilder
                     $ticket->ticket_no, $ticket->customer->name, $ticket->received_date, $ticket->returned_date, $ticket->status, $ticket->charge_amount,
                     $ticket->erp_receipt_no, $ticket->erp_return_no,
                     match (true) {
-                        filled($ticket->erp_receipt_no) && filled($ticket->erp_return_no) => ['ok', 'Đủ chứng từ'],
-                        blank($ticket->erp_receipt_no) => ['bad', 'Thiếu V223'],
+                        filled($ticket->erp_return_no) => ['ok', 'Đủ chứng từ'],
+                        $ticket->status === TicketStatus::Returned => ['bad', 'Đã trả, thiếu V233'],
                         default => ['warn', 'Chưa có V233'],
                     },
                 ]])->all(),
@@ -266,6 +277,7 @@ class ReportBuilder
 
         return [
             'kpis' => $kpis,
+            'backlog_health' => $backlogHealth,
             'months' => $this->months($from, $to, $kind),
             'sections' => $sections,
             'received' => $received,

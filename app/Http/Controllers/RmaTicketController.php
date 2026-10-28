@@ -91,7 +91,7 @@ class RmaTicketController extends Controller
             'deviceTypes' => DeviceType::active()->orderBy('name')->get(),
             'brands' => Brand::active()->orderBy('name')->get(),
             'models' => ProductModel::active()->with('brand')->orderBy('code')->get(),
-            'customers' => Customer::orderBy('name')->get(['id', 'name', 'phone', 'tax_code']),
+            'customers' => Customer::orderBy('name')->get(['id', 'code', 'short_name', 'name', 'phone', 'tax_code']),
             'contacts' => CustomerContact::active()->orderBy('name')->get(['id', 'customer_id', 'name', 'phone'])
                 ->groupBy('customer_id')->map(fn ($group) => $group->map->only(['id', 'name', 'phone'])->values()),
             'technicians' => User::active()->orderBy('name')->get(),

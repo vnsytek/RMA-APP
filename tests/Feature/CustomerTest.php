@@ -33,6 +33,25 @@ class CustomerTest extends TestCase
         $this->actingAs($user)->get(route('customers.index', ['q' => '0801379534']))->assertOk()->assertSeeText('Công ty A');
     }
 
+    public function test_a_customer_keeps_the_erp_code_and_short_name(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->post(route('customers.store'), ['code' => ' cai-hcm ', 'short_name' => ' CAINIAO  HCM ', 'name' => 'CÔNG TY TNHH CAINIAO'])->assertSessionHasNoErrors();
+        $customer = Customer::sole();
+        $this->assertSame('CAI-HCM', $customer->code);
+        $this->assertSame('CAINIAO HCM', $customer->short_name);
+
+        $this->actingAs($user)->post(route('customers.store'), ['code' => 'CAI-HCM', 'name' => 'Công ty khác'])
+            ->assertSessionHasErrorsIn('customer', ['code' => 'Đã có khách hàng dùng mã khách này.']);
+        $this->actingAs($user)->post(route('customers.store'), ['code' => 'QUA-DAI-MUOI-KY-TU', 'name' => 'Công ty khác'])
+            ->assertSessionHasErrorsIn('customer', 'code');
+        $this->actingAs($user)->put(route('customers.update', $customer), ['code' => 'CAI-HCM', 'name' => 'CÔNG TY TNHH CAINIAO'])->assertSessionHasNoErrors();
+
+        $this->actingAs($user)->get(route('customers.index', ['q' => 'cai-hcm']))->assertOk()->assertSeeText('CÔNG TY TNHH CAINIAO');
+        $this->actingAs($user)->get(route('customers.show', $customer))->assertOk()->assertSeeText('CAI-HCM');
+    }
+
     public function test_customers_are_viewed_edited_and_deleted_by_an_admin_only_while_they_have_no_tickets(): void
     {
         $user = User::factory()->create();

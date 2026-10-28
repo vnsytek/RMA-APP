@@ -53,7 +53,7 @@ class DemoSeeder extends Seeder
         $this->step('2026-08-21', $laptopRepair, TicketAction::SendQuote, $long);
         $this->step('2026-08-21', $laptopRepair, TicketAction::AcceptQuote, $long, ['note' => 'Khách đồng ý qua điện thoại']);
         $this->step('2026-08-26', $laptopRepair, TicketAction::FinishRepair, $long, [...$this->warranty($laptopRepair, [3, 1]), 'note' => 'Vệ sinh, thay keo tản nhiệt, cài lại Windows']);
-        $laptopRepair->update(['erp_receipt_no' => 'V223-000418', 'erp_return_no' => 'V233-000392']);
+        $laptopRepair->update(['erp_return_no' => 'V233-000392']);
         $this->step('2026-08-27', $laptopRepair, TicketAction::ReturnToCustomer, $long, ['returned_date' => '2026-08-27']);
 
         // Khách quay lại bảo hành sửa chữa theo phiếu trên: lỗi nóng máy thuộc hạng mục đã bảo hành.
@@ -88,7 +88,6 @@ class DemoSeeder extends Seeder
         $this->quote($tv, [['Panel 55 inch', 1, 2900000], ['Công thay panel', 1, 300000]]);
         $this->step('2026-09-11', $tv, TicketAction::SendQuote, $long);
         $this->step('2026-09-12', $tv, TicketAction::AcceptQuote, $long, ['note' => 'Khách đồng ý báo giá']);
-        $tv->update(['erp_receipt_no' => 'V223-000455']);
 
         // Nhận về gửi TTBH: đang ở TTBH ASUS.
         $laptop = $this->open('2026-09-15', $long, TicketKind::CarryIn, $dung, 'ASUS', 'P500MV', 'R7NRKD012345', 'Không nhận sạc, pin không vào', ['accessories' => 'Sạc zin']);

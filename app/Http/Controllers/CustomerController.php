@@ -10,6 +10,7 @@ use App\Services\TaxCodeLookup;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
@@ -22,6 +23,8 @@ class CustomerController extends Controller
         $customers = Customer::query()
             ->when($search !== '', fn (Builder $query) => $query->where(fn (Builder $query) => $query
                 ->where('name', 'like', "%{$search}%")
+                ->orWhere('code', 'like', "%{$search}%")
+                ->orWhere('short_name', 'like', "%{$search}%")
                 ->orWhere('phone', 'like', "%{$search}%")
                 ->orWhereHas('contacts', fn (Builder $contact) => $contact->where('name', 'like', "%{$search}%")->orWhere('phone', 'like', "%{$search}%"))
                 ->orWhere('tax_code', 'like', "%{$search}%")))
@@ -93,9 +96,15 @@ class CustomerController extends Controller
      */
     private function validated(Request $request, ?Customer $customer): array
     {
-        $request->merge(['tax_code' => TaxCodeLookup::normalize($request->input('tax_code'))]);
+        $request->merge([
+            'tax_code' => TaxCodeLookup::normalize($request->input('tax_code')),
+            'code' => Str::upper(Str::squish((string) $request->input('code'))) ?: null,
+            'short_name' => Str::squish((string) $request->input('short_name')) ?: null,
+        ]);
 
         return $request->validateWithBag('customer', [
+            'code' => ['nullable', 'string', 'max:10', Rule::unique('customers', 'code')->ignore($customer)],
+            'short_name' => ['nullable', 'string', 'max:20'],
             'name' => ['required', 'string', 'max:255'],
             'tax_code' => ['nullable', 'string', 'regex:'.TaxCodeLookup::pattern(), Rule::unique('customers', 'tax_code')->ignore($customer)],
             'phone' => ['nullable', 'string', 'max:20', new VietnamesePhoneNumber],
@@ -105,6 +114,7 @@ class CustomerController extends Controller
         ], [
             'tax_code.regex' => 'Mã số thuế gồm 10 số, chi nhánh thêm "-" và 3 số (VD: 0801379534-001).',
             'tax_code.unique' => 'Đã có khách hàng dùng mã số thuế này.',
-        ], ['name' => 'tên khách', 'tax_code' => 'mã số thuế', 'phone' => 'số điện thoại công ty', 'address' => 'địa chỉ', 'shipping_address' => 'địa chỉ nhận/trả máy', 'note' => 'ghi chú']);
+            'code.unique' => 'Đã có khách hàng dùng mã khách này.',
+        ], ['code' => 'mã khách', 'short_name' => 'tên viết tắt', 'name' => 'tên khách', 'tax_code' => 'mã số thuế', 'phone' => 'số điện thoại công ty', 'address' => 'địa chỉ', 'shipping_address' => 'địa chỉ nhận/trả máy', 'note' => 'ghi chú']);
     }
 }

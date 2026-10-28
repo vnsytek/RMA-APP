@@ -149,10 +149,6 @@ class TicketWorkflow
             case TicketAction::ReturnToCustomer:
                 $notBefore('returned_date', $ticket->received_date, 'ngày nhận máy');
 
-                if ($ticket->is_chargeable && blank($ticket->erp_receipt_no)) {
-                    $errors['erp_receipt_no'] = 'Phiếu có phí: cần lưu số chứng từ V223 trước khi trả khách.';
-                }
-
                 if ($ticket->is_chargeable && blank($ticket->erp_return_no)) {
                     $errors['erp_return_no'] = 'Phiếu có phí: cần lưu số chứng từ V233 trước khi trả khách.';
                 }

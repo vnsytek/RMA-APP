@@ -11,8 +11,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 /**
  * A company or person who sends devices in. Its people are in {@see CustomerContact};
  * `phone` is only the company's general number.
+ * `code`, `short_name` and `name` match the ERP customer's MA001, MA002 and MA003.
  */
-#[Fillable(['name', 'tax_code', 'phone', 'address', 'shipping_address', 'note'])]
+#[Fillable(['code', 'short_name', 'name', 'tax_code', 'phone', 'address', 'shipping_address', 'note'])]
 class Customer extends Model
 {
     /** @use HasFactory<CustomerFactory> */

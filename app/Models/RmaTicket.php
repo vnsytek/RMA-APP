@@ -38,6 +38,16 @@ class RmaTicket extends Model
     use HasFactory, SoftDeletes;
 
     /**
+     * The ticket number is also the ERP receipt voucher number (V223).
+     */
+    protected static function booted(): void
+    {
+        static::creating(function (RmaTicket $ticket): void {
+            $ticket->erp_receipt_no ??= $ticket->ticket_no;
+        });
+    }
+
+    /**
      * @return array<string, string>
      */
     protected function casts(): array

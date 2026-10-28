@@ -206,9 +206,13 @@ class TicketWorkflowTest extends TestCase
         $returnedOn = today()->toDateString();
         $this->actingAs($this->user)
             ->post(route('tickets.actions.store', [$ticket, TicketAction::ReturnToCustomer]), ['returned_date' => $returnedOn, 'photos' => [UploadedFile::fake()->image('tra.jpg')]])
-            ->assertSessionHasErrorsIn('action', ['erp_receipt_no', 'erp_return_no']);
+            ->assertSessionHasErrorsIn('action', ['erp_return_no' => 'Phiếu có phí: cần lưu số chứng từ V233 trước khi trả khách.']);
 
-        $this->actingAs($this->user)->put(route('tickets.erp.update', $ticket), ['erp_receipt_no' => 'V223-1', 'erp_return_no' => 'V233-1']);
+        $other = RmaTicket::factory()->create(['is_chargeable' => true, 'erp_return_no' => 'V233-0007']);
+        $this->actingAs($this->user)->put(route('tickets.erp.update', $ticket), ['erp_return_no' => ' V233-0007 '])
+            ->assertSessionHasErrorsIn('erp', ['erp_return_no' => 'Số V233 này đã dùng cho phiếu khác.']);
+        $this->actingAs($this->user)->put(route('tickets.erp.update', $ticket), ['erp_return_no' => 'V233-1'])->assertSessionHasNoErrors();
+        $this->assertSame($ticket->ticket_no, $ticket->refresh()->erp_receipt_no);
         $this->act($ticket, TicketAction::ReturnToCustomer, ['returned_date' => $returnedOn]);
 
         $ticket->refresh();
