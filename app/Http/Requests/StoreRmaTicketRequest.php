@@ -6,6 +6,7 @@ use App\Enums\AttachmentStage;
 use App\Enums\TicketKind;
 use App\Enums\WarrantyStatus;
 use App\Models\RmaTicket;
+use App\Rules\VietnamesePhoneNumber;
 use App\Services\AttachmentStorage;
 use App\Services\TaxCodeLookup;
 use Illuminate\Foundation\Http\FormRequest;
@@ -68,7 +69,7 @@ class StoreRmaTicketRequest extends FormRequest
                 ? ['required']
                 : ['required', 'integer', Rule::exists('customer_contacts', 'id')->where('customer_id', $this->integer('customer_id'))->where('is_active', true)],
             'contact_name' => [Rule::requiredIf($newContact), 'nullable', 'string', 'max:255'],
-            'contact_phone' => [Rule::requiredIf($newContact), 'nullable', 'string', 'max:20'],
+            'contact_phone' => [Rule::requiredIf($newContact), 'nullable', 'string', 'max:20', new VietnamesePhoneNumber],
             'customer_tax_code' => ['nullable', 'string', 'regex:'.TaxCodeLookup::pattern(), Rule::unique('customers', 'tax_code')],
             'customer_address' => ['nullable', 'string', 'max:500'],
 

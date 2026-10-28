@@ -29,7 +29,7 @@ class TicketSlipController extends Controller
             ['Tel: '.($company['phone'] ?: '…………').'   Email: '.($company['email'] ?: '…………')],
             [],
             ['Khách hàng:', $customer->name, null, 'Điện thoại:', $ticket->contact_phone ?? $customer->phone],
-            ['Người liên hệ:', $ticket->contact_name, null, 'Địa chỉ:', $customer->address],
+            ['Người liên hệ:', $ticket->contact_name, null, 'Địa chỉ:', $customer->shippingAddress()],
             ['Hình thức:', $ticket->kind()->label(), null, 'Tình trạng BH:', $ticket->warranty_status->label()],
         ];
         $bold = [0];

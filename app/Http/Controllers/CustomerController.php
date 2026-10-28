@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Customer;
+use App\Rules\VietnamesePhoneNumber;
 use App\Services\DeviceSummary;
 use App\Services\DeviceTracker;
 use App\Services\TaxCodeLookup;
@@ -97,12 +98,13 @@ class CustomerController extends Controller
         return $request->validateWithBag('customer', [
             'name' => ['required', 'string', 'max:255'],
             'tax_code' => ['nullable', 'string', 'regex:'.TaxCodeLookup::pattern(), Rule::unique('customers', 'tax_code')->ignore($customer)],
-            'phone' => ['nullable', 'string', 'max:20'],
+            'phone' => ['nullable', 'string', 'max:20', new VietnamesePhoneNumber],
             'address' => ['nullable', 'string', 'max:500'],
+            'shipping_address' => ['nullable', 'string', 'max:500'],
             'note' => ['nullable', 'string', 'max:2000'],
         ], [
             'tax_code.regex' => 'Mã số thuế gồm 10 số, chi nhánh thêm "-" và 3 số (VD: 0801379534-001).',
             'tax_code.unique' => 'Đã có khách hàng dùng mã số thuế này.',
-        ], ['name' => 'tên khách', 'tax_code' => 'mã số thuế', 'phone' => 'số điện thoại công ty', 'address' => 'địa chỉ', 'note' => 'ghi chú']);
+        ], ['name' => 'tên khách', 'tax_code' => 'mã số thuế', 'phone' => 'số điện thoại công ty', 'address' => 'địa chỉ', 'shipping_address' => 'địa chỉ nhận/trả máy', 'note' => 'ghi chú']);
     }
 }

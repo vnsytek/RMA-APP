@@ -27,7 +27,10 @@ return [
 
     'ticket_type' => 'RMA',
 
-    'max_tickets_per_month' => 9999,
+    // 3-digit sequence in the ticket number (RMA-YYMM-001): keep this at 999 so the number
+    // never grows a 4th digit, or ORDER BY ticket_no (plain string sort, used all over the
+    // app) would put "1000" before "999".
+    'max_tickets_per_month' => 999,
 
     'max_repair_warranty_months' => 60,
 

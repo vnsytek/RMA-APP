@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * A company or person who sends devices in. Its people are in {@see CustomerContact};
  * `phone` is only the company's general number.
  */
-#[Fillable(['name', 'tax_code', 'phone', 'address', 'note'])]
+#[Fillable(['name', 'tax_code', 'phone', 'address', 'shipping_address', 'note'])]
 class Customer extends Model
 {
     /** @use HasFactory<CustomerFactory> */
@@ -32,5 +32,13 @@ class Customer extends Model
     public function contacts(): HasMany
     {
         return $this->hasMany(CustomerContact::class)->orderByDesc('is_active')->orderBy('name');
+    }
+
+    /**
+     * Where to print on receipt/return slips: the dedicated shipping address if one was given, else the registered address.
+     */
+    public function shippingAddress(): ?string
+    {
+        return $this->shipping_address ?: $this->address;
     }
 }

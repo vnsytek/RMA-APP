@@ -23,7 +23,91 @@
           data-type-names='@json($deviceTypes->pluck('name'))' data-brand-names='@json($brands->pluck('name'))' data-contacts='@json($contacts)'>
         @csrf
 
-        <div class="section-title mt-0">Thiết bị</div>
+        <div class="section-title mt-0">Tiếp nhận</div>
+        <div class="grid gap-4 sm:grid-cols-2">
+            <div>
+                <label class="label" for="received_date"><span data-date-label>Ngày nhận máy</span> *</label>
+                <input class="input" type="date" name="received_date" id="received_date" value="{{ old('received_date', today()->toDateString()) }}" max="{{ today()->toDateString() }}" required>
+                <x-field-error name="received_date" />
+            </div>
+            <div>
+                <label class="label" for="technician_id">Nhân viên phụ trách</label>
+                @cannot('admin')
+                    <p class="input bg-panel text-muted">{{ auth()->user()->name }} (người lập phiếu)</p>
+                @else
+                <select class="input" name="technician_id" id="technician_id">
+                    <option value="">Chưa phân công</option>
+                    @foreach ($technicians as $technician)
+                        <option value="{{ $technician->id }}" @selected((string) old('technician_id', auth()->id()) === (string) $technician->id)>{{ $technician->name }}</option>
+                    @endforeach
+                </select>
+                @endcannot
+            </div>
+            <div class="sm:col-span-2">
+                <label class="label" for="fault_description">Lỗi khách báo *</label>
+                <textarea class="input min-h-20" name="fault_description" id="fault_description" required maxlength="2000">{{ old('fault_description') }}</textarea>
+                <x-field-error name="fault_description" />
+            </div>
+            <div data-takes-device>
+                <label class="label" for="accessories">Phụ kiện kèm theo <span class="label-hint">(tuỳ chọn)</span></label>
+                <input class="input" name="accessories" id="accessories" value="{{ old('accessories') }}" placeholder="Sạc, dây nguồn, remote…" maxlength="255">
+            </div>
+            <div>
+                <label class="label" for="note">Ghi chú <span class="label-hint">(tuỳ chọn)</span></label>
+                <input class="input" name="note" id="note" value="{{ old('note') }}" maxlength="2000">
+            </div>
+        </div>
+
+        <div class="mt-6 rounded-lg border border-red-700 bg-red-50 p-4">
+            <h2 class="text-base font-bold text-red-400">Khách hàng</h2>
+            <div class="mt-3">
+            <div class="grid gap-4 sm:grid-cols-2">
+                <div class="sm:col-span-2">
+                    <label class="label" for="customer_id-search">Khách gửi máy</label>
+                    <select class="input" name="customer_id" id="customer_id" data-searchable data-new-label="+ Khách mới"
+                            data-placeholder="Gõ tên khách, MST, tên hoặc SĐT người liên hệ…">
+                        <option value="new">+ Khách mới</option>
+                        @foreach ($customers as $customer)
+                            <option value="{{ $customer->id }}" @selected($customerValue === (string) $customer->id)
+                                    data-detail="{{ collect([$customer->tax_code ? 'MST '.$customer->tax_code : null, ($contacts[$customer->id] ?? collect())->pluck('name')->implode(', ')])->filter()->implode(' · ') }}"
+                                    data-search="{{ collect([$customer->tax_code, $customer->phone, ...($contacts[$customer->id] ?? collect())->flatMap(fn ($contact) => [$contact['name'], $contact['phone']])])->filter()->implode(' ') }}">{{ $customer->name }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <x-tax-code-field name="customer_tax_code" :value="old('customer_tax_code')" class="sm:col-span-2" data-new-customer />
+                <div data-new-customer>
+                    <label class="label" for="customer_name">Tên khách / công ty *</label>
+                    <input class="input" name="customer_name" id="customer_name" value="{{ old('customer_name') }}" maxlength="255" data-tax-fill="name">
+                    <x-field-error name="customer_name" />
+                </div>
+                <div data-new-customer>
+                    <label class="label" for="customer_address">Địa chỉ <span class="label-hint">(tuỳ chọn)</span></label>
+                    <input class="input" name="customer_address" id="customer_address" value="{{ old('customer_address') }}" maxlength="500" data-tax-fill="address">
+                </div>
+            </div>
+
+            <div class="mt-4">
+                <span class="label">Người liên hệ của phiếu này *</span>
+                <div id="contact-choices" class="grid gap-1.5 sm:grid-cols-2" data-old="{{ old('contact_id') }}"></div>
+                <x-field-error name="contact_id" />
+                <div class="mt-2 grid gap-4 sm:grid-cols-2" data-new-contact>
+                    <div>
+                        <label class="label" for="contact_name">Tên người liên hệ *</label>
+                        <input class="input" name="contact_name" id="contact_name" value="{{ old('contact_name') }}" maxlength="255" placeholder="VD: Chị Nga">
+                        <x-field-error name="contact_name" />
+                    </div>
+                    <div>
+                        <label class="label" for="contact_phone">Số điện thoại *</label>
+                        <input class="input" name="contact_phone" id="contact_phone" value="{{ old('contact_phone') }}" maxlength="20" inputmode="tel" placeholder="VD: 0901 234 567">
+                        <x-field-error name="contact_phone" />
+                    </div>
+                    <p class="text-xs text-muted sm:col-span-2" data-new-contact-hint>Người mới sẽ được lưu vào danh bạ của khách, lần sau chỉ cần chọn.</p>
+                </div>
+            </div>
+            </div>
+        </div>
+
+        <div class="section-title">Thiết bị</div>
         <div class="grid gap-4 sm:grid-cols-3">
             <div class="sm:col-span-3">
                 <label class="label" for="serial_number">Số serial / Service Tag *</label>
@@ -99,86 +183,6 @@
         </div>
         <p class="mt-1 text-xs text-muted" id="kind-hint"></p>
         <x-field-error name="kind" />
-
-        <div class="section-title">Khách hàng</div>
-        <div class="grid gap-4 sm:grid-cols-2">
-            <div class="sm:col-span-2">
-                <label class="label" for="customer_id-search">Khách gửi máy</label>
-                <select class="input" name="customer_id" id="customer_id" data-searchable data-new-label="+ Khách mới"
-                        data-placeholder="Gõ tên khách, MST, tên hoặc SĐT người liên hệ…">
-                    <option value="new">+ Khách mới</option>
-                    @foreach ($customers as $customer)
-                        <option value="{{ $customer->id }}" @selected($customerValue === (string) $customer->id)
-                                data-detail="{{ collect([$customer->tax_code ? 'MST '.$customer->tax_code : null, ($contacts[$customer->id] ?? collect())->pluck('name')->implode(', ')])->filter()->implode(' · ') }}"
-                                data-search="{{ collect([$customer->tax_code, $customer->phone, ...($contacts[$customer->id] ?? collect())->flatMap(fn ($contact) => [$contact['name'], $contact['phone']])])->filter()->implode(' ') }}">{{ $customer->name }}</option>
-                    @endforeach
-                </select>
-            </div>
-            <x-tax-code-field name="customer_tax_code" :value="old('customer_tax_code')" class="sm:col-span-2" data-new-customer />
-            <div data-new-customer>
-                <label class="label" for="customer_name">Tên khách / công ty *</label>
-                <input class="input" name="customer_name" id="customer_name" value="{{ old('customer_name') }}" maxlength="255" data-tax-fill="name">
-                <x-field-error name="customer_name" />
-            </div>
-            <div data-new-customer>
-                <label class="label" for="customer_address">Địa chỉ <span class="label-hint">(tuỳ chọn)</span></label>
-                <input class="input" name="customer_address" id="customer_address" value="{{ old('customer_address') }}" maxlength="500" data-tax-fill="address">
-            </div>
-        </div>
-
-        <div class="mt-4">
-            <span class="label">Người liên hệ của phiếu này *</span>
-            <div id="contact-choices" class="grid gap-1.5 sm:grid-cols-2" data-old="{{ old('contact_id') }}"></div>
-            <x-field-error name="contact_id" />
-            <div class="mt-2 grid gap-4 sm:grid-cols-2" data-new-contact>
-                <div>
-                    <label class="label" for="contact_name">Tên người liên hệ *</label>
-                    <input class="input" name="contact_name" id="contact_name" value="{{ old('contact_name') }}" maxlength="255" placeholder="VD: Chị Nga">
-                    <x-field-error name="contact_name" />
-                </div>
-                <div>
-                    <label class="label" for="contact_phone">Số điện thoại *</label>
-                    <input class="input" name="contact_phone" id="contact_phone" value="{{ old('contact_phone') }}" maxlength="20" inputmode="tel" placeholder="VD: 0901 234 567">
-                    <x-field-error name="contact_phone" />
-                </div>
-                <p class="text-xs text-muted sm:col-span-2" data-new-contact-hint>Người mới sẽ được lưu vào danh bạ của khách, lần sau chỉ cần chọn.</p>
-            </div>
-        </div>
-
-        <div class="section-title">Tiếp nhận</div>
-        <div class="grid gap-4 sm:grid-cols-2">
-            <div class="sm:col-span-2">
-                <label class="label" for="fault_description">Lỗi khách báo *</label>
-                <textarea class="input min-h-20" name="fault_description" id="fault_description" required maxlength="2000">{{ old('fault_description') }}</textarea>
-                <x-field-error name="fault_description" />
-            </div>
-            <div data-takes-device>
-                <label class="label" for="accessories">Phụ kiện kèm theo <span class="label-hint">(tuỳ chọn)</span></label>
-                <input class="input" name="accessories" id="accessories" value="{{ old('accessories') }}" placeholder="Sạc, dây nguồn, remote…" maxlength="255">
-            </div>
-            <div>
-                <label class="label" for="received_date"><span data-date-label>Ngày nhận máy</span> *</label>
-                <input class="input" type="date" name="received_date" id="received_date" value="{{ old('received_date', today()->toDateString()) }}" max="{{ today()->toDateString() }}" required>
-                <x-field-error name="received_date" />
-            </div>
-            <div>
-                <label class="label" for="technician_id">Nhân viên phụ trách</label>
-                @cannot('admin')
-                    <p class="input bg-panel text-muted">{{ auth()->user()->name }} (người lập phiếu)</p>
-                @else
-                <select class="input" name="technician_id" id="technician_id">
-                    <option value="">Chưa phân công</option>
-                    @foreach ($technicians as $technician)
-                        <option value="{{ $technician->id }}" @selected((string) old('technician_id', auth()->id()) === (string) $technician->id)>{{ $technician->name }}</option>
-                    @endforeach
-                </select>
-                @endcannot
-            </div>
-            <div>
-                <label class="label" for="note">Ghi chú <span class="label-hint">(tuỳ chọn)</span></label>
-                <input class="input" name="note" id="note" value="{{ old('note') }}" maxlength="2000">
-            </div>
-        </div>
 
         <div data-onsite-only>
             <div class="section-title">Hãng đến bảo hành</div>

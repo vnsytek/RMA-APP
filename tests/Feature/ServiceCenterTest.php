@@ -26,8 +26,8 @@ class ServiceCenterTest extends TestCase
         $this->actingAs($user)->post(route('service-centers.store'), ['name' => 'Tin học Lâm Hiếu', 'brands' => 'VSP'])->assertSessionHasNoErrors();
 
         $this->actingAs($user)->put(route('service-centers.update', $center), ['name' => ''])->assertSessionHasErrorsIn('serviceCenter'.$center->id, 'name');
-        $this->actingAs($user)->put(route('service-centers.update', $center), ['name' => 'TTBH ASUS HP', 'phone' => '0225 123'])->assertSessionHasNoErrors();
-        $this->assertSame(['TTBH ASUS HP', '0225 123'], [$center->refresh()->name, $center->phone]);
+        $this->actingAs($user)->put(route('service-centers.update', $center), ['name' => 'TTBH ASUS HP', 'phone' => '0225 3845 566'])->assertSessionHasNoErrors();
+        $this->assertSame(['TTBH ASUS HP', '0225 3845 566'], [$center->refresh()->name, $center->phone]);
 
         $this->actingAs($user)->patch(route('service-centers.toggle', $center))->assertForbidden();
         $this->actingAs(User::factory()->admin()->create())->patch(route('service-centers.toggle', $center));

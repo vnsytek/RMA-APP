@@ -76,7 +76,7 @@
             <div>Điện thoại: {{ $ticket->contact_phone ?? $ticket->customer->phone }}</div>
             <div>Hình thức: {{ $ticket->kind()->label() }}</div>
             <div>Người liên hệ: {{ $ticket->contact_name ?: '……………………' }}</div>
-            <div>Địa chỉ: {{ $ticket->customer->address ?: '……………………' }}</div>
+            <div>Địa chỉ: {{ $ticket->customer->shippingAddress() ?: '……………………' }}</div>
             <div>Tình trạng BH: {{ $ticket->warranty_status->label() }}</div>
         </div>
 

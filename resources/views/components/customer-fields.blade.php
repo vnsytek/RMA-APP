@@ -27,6 +27,11 @@
         <textarea class="input min-h-16" name="address" id="{{ $prefix }}-address" maxlength="500" data-tax-fill="address">{{ $value('address') }}</textarea>
     </div>
     <div class="sm:col-span-2">
+        <label class="label" for="{{ $prefix }}-shipping_address">Địa chỉ nhận/trả máy <span class="label-hint">(để trống nếu giống địa chỉ trên)</span></label>
+        <input class="input" name="shipping_address" id="{{ $prefix }}-shipping_address" maxlength="500" value="{{ $value('shipping_address') }}">
+        <x-field-error name="shipping_address" bag="customer" />
+    </div>
+    <div class="sm:col-span-2">
         <label class="label" for="{{ $prefix }}-note">Ghi chú</label>
         <textarea class="input min-h-16" name="note" id="{{ $prefix }}-note" maxlength="2000">{{ $value('note') }}</textarea>
     </div>

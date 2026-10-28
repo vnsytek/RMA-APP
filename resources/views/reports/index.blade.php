@@ -162,6 +162,9 @@
                         </tbody>
                     </table>
                 </div>
+                @if (! empty($section['paginator']))
+                    <div class="px-4 pb-4">{{ $section['paginator']->links() }}</div>
+                @endif
             </section>
         @endforeach
     </div>

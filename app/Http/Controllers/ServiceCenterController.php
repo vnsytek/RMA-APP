@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Enums\ShipmentOutcome;
 use App\Models\ServiceCenter;
+use App\Rules\VietnamesePhoneNumber;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -49,7 +50,7 @@ class ServiceCenterController extends Controller
         return $request->validateWithBag($bag, [
             'name' => ['required', 'string', 'max:255'],
             'brands' => ['nullable', 'string', 'max:255'],
-            'phone' => ['nullable', 'string', 'max:30'],
+            'phone' => ['nullable', 'string', 'max:30', new VietnamesePhoneNumber],
             'address' => ['nullable', 'string', 'max:500'],
         ], attributes: ['name' => 'tên', 'brands' => 'hãng nhận bảo hành', 'phone' => 'số điện thoại', 'address' => 'địa chỉ']);
     }

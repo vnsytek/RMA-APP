@@ -46,7 +46,7 @@ class CustomerTest extends TestCase
 
         $this->actingAs($user)->get(route('customers.show', $customer))->assertOk()->assertSeeText('MST 0202019370')->assertDontSeeText('Xoá');
 
-        $this->actingAs($user)->put(route('customers.update', $customer), ['name' => 'Công ty Mới (đổi tên)', 'tax_code' => '0202019370', 'phone' => '0900'])
+        $this->actingAs($user)->put(route('customers.update', $customer), ['name' => 'Công ty Mới (đổi tên)', 'tax_code' => '0202019370', 'phone' => '0225 3845 566'])
             ->assertRedirect(route('customers.show', $customer));
         $this->assertSame('Công ty Mới (đổi tên)', $customer->refresh()->name);
 

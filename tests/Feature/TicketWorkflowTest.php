@@ -176,9 +176,13 @@ class TicketWorkflowTest extends TestCase
         $this->actingAs($this->user)->post(route('tickets.quote-items.store', $ticket), ['description' => 'Panel', 'quantity' => 2, 'unit_price' => '1.500.000']);
         $this->act($ticket, TicketAction::SendQuote);
 
+        // A quote line can still be corrected after it was sent — the correction is logged, not forbidden.
         $this->actingAs($this->user)
-            ->post(route('tickets.quote-items.store', $ticket), ['description' => 'Công', 'quantity' => 1, 'unit_price' => '100000'])
-            ->assertForbidden();
+            ->post(route('tickets.quote-items.store', $ticket), ['description' => 'Công thêm (gõ nhầm)', 'quantity' => 1, 'unit_price' => '100000'])
+            ->assertSessionHasNoErrors();
+        $mistake = $ticket->quoteItems()->where('description', 'Công thêm (gõ nhầm)')->sole();
+        $this->assertSame('Báo giá (sau khi đã gửi)', $ticket->edits()->latest()->first()->field);
+        $this->actingAs($this->user)->delete(route('tickets.quote-items.destroy', [$ticket, $mistake]))->assertSessionHasNoErrors();
 
         $this->act($ticket, TicketAction::AcceptQuote);
         $panel = $ticket->quoteItems()->sole();

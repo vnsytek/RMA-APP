@@ -8,7 +8,7 @@
     $kind = $ticket->kind();
     $atCustomer = $ticket->originalKind() === TicketKind::Onsite;
     $isOnsite = $ticket->originalKind()->isOnsite();
-    $quoteEditable = $ticket->service_type === ServiceType::Repair && $ticket->status === TicketStatus::Inspecting && ! $ticket->claimPending();
+    $quoteEditable = $ticket->service_type === ServiceType::Repair && in_array($ticket->status, [TicketStatus::Inspecting, TicketStatus::Quoted], true) && ! $ticket->claimPending();
     $partsEditable = ! $ticket->isClosed() && $ticket->original_service_type !== ServiceType::Repair;
     $openAction = old('_action');
     $modelGroups = $models->groupBy(fn ($model) => $model->deviceType->name);
@@ -216,12 +216,11 @@
                     </div>
                     <div class="overflow-x-auto">
                         <table class="table">
-                            <thead><tr><th>Nội dung</th><th>Kho</th><th class="text-right">SL</th><th class="text-right">Đơn giá</th><th class="text-right">Thành tiền</th>@if ($quoteEditable)<th></th>@endif</tr></thead>
+                            <thead><tr><th>Nội dung</th><th class="text-right">SL</th><th class="text-right">Đơn giá</th><th class="text-right">Thành tiền</th>@if ($quoteEditable)<th></th>@endif</tr></thead>
                             <tbody>
                                 @forelse ($ticket->quoteItems as $item)
                                     <tr>
                                         <td>{{ $item->description }}</td>
-                                        <td>{{ $item->part->name ?? '—' }}</td>
                                         <td class="text-right">{{ $item->quantity }}</td>
                                         <td class="text-right">{{ money_vnd($item->unit_price) }}</td>
                                         <td class="text-right">{{ money_vnd($item->lineTotal()) }}</td>
@@ -235,10 +234,10 @@
                                         @endif
                                     </tr>
                                 @empty
-                                    <tr><td colspan="6" class="text-muted">Chưa có dòng nào.</td></tr>
+                                    <tr><td colspan="5" class="text-muted">Chưa có dòng nào.</td></tr>
                                 @endforelse
                                 @if ($ticket->quoteItems->isNotEmpty())
-                                    <tr class="bg-panel font-semibold"><td colspan="4">Tổng cộng</td><td class="text-right">{{ money_vnd($ticket->quoteTotal()) }}</td>@if ($quoteEditable)<td></td>@endif</tr>
+                                    <tr class="bg-panel font-semibold"><td colspan="3">Tổng cộng</td><td class="text-right">{{ money_vnd($ticket->quoteTotal()) }}</td>@if ($quoteEditable)<td></td>@endif</tr>
                                 @endif
                             </tbody>
                         </table>
@@ -247,21 +246,14 @@
                         <form method="POST" action="{{ route('tickets.quote-items.store', $ticket) }}" class="mt-3 flex flex-wrap gap-2">
                             @csrf
                             <input class="input min-w-56 flex-1" name="description" placeholder="Nội dung (linh kiện / công) *" required maxlength="255" aria-label="Nội dung báo giá">
-                            <select class="input w-44" name="part_id" aria-label="Lấy từ kho">
-                                <option value="">Không lấy từ kho</option>
-                                @foreach ($parts as $part)
-                                    <option value="{{ $part->id }}">{{ $part->name }} (tồn {{ $part->quantity_on_hand }})</option>
-                                @endforeach
-                            </select>
                             <input class="input w-20" type="number" name="quantity" value="1" min="1" required aria-label="Số lượng">
-                            <input class="input w-40" name="unit_price" placeholder="Đơn giá *" required inputmode="numeric" aria-label="Đơn giá">
+                            <input class="input w-40" name="unit_price" placeholder="Đơn giá *" required inputmode="numeric" autocomplete="off" data-money aria-label="Đơn giá">
                             <button class="btn btn-secondary">Thêm dòng</button>
                         </form>
                         <x-field-error name="description" bag="quote" />
-                        <x-field-error name="part_id" bag="quote" />
                         <x-field-error name="quantity" bag="quote" />
                         <x-field-error name="unit_price" bag="quote" />
-                        <p class="mt-2 text-xs text-muted">Lỗi cần thay / sửa: lập bảng giá rồi bấm "Gửi báo giá cho khách". Giá chỉ báo một lần: khách đồng ý thì sửa, không đồng ý thì không sửa. Lỗi đơn giản chọn "Miễn phí", không sửa được chọn "Báo phế". Chọn "Lấy từ kho" nếu dùng linh kiện có sẵn của Sang Y — kho sẽ tự trừ ngay.</p>
+                        <p class="mt-2 text-xs text-muted">Lỗi cần thay / sửa: lập bảng giá rồi bấm "Gửi báo giá cho khách". Giá chỉ báo một lần: khách đồng ý thì sửa, không đồng ý thì không sửa. Lỗi đơn giản chọn "Miễn phí", không sửa được chọn "Báo phế". Vẫn sửa được bảng này sau khi đã gửi nếu cần đính chính — mỗi lần sửa sẽ ghi vào Lịch sử bên dưới.</p>
                     @endif
                     @if ($ticket->quoted_at)
                         <p class="mt-2 text-xs text-muted">Gửi báo giá {{ $ticket->quoted_at->format('d/m/Y H:i') }}@if ($ticket->quote_decided_at) · khách trả lời {{ $ticket->quote_decided_at->format('d/m/Y H:i') }}@endif</p>
@@ -374,9 +366,9 @@
                                             @case('warranty_items')
                                                 @php
                                                     $rows = $action === TicketAction::FinishRepair
-                                                        ? $ticket->quoteItems->map(fn ($item) => ['quote_item_id' => $item->id, 'description' => $item->description, 'price' => $item->lineTotal(), 'default_months' => $item->part?->warranty_months])->all()
+                                                        ? $ticket->quoteItems->map(fn ($item) => ['quote_item_id' => $item->id, 'description' => $item->description, 'price' => $item->lineTotal()])->all()
                                                         : [];
-                                                    $rows = [...$rows, ...array_fill(0, 3, ['quote_item_id' => null, 'description' => null, 'price' => null, 'default_months' => null])];
+                                                    $rows = [...$rows, ...array_fill(0, 3, ['quote_item_id' => null, 'description' => null, 'price' => null])];
                                                     $isOpen = $openAction === $action->value;
                                                 @endphp
                                                 <div class="overflow-x-auto rounded-md border border-line" id="{{ $id }}">
@@ -397,7 +389,7 @@
                                                                         @endif
                                                                     </td>
                                                                     <td>
-                                                                        <input class="input" type="number" name="{{ $name }}[{{ $i }}][months]" value="{{ $isOpen ? old("{$name}.{$i}.months", $row['default_months']) : $row['default_months'] }}"
+                                                                        <input class="input" type="number" name="{{ $name }}[{{ $i }}][months]" value="{{ $isOpen ? old("{$name}.{$i}.months") : '' }}"
                                                                                min="1" max="{{ config('rma.max_repair_warranty_months') }}" placeholder="Không BH" aria-label="Số tháng bảo hành hạng mục {{ $i + 1 }}">
                                                                     </td>
                                                                 </tr>
@@ -512,38 +504,88 @@
             @endcan
 
             <section class="card p-5">
+                <h2 class="font-semibold">Sửa thông tin phiếu <span class="text-xs font-normal text-muted">(đính chính sai sót)</span></h2>
+                <p class="mt-1 text-xs text-muted">Dùng khi lập phiếu bị gõ nhầm serial, mô tả lỗi hay ngày nhận. Mọi thay đổi ở đây được ghi vào Lịch sử bên dưới, không bị xoá dấu vết — kể cả khi phiếu đã đóng.</p>
+                <form method="POST" action="{{ route('tickets.correct', $ticket) }}" class="mt-3 space-y-3">
+                    @csrf @method('PUT')
+                    <div>
+                        <label class="label" for="correct-serial">Serial</label>
+                        <input class="input font-mono" name="serial_number" id="correct-serial" required maxlength="100" value="{{ old('serial_number', $ticket->device->serial_number) }}">
+                        <x-field-error name="serial_number" bag="correct" />
+                    </div>
+                    <div>
+                        <label class="label" for="correct-fault">Lỗi khách báo</label>
+                        <textarea class="input min-h-16" name="fault_description" id="correct-fault" required maxlength="2000">{{ old('fault_description', $ticket->fault_description) }}</textarea>
+                        <x-field-error name="fault_description" bag="correct" />
+                    </div>
+                    <div>
+                        <label class="label" for="correct-date">{{ $atCustomer ? 'Ngày yêu cầu' : 'Ngày nhận' }}</label>
+                        <input class="input" type="date" name="received_date" id="correct-date" required max="{{ today()->toDateString() }}" value="{{ old('received_date', $ticket->received_date->toDateString()) }}">
+                        <x-field-error name="received_date" bag="correct" />
+                    </div>
+                    <div>
+                        <label class="label" for="correct-note">Lý do sửa <span class="label-hint">(tuỳ chọn)</span></label>
+                        <input class="input" name="note" id="correct-note" maxlength="500" placeholder="VD: gõ nhầm số cuối serial">
+                    </div>
+                    <button class="btn btn-secondary w-full">Lưu thay đổi</button>
+                </form>
+            </section>
+
+            <section class="card p-5">
                 <h2 class="mb-3 font-semibold">Lịch sử</h2>
                 <ol class="space-y-3">
-                    @foreach ($ticket->statusLogs as $log)
+                    @foreach ($timeline as $event)
                         <li class="grid grid-cols-[12px_1fr] gap-3 text-sm">
-                            <span class="mt-1.5 size-2.5 rounded-full bg-brand"></span>
-                            <div>
-                                <div class="flex flex-wrap items-center gap-1">
-                                    @if ($log->from_status)
-                                        <x-status-pill :status="$log->from_status" /> <span class="text-muted">→</span>
-                                    @endif
-                                    <x-status-pill :status="$log->to_status" />
-                                </div>
-                                <div class="mt-0.5 text-xs text-muted">{{ $log->user->name }} · {{ $log->created_at->format('d/m/Y H:i') }}</div>
-                                @if ($log->note)
-                                    <div class="mt-0.5">{{ $log->note }}</div>
-                                @endif
-                                @if ($log->attachments->isNotEmpty())
-                                    <div class="mt-1.5 flex flex-wrap gap-1.5">
-                                        @foreach ($log->attachments as $attachment)
-                                            <a href="{{ route('tickets.attachments.show', [$ticket, $attachment]) }}" target="_blank" rel="noopener"
-                                               class="grid size-12 place-items-center overflow-hidden rounded border border-line bg-white font-mono text-[10px] font-semibold text-muted"
-                                               title="{{ $attachment->stage->label() }} · {{ $attachment->file_name }}">
-                                                @if ($attachment->isImage())
-                                                    <img src="{{ route('tickets.attachments.show', [$ticket, $attachment]) }}" alt="{{ $attachment->stage->label() }}" class="size-full object-cover" loading="lazy">
-                                                @else
-                                                    PDF
-                                                @endif
-                                            </a>
-                                        @endforeach
+                            @if ($event['type'] === 'status')
+                                @php $log = $event['data']; @endphp
+                                <span class="mt-1.5 size-2.5 rounded-full bg-brand"></span>
+                                <div>
+                                    <div class="flex flex-wrap items-center gap-1">
+                                        @if ($log->from_status)
+                                            <x-status-pill :status="$log->from_status" /> <span class="text-muted">→</span>
+                                        @endif
+                                        <x-status-pill :status="$log->to_status" />
                                     </div>
-                                @endif
-                            </div>
+                                    <div class="mt-0.5 text-xs text-muted">{{ $log->user->name }} · {{ $log->created_at->format('d/m/Y H:i') }}</div>
+                                    @if ($log->note)
+                                        <div class="mt-0.5">{{ $log->note }}</div>
+                                    @endif
+                                    @if ($log->attachments->isNotEmpty())
+                                        <div class="mt-1.5 flex flex-wrap gap-1.5">
+                                            @foreach ($log->attachments as $attachment)
+                                                <a href="{{ route('tickets.attachments.show', [$ticket, $attachment]) }}" target="_blank" rel="noopener"
+                                                   class="grid size-12 place-items-center overflow-hidden rounded border border-line bg-white font-mono text-[10px] font-semibold text-muted"
+                                                   title="{{ $attachment->stage->label() }} · {{ $attachment->file_name }}">
+                                                    @if ($attachment->isImage())
+                                                        <img src="{{ route('tickets.attachments.show', [$ticket, $attachment]) }}" alt="{{ $attachment->stage->label() }}" class="size-full object-cover" loading="lazy">
+                                                    @else
+                                                        PDF
+                                                    @endif
+                                                </a>
+                                            @endforeach
+                                        </div>
+                                    @endif
+                                </div>
+                            @else
+                                @php $edit = $event['data']; @endphp
+                                <span class="mt-1.5 size-2.5 rounded-full bg-amber-500"></span>
+                                <div>
+                                    <div class="font-medium">Sửa: {{ $edit->field }}</div>
+                                    <div class="mt-0.5 text-xs text-muted">{{ $edit->user->name }} · {{ $edit->created_at->format('d/m/Y H:i') }}</div>
+                                    <div class="mt-0.5">
+                                        @if ($edit->old_value !== null && $edit->new_value !== null)
+                                            <span class="text-muted line-through">{{ $edit->old_value }}</span> → <span class="font-medium">{{ $edit->new_value }}</span>
+                                        @elseif ($edit->new_value !== null)
+                                            <span class="font-medium">+ {{ $edit->new_value }}</span>
+                                        @else
+                                            <span class="text-muted line-through">− {{ $edit->old_value }}</span>
+                                        @endif
+                                    </div>
+                                    @if ($edit->note)
+                                        <div class="mt-0.5 text-xs">Lý do: {{ $edit->note }}</div>
+                                    @endif
+                                </div>
+                            @endif
                         </li>
                     @endforeach
                 </ol>
