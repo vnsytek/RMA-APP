@@ -216,28 +216,6 @@ document.addEventListener('click', (event) => {
 /* A dialog whose form came back with validation errors opens again on load. */
 $$('dialog[data-open]').forEach((dialog) => dialog.showModal());
 
-/* Workflow step buttons on the ticket page: one form open at a time. */
-document.addEventListener('click', (event) => {
-    const button = event.target.closest('[data-action-toggle]');
-
-    if (!button) {
-        return;
-    }
-
-    const name = button.dataset.actionToggle;
-    const panel = $(`[data-action-panel="${name}"]`);
-    const opening = panel.hidden;
-
-    $$('[data-action-panel]').forEach((other) => (other.hidden = true));
-    $$('[data-action-toggle]').forEach((other) => other.setAttribute('aria-expanded', 'false'));
-
-    if (opening) {
-        panel.hidden = false;
-        $$(`[data-action-toggle="${name}"]`).forEach((other) => other.setAttribute('aria-expanded', 'true'));
-        panel.querySelector('input:not([type=hidden]), select, textarea')?.focus();
-    }
-});
-
 /* Phone photos are scaled down in the browser: they upload faster and stay under the server's size limit. */
 const PHOTO_MAX_SIDE = 1920;
 const PHOTO_SHRINK_FROM = 1024 * 1024;

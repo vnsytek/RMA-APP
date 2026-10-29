@@ -52,7 +52,7 @@
                     <dl class="customer-box mt-5 grid gap-x-6 gap-y-4 sm:grid-cols-2 lg:grid-cols-[minmax(0,2.2fr)_minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)]" aria-label="Khách hàng và ngày">
                         <div class="min-w-0">
                             <dt class="meta-label">Khách hàng</dt>
-                            <dd class="meta-value font-semibold break-words"><a href="{{ route('customers.show', $ticket->customer) }}" class="text-brand hover:underline">{{ $ticket->customer->name }}</a></dd>
+                            <dd class="meta-value font-semibold break-words"><a href="{{ route('customers.show', $ticket->customer) }}" class="text-red-700 hover:underline">{{ $ticket->customer->name }}</a></dd>
                             @if ($address = $ticket->customer->shippingAddress())
                                 <dd class="mt-0.5 text-[13px] text-muted">{{ $address }}</dd>
                             @endif
@@ -95,173 +95,6 @@
 
     <div class="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_22rem]">
         <div class="min-w-0 space-y-5">
-            @if ($actions !== [])
-                <section class="card border-brand/40 p-5 shadow-[inset_4px_0_0_var(--color-brand)]" id="buoc-tiep-theo" aria-labelledby="buoc-tiep-theo-title">
-                    <h2 id="buoc-tiep-theo-title" class="card-title">Bước tiếp theo</h2>
-                    <p class="mt-1 mb-4 text-muted">Chọn việc vừa làm xong, điền thông tin rồi xác nhận để chuyển phiếu sang bước sau.</p>
-                    <div class="flex flex-wrap gap-2">
-                        @foreach ($actions as $action)
-                            <button type="button" data-action-toggle="{{ $action->value }}" aria-expanded="{{ $openAction === $action->value ? 'true' : 'false' }}" aria-controls="action-{{ $action->value }}"
-                                    @class(['btn aria-expanded:ring-3 aria-expanded:ring-brand/20', 'btn-primary' => $action->style() === 'primary', 'btn-secondary' => $action->style() === 'secondary', 'btn-danger' => $action->style() === 'danger'])>
-                                {{ $action->label() }}
-                            </button>
-                        @endforeach
-                    </div>
-
-                    @if ($errors->action->any())
-                        <div class="alert alert-error mt-4" role="alert">
-                            <x-icon name="alert" />
-                            <div>
-                                @foreach ($errors->action->all() as $error)
-                                    <p>{{ $error }}</p>
-                                @endforeach
-                            </div>
-                        </div>
-                    @endif
-
-                    @foreach ($actions as $action)
-                        @php
-                            $photoStage = $action->photoStage();
-                        @endphp
-                        <form method="POST" action="{{ route('tickets.actions.store', [$ticket, $action]) }}" data-action-panel="{{ $action->value }}" id="action-{{ $action->value }}"
-                              @if ($photoStage) enctype="multipart/form-data" @endif
-                              @class(['mt-4 rounded-lg border p-4', 'border-red-200 bg-red-50/40' => $action->style() === 'danger', 'border-line bg-panel' => $action->style() !== 'danger'])
-                              @if ($openAction !== $action->value) hidden @endif>
-                            @csrf
-                            <input type="hidden" name="_action" value="{{ $action->value }}">
-                            <h3 class="mb-4 text-sm font-semibold">{{ $action->label() }}</h3>
-                            <div class="grid gap-4 sm:grid-cols-2">
-                                @foreach ($action->fields() as $name => $field)
-                                    @php
-                                        $id = $action->value.'-'.$name;
-                                        $default = match ($name) {
-                                            'sent_date', 'back_date', 'returned_date', 'done_date' => today()->toDateString(),
-                                            'warranty_exclusions' => $ticket->warranty_exclusions ?? $ticket->device->productModel->deviceType->warranty_exclusions,
-                                            'vendor_case_no' => $ticket->shipments->last()?->vendor_case_no,
-                                            'service_center_id' => $ticket->shipments->last()?->service_center_id,
-                                            default => null,
-                                        };
-                                        $value = $openAction === $action->value ? old($name, $default) : $default;
-                                    @endphp
-                                    <div @class(['sm:col-span-2' => in_array($field['type'], ['textarea', 'lines', 'warranty_items'], true)])>
-                                        <label class="label" for="{{ $id }}">{{ $field['label'] }}@if ($field['required']) <span class="req">*</span>@else <span class="label-hint">(tuỳ chọn)</span>@endif</label>
-                                        @switch($field['type'])
-                                            @case('service_center')
-                                                <select class="input" name="{{ $name }}" id="{{ $id }}" required>
-                                                    <option value="">Chọn…</option>
-                                                    @foreach ($serviceCenters as $center)
-                                                        <option value="{{ $center->id }}" @selected((string) $value === (string) $center->id)>{{ $center->name }}</option>
-                                                    @endforeach
-                                                </select>
-                                                @break
-                                            @case('product_model')
-                                                <select class="input" name="{{ $name }}" id="{{ $id }}">
-                                                    <option value="">Cùng model máy cũ ({{ $ticket->device->productModel->shortName() }})</option>
-                                                    @foreach ($modelGroups as $typeName => $group)
-                                                        <optgroup label="{{ $typeName }}">
-                                                            @foreach ($group as $model)
-                                                                <option value="{{ $model->id }}" @selected((string) $value === (string) $model->id)>{{ $model->shortName() }}</option>
-                                                            @endforeach
-                                                        </optgroup>
-                                                    @endforeach
-                                                </select>
-                                                @break
-                                            @case('warranty_items')
-                                                @php
-                                                    $rows = $action === TicketAction::FinishRepair
-                                                        ? $ticket->quoteItems->map(fn ($item) => ['quote_item_id' => $item->id, 'description' => $item->description, 'price' => $item->lineTotal()])->all()
-                                                        : [];
-                                                    $rows = [...$rows, ...array_fill(0, 3, ['quote_item_id' => null, 'description' => null, 'price' => null])];
-                                                    $isOpen = $openAction === $action->value;
-                                                @endphp
-                                                <div class="overflow-x-auto rounded-lg border border-line bg-white" id="{{ $id }}">
-                                                    <table class="table">
-                                                        <thead><tr><th>Hạng mục</th><th class="w-36">BH (tháng)</th></tr></thead>
-                                                        <tbody>
-                                                            @foreach ($rows as $i => $row)
-                                                                <tr>
-                                                                    <td>
-                                                                        @if ($row['quote_item_id'])
-                                                                            <input type="hidden" name="{{ $name }}[{{ $i }}][quote_item_id]" value="{{ $row['quote_item_id'] }}">
-                                                                            <input type="hidden" name="{{ $name }}[{{ $i }}][description]" value="{{ $row['description'] }}">
-                                                                            {{ $row['description'] }}
-                                                                            <div class="text-xs text-muted">Báo giá · {{ money_vnd($row['price']) }}</div>
-                                                                        @else
-                                                                            <input class="input" name="{{ $name }}[{{ $i }}][description]" value="{{ $isOpen ? old("{$name}.{$i}.description") : '' }}" maxlength="255"
-                                                                                   placeholder="{{ $loop->first && $rows[0]['quote_item_id'] === null ? 'VD: Vệ sinh bao lụa, hết kẹt giấy' : 'Hạng mục khác, VD: Cài Windows 11' }}" aria-label="Hạng mục bảo hành {{ $i + 1 }}">
-                                                                        @endif
-                                                                    </td>
-                                                                    <td>
-                                                                        <input class="input" type="number" name="{{ $name }}[{{ $i }}][months]" value="{{ $isOpen ? old("{$name}.{$i}.months") : '' }}"
-                                                                               min="1" max="{{ config('rma.max_repair_warranty_months') }}" placeholder="Không BH" aria-label="Số tháng bảo hành hạng mục {{ $i + 1 }}">
-                                                                    </td>
-                                                                </tr>
-                                                            @endforeach
-                                                        </tbody>
-                                                    </table>
-                                                </div>
-                                                @break
-                                            @case('lines')
-                                                <textarea class="input min-h-20" name="{{ $name }}" id="{{ $id }}" maxlength="2000">{{ $value }}</textarea>
-                                                @break
-                                            @case('claim_item')
-                                                @php
-                                                    $claimItems = $ticket->claimTicket?->activeWarrantyItems() ?? collect();
-                                                @endphp
-                                                @if ($ticket->claimTicket?->warrantyItems->isEmpty())
-                                                    <p class="text-sm">Phiếu {{ $ticket->claimTicket->ticket_no }} là phiếu cũ, chưa ghi hạng mục: bảo hành chung đến {{ vn_date($ticket->claimTicket->repairWarrantyEndsOn()) }}.</p>
-                                                @elseif ($claimItems->isEmpty())
-                                                    <p class="text-sm text-red-700">Không còn hạng mục nào trong hạn bảo hành, hãy chọn "Ngoài phạm vi BH".</p>
-                                                @else
-                                                    <select class="input" name="{{ $name }}" id="{{ $id }}" required>
-                                                        <option value="">Chọn…</option>
-                                                        @foreach ($claimItems as $item)
-                                                            <option value="{{ $item->id }}" @selected((string) $value === (string) $item->id || $claimItems->count() === 1)>{{ $item->description }} · {{ $item->statusLabel() }}</option>
-                                                        @endforeach
-                                                    </select>
-                                                @endif
-                                                @break
-                                            @case('date')
-                                                <input class="input" type="date" name="{{ $name }}" id="{{ $id }}" value="{{ $value }}" max="{{ today()->toDateString() }}" required>
-                                                @break
-                                            @case('months')
-                                                <input class="input w-40" type="number" name="{{ $name }}" id="{{ $id }}" value="{{ $value }}" min="1" max="{{ config('rma.max_repair_warranty_months') }}" placeholder="VD: 3">
-                                                @break
-                                            @case('textarea')
-                                                <textarea class="input min-h-16" name="{{ $name }}" id="{{ $id }}" maxlength="1000" @required($field['required'])>{{ $value }}</textarea>
-                                                @break
-                                            @default
-                                                <input class="input" name="{{ $name }}" id="{{ $id }}" value="{{ $value }}" maxlength="100">
-                                        @endswitch
-                                        @isset($field['hint'])
-                                            <p class="hint">{{ $field['hint'] }}</p>
-                                        @endisset
-                                    </div>
-                                @endforeach
-                                @if ($photoStage)
-                                    <div class="sm:col-span-2">
-                                        <label class="label" for="{{ $action->value }}-photos">
-                                            @if ($action->requiresPhoto())
-                                                Ảnh tình trạng máy {{ mb_strtolower($photoStage->label()) }} <span class="req">*</span> <span class="label-hint">(ít nhất 1 ảnh)</span>
-                                            @else
-                                                Ảnh / chứng từ <span class="label-hint">(tuỳ chọn)</span>
-                                            @endif
-                                        </label>
-                                        <input type="file" name="photos[]" id="{{ $action->value }}-photos" multiple accept="image/*,application/pdf" class="input py-1.5"
-                                               data-file-preview="{{ $action->value }}-photos-preview" @required($action->requiresPhoto())>
-                                        <p class="hint">{{ $photoStage->hint() }}</p>
-                                        <div id="{{ $action->value }}-photos-preview" class="mt-2 flex flex-wrap gap-2"></div>
-                                    </div>
-                                @endif
-                            </div>
-                            <div class="mt-5 flex flex-wrap justify-end gap-2">
-                                <button type="button" class="btn btn-secondary" data-action-toggle="{{ $action->value }}">Đóng</button>
-                                <button class="btn {{ $action->style() === 'danger' ? 'btn-danger-solid' : 'btn-primary' }}">Xác nhận: {{ $action->label() }}</button>
-                            </div>
-                        </form>
-                    @endforeach
-                </section>
-            @endif
 
             @if ($ticket->service_type === ServiceType::Repair && ($ticket->quoteItems->isNotEmpty() || $quoteEditable))
                 <section class="card overflow-hidden" id="bao-gia">
@@ -681,4 +514,184 @@
             @endcan
         </aside>
     </div>
+
+    {{-- Next step: a bar pinned to the bottom of the screen, so it is at hand wherever staff have scrolled to.
+         Each step's form opens in a dialog instead of pushing the page down. --}}
+    @if ($actions !== [])
+        <section class="sticky bottom-0 z-20 -mx-4 mt-6 -mb-16 border-t border-line bg-white/95 px-4 py-3 shadow-[0_-6px_16px_-10px_rgb(0_0_0/0.25)] backdrop-blur sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8"
+                 id="buoc-tiep-theo" aria-labelledby="buoc-tiep-theo-title">
+            <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
+                <div class="mr-auto">
+                    <h2 id="buoc-tiep-theo-title" class="text-sm font-semibold">Bước tiếp theo</h2>
+                    <p class="text-xs text-muted">Chọn việc vừa làm xong để điền thông tin và chuyển phiếu sang bước sau.</p>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                    @foreach ($actions as $action)
+                        <button type="button" data-dialog-open="action-{{ $action->value }}"
+                                @class(['btn', 'btn-primary' => $action->style() === 'primary', 'btn-secondary' => $action->style() === 'secondary', 'btn-danger' => $action->style() === 'danger'])>
+                            {{ $action->label() }}
+                        </button>
+                    @endforeach
+                </div>
+            </div>
+        </section>
+
+                    @foreach ($actions as $action)
+                        @php
+                            $photoStage = $action->photoStage();
+                        @endphp
+                        <dialog id="action-{{ $action->value }}" class="modal max-w-2xl" aria-labelledby="action-{{ $action->value }}-title" @if ($openAction === $action->value) data-open @endif>
+                        <form method="POST" action="{{ route('tickets.actions.store', [$ticket, $action]) }}" class="modal-body"
+                              @if ($photoStage) enctype="multipart/form-data" @endif>
+                            @csrf
+                            <input type="hidden" name="_action" value="{{ $action->value }}">
+                            <div class="modal-head">
+                                <div>
+                                    <h2 id="action-{{ $action->value }}-title">{{ $action->label() }}</h2>
+                                    <p class="text-xs text-muted">Phiếu {{ $ticket->ticket_no }} · {{ $ticket->device->displayName() }}</p>
+                                </div>
+                                <button type="button" class="modal-x" data-dialog-close aria-label="Đóng">×</button>
+                            </div>
+                            @if ($openAction === $action->value && $errors->action->any())
+                                <div class="alert alert-error" role="alert">
+                                    <x-icon name="alert" />
+                                    <div>
+                                        @foreach ($errors->action->all() as $error)
+                                            <p>{{ $error }}</p>
+                                        @endforeach
+                                    </div>
+                                </div>
+                            @endif
+                            <div class="grid gap-4 sm:grid-cols-2">
+                                @foreach ($action->fields() as $name => $field)
+                                    @php
+                                        $id = $action->value.'-'.$name;
+                                        $default = match ($name) {
+                                            'sent_date', 'back_date', 'returned_date', 'done_date' => today()->toDateString(),
+                                            'warranty_exclusions' => $ticket->warranty_exclusions ?? $ticket->device->productModel->deviceType->warranty_exclusions,
+                                            'vendor_case_no' => $ticket->shipments->last()?->vendor_case_no,
+                                            'service_center_id' => $ticket->shipments->last()?->service_center_id,
+                                            default => null,
+                                        };
+                                        $value = $openAction === $action->value ? old($name, $default) : $default;
+                                    @endphp
+                                    <div @class(['sm:col-span-2' => in_array($field['type'], ['textarea', 'lines', 'warranty_items'], true)])>
+                                        <label class="label" for="{{ $id }}">{{ $field['label'] }}@if ($field['required']) <span class="req">*</span>@else <span class="label-hint">(tuỳ chọn)</span>@endif</label>
+                                        @switch($field['type'])
+                                            @case('service_center')
+                                                <select class="input" name="{{ $name }}" id="{{ $id }}" required>
+                                                    <option value="">Chọn…</option>
+                                                    @foreach ($serviceCenters as $center)
+                                                        <option value="{{ $center->id }}" @selected((string) $value === (string) $center->id)>{{ $center->name }}</option>
+                                                    @endforeach
+                                                </select>
+                                                @break
+                                            @case('product_model')
+                                                <select class="input" name="{{ $name }}" id="{{ $id }}">
+                                                    <option value="">Cùng model máy cũ ({{ $ticket->device->productModel->shortName() }})</option>
+                                                    @foreach ($modelGroups as $typeName => $group)
+                                                        <optgroup label="{{ $typeName }}">
+                                                            @foreach ($group as $model)
+                                                                <option value="{{ $model->id }}" @selected((string) $value === (string) $model->id)>{{ $model->shortName() }}</option>
+                                                            @endforeach
+                                                        </optgroup>
+                                                    @endforeach
+                                                </select>
+                                                @break
+                                            @case('warranty_items')
+                                                @php
+                                                    $rows = $action === TicketAction::FinishRepair
+                                                        ? $ticket->quoteItems->map(fn ($item) => ['quote_item_id' => $item->id, 'description' => $item->description, 'price' => $item->lineTotal()])->all()
+                                                        : [];
+                                                    $rows = [...$rows, ...array_fill(0, 3, ['quote_item_id' => null, 'description' => null, 'price' => null])];
+                                                    $isOpen = $openAction === $action->value;
+                                                @endphp
+                                                <div class="overflow-x-auto rounded-lg border border-line bg-white" id="{{ $id }}">
+                                                    <table class="table">
+                                                        <thead><tr><th>Hạng mục</th><th class="w-36">BH (tháng)</th></tr></thead>
+                                                        <tbody>
+                                                            @foreach ($rows as $i => $row)
+                                                                <tr>
+                                                                    <td>
+                                                                        @if ($row['quote_item_id'])
+                                                                            <input type="hidden" name="{{ $name }}[{{ $i }}][quote_item_id]" value="{{ $row['quote_item_id'] }}">
+                                                                            <input type="hidden" name="{{ $name }}[{{ $i }}][description]" value="{{ $row['description'] }}">
+                                                                            {{ $row['description'] }}
+                                                                            <div class="text-xs text-muted">Báo giá · {{ money_vnd($row['price']) }}</div>
+                                                                        @else
+                                                                            <input class="input" name="{{ $name }}[{{ $i }}][description]" value="{{ $isOpen ? old("{$name}.{$i}.description") : '' }}" maxlength="255"
+                                                                                   placeholder="{{ $loop->first && $rows[0]['quote_item_id'] === null ? 'VD: Vệ sinh bao lụa, hết kẹt giấy' : 'Hạng mục khác, VD: Cài Windows 11' }}" aria-label="Hạng mục bảo hành {{ $i + 1 }}">
+                                                                        @endif
+                                                                    </td>
+                                                                    <td>
+                                                                        <input class="input" type="number" name="{{ $name }}[{{ $i }}][months]" value="{{ $isOpen ? old("{$name}.{$i}.months") : '' }}"
+                                                                               min="1" max="{{ config('rma.max_repair_warranty_months') }}" placeholder="Không BH" aria-label="Số tháng bảo hành hạng mục {{ $i + 1 }}">
+                                                                    </td>
+                                                                </tr>
+                                                            @endforeach
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                                @break
+                                            @case('lines')
+                                                <textarea class="input min-h-20" name="{{ $name }}" id="{{ $id }}" maxlength="2000">{{ $value }}</textarea>
+                                                @break
+                                            @case('claim_item')
+                                                @php
+                                                    $claimItems = $ticket->claimTicket?->activeWarrantyItems() ?? collect();
+                                                @endphp
+                                                @if ($ticket->claimTicket?->warrantyItems->isEmpty())
+                                                    <p class="text-sm">Phiếu {{ $ticket->claimTicket->ticket_no }} là phiếu cũ, chưa ghi hạng mục: bảo hành chung đến {{ vn_date($ticket->claimTicket->repairWarrantyEndsOn()) }}.</p>
+                                                @elseif ($claimItems->isEmpty())
+                                                    <p class="text-sm text-red-700">Không còn hạng mục nào trong hạn bảo hành, hãy chọn "Ngoài phạm vi BH".</p>
+                                                @else
+                                                    <select class="input" name="{{ $name }}" id="{{ $id }}" required>
+                                                        <option value="">Chọn…</option>
+                                                        @foreach ($claimItems as $item)
+                                                            <option value="{{ $item->id }}" @selected((string) $value === (string) $item->id || $claimItems->count() === 1)>{{ $item->description }} · {{ $item->statusLabel() }}</option>
+                                                        @endforeach
+                                                    </select>
+                                                @endif
+                                                @break
+                                            @case('date')
+                                                <input class="input" type="date" name="{{ $name }}" id="{{ $id }}" value="{{ $value }}" max="{{ today()->toDateString() }}" required>
+                                                @break
+                                            @case('months')
+                                                <input class="input w-40" type="number" name="{{ $name }}" id="{{ $id }}" value="{{ $value }}" min="1" max="{{ config('rma.max_repair_warranty_months') }}" placeholder="VD: 3">
+                                                @break
+                                            @case('textarea')
+                                                <textarea class="input min-h-16" name="{{ $name }}" id="{{ $id }}" maxlength="1000" @required($field['required'])>{{ $value }}</textarea>
+                                                @break
+                                            @default
+                                                <input class="input" name="{{ $name }}" id="{{ $id }}" value="{{ $value }}" maxlength="100">
+                                        @endswitch
+                                        @isset($field['hint'])
+                                            <p class="hint">{{ $field['hint'] }}</p>
+                                        @endisset
+                                    </div>
+                                @endforeach
+                                @if ($photoStage)
+                                    <div class="sm:col-span-2">
+                                        <label class="label" for="{{ $action->value }}-photos">
+                                            @if ($action->requiresPhoto())
+                                                Ảnh tình trạng máy {{ mb_strtolower($photoStage->label()) }} <span class="req">*</span> <span class="label-hint">(ít nhất 1 ảnh)</span>
+                                            @else
+                                                Ảnh / chứng từ <span class="label-hint">(tuỳ chọn)</span>
+                                            @endif
+                                        </label>
+                                        <input type="file" name="photos[]" id="{{ $action->value }}-photos" multiple accept="image/*,application/pdf" class="input py-1.5"
+                                               data-file-preview="{{ $action->value }}-photos-preview" @required($action->requiresPhoto())>
+                                        <p class="hint">{{ $photoStage->hint() }}</p>
+                                        <div id="{{ $action->value }}-photos-preview" class="mt-2 flex flex-wrap gap-2"></div>
+                                    </div>
+                                @endif
+                            </div>
+                            <div class="modal-foot">
+                                <button type="button" class="btn btn-secondary" data-dialog-close>Huỷ</button>
+                                <button class="btn {{ $action->style() === 'danger' ? 'btn-danger-solid' : 'btn-primary' }}">Xác nhận: {{ $action->label() }}</button>
+                            </div>
+                        </form>
+                        </dialog>
+                    @endforeach
+    @endif
 </x-layouts.app>
