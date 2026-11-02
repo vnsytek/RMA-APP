@@ -100,8 +100,8 @@ class StoreRmaTicketRequest extends FormRequest
                     return;
                 }
 
-                if ($this->input('warranty_status') === WarrantyStatus::OutOfWarranty->value && $this->input('kind') !== TicketKind::Repair->value) {
-                    $validator->errors()->add('kind', 'Máy hết bảo hành chỉ lập được phiếu sửa chữa.');
+                if ($this->input('warranty_status') === WarrantyStatus::OutOfWarranty->value && ! TicketKind::from($this->input('kind'))->allowsOutOfWarranty()) {
+                    $validator->errors()->add('kind', 'Máy hết bảo hành chỉ lập được phiếu sửa chữa hoặc Sang Y sửa tại khách.');
                 }
 
                 $catalogIsNew = $this->input('device_type_id') === 'new' || $this->input('brand_id') === 'new';
@@ -162,7 +162,11 @@ class StoreRmaTicketRequest extends FormRequest
             'customer_tax_code' => 'mã số thuế',
             'fault_description' => 'lỗi khách báo',
             'accessories' => 'phụ kiện',
-            'received_date' => TicketKind::tryFrom((string) $this->input('kind')) === TicketKind::Onsite ? 'ngày yêu cầu hãng' : 'ngày nhận máy',
+            'received_date' => match (TicketKind::tryFrom((string) $this->input('kind'))) {
+                TicketKind::Onsite => 'ngày yêu cầu hãng',
+                TicketKind::RepairOnsite => 'ngày yêu cầu',
+                default => 'ngày nhận máy',
+            },
             'technician_id' => 'nhân viên phụ trách',
             'service_center_id' => 'hãng / TTBH',
             'vendor_case_no' => 'mã hồ sơ hãng',

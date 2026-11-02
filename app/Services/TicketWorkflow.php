@@ -8,6 +8,7 @@ use App\Enums\ServiceType;
 use App\Enums\ShipmentOutcome;
 use App\Enums\TicketAction;
 use App\Enums\TicketResult;
+use App\Enums\TicketStatus;
 use App\Models\Device;
 use App\Models\RmaQuoteItem;
 use App\Models\RmaTicket;
@@ -70,7 +71,12 @@ class TicketWorkflow
 
             $this->apply($ticket, $action, $input, $user);
 
-            $ticket->status = $action->targetStatus();
+            $ticket->status = $action->targetStatus($ticket->kind());
+
+            // Repaired on the spot: nothing is handed back later, so the finishing step is also the return date.
+            if ($ticket->kind()->repairsAtCustomer() && $ticket->status === TicketStatus::Done) {
+                $ticket->returned_date = today();
+            }
             $ticket->save();
 
             $log = $ticket->statusLogs()->create([
@@ -146,6 +152,12 @@ class TicketWorkflow
                 }
                 break;
 
+            case TicketAction::FinishRepair:
+                if ($ticket->kind()->repairsAtCustomer() && $ticket->is_chargeable && blank($ticket->erp_return_no)) {
+                    $errors['erp_return_no'] = 'Phiếu có phí: cần lưu số chứng từ V233 trước khi hoàn tất.';
+                }
+                break;
+
             case TicketAction::ReturnToCustomer:
                 $notBefore('returned_date', $ticket->received_date, 'ngày nhận máy');
 
@@ -202,6 +214,11 @@ class TicketWorkflow
                     'outcome' => ShipmentOutcome::Rejected,
                     'note' => $input['note'],
                 ]);
+                $ticket->service_type = ServiceType::Repair;
+                $ticket->result = null;
+                break;
+
+            case TicketAction::TakeBackToCompany:
                 $ticket->service_type = ServiceType::Repair;
                 $ticket->result = null;
                 break;

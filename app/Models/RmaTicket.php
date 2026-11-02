@@ -241,11 +241,20 @@ class RmaTicket extends Model
     }
 
     /**
-     * Receipt / return slips exist whenever Sang Y takes the device in.
+     * Receipt / return slips exist whenever Sang Y has the device in its hands, including a device
+     * brought back from the customer's site after it could not be repaired there.
      */
     public function printsSlips(): bool
     {
-        return $this->originalKind()->takesDeviceIn();
+        return $this->kind()->takesDeviceIn();
+    }
+
+    /**
+     * The confirmation record signed at the customer's site when Sang Y repairs there.
+     */
+    public function printsVisitRecord(): bool
+    {
+        return $this->originalKind()->repairsAtCustomer() && $this->status !== TicketStatus::Cancelled;
     }
 
     /**
@@ -320,7 +329,7 @@ class RmaTicket extends Model
 
     public function hasRepairWarranty(): bool
     {
-        return $this->service_type === ServiceType::Repair
+        return $this->service_type->isSangyRepair()
             && $this->result?->carriesRepairWarranty() === true
             && $this->repair_warranty_months > 0;
     }

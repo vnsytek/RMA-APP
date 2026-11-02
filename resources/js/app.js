@@ -195,6 +195,48 @@ document.addEventListener('change', (event) => {
     }
 });
 
+/* Step dialogs: choosing "+ Thêm trung tâm mới…" in the service-center select reveals the name / phone fields. */
+document.addEventListener('change', (event) => {
+    const select = event.target.closest('[data-new-center-select]');
+
+    if (!select) {
+        return;
+    }
+
+    const box = select.parentElement.querySelector('[data-new-center-fields]');
+    box.hidden = select.value !== 'new';
+    box.querySelector('input[name="new_center_name"]').required = select.value === 'new';
+});
+
+/* Correction dialog: type and brand narrow the model list; "+ Model mới…" reveals the code field. */
+const syncCorrectDevice = (box) => {
+    const type = $('[data-correct-type]', box).value;
+    const brand = $('[data-correct-brand]', box).value;
+    const model = $('[data-correct-model]', box);
+
+    $$('option[data-type]', model).forEach((option) => {
+        const fits = option.dataset.type === type && option.dataset.brand === brand;
+        option.hidden = !fits;
+        option.disabled = !fits;
+    });
+
+    if (model.selectedOptions[0]?.disabled) {
+        model.value = '';
+    }
+
+    $('[data-new-model-fields]', box).hidden = model.value !== 'new';
+};
+
+document.addEventListener('change', (event) => {
+    const box = event.target.closest('[data-correct-device]');
+
+    if (box) {
+        syncCorrectDevice(box);
+    }
+});
+
+$$('[data-correct-device]').forEach(syncCorrectDevice);
+
 /* Modal dialogs: [data-dialog-open="id"] opens; only [data-dialog-close] (× / Huỷ) or Esc closes.
    Clicking the backdrop does nothing, so a stray click or a text selection dragged outside never loses what was typed. */
 document.addEventListener('click', (event) => {
@@ -307,8 +349,9 @@ function setUpFilePreview(input) {
         });
     };
 
-    input.addEventListener('change', async () => {
-        const picked = [...input.files].filter((file) => !entries.some((entry) => entry.key === keyOf(file)));
+    /* Files picked from disk and images pasted from the clipboard take the same route. */
+    const add = async (list) => {
+        const picked = [...list].filter((file) => !entries.some((entry) => entry.key === keyOf(file)));
         const buttons = input.form ? $$('button:not([type=button])', input.form) : [];
         buttons.forEach((button) => (button.disabled = true));
 
@@ -319,8 +362,80 @@ function setUpFilePreview(input) {
             buttons.forEach((button) => (button.disabled = false));
             sync();
         }
+    };
+
+    input.addEventListener('change', () => add(input.files));
+    input.addEventListener('files:add', (event) => add(event.detail));
+
+    /* "Dán ảnh" button: reads an image copied anywhere (screenshot, browser, Zalo…) from the clipboard. */
+    const paste = document.createElement('div');
+    paste.className = 'mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1';
+    paste.innerHTML = '<button type="button" class="btn btn-secondary btn-sm">Dán ảnh từ clipboard</button><span class="text-xs text-muted">hoặc bấm Ctrl+V để dán ảnh đã copy</span>';
+    input.after(paste);
+
+    const hint = paste.querySelector('span');
+    const defaultHint = hint.textContent;
+
+    paste.querySelector('button').addEventListener('click', async () => {
+        try {
+            const files = [];
+
+            for (const item of await navigator.clipboard.read()) {
+                const type = item.types.find((candidate) => candidate.startsWith('image/'));
+
+                if (type) {
+                    files.push(namePastedImage(new File([await item.getType(type)], 'image', { type })));
+                }
+            }
+
+            if (files.length === 0) {
+                hint.textContent = 'Clipboard chưa có ảnh. Hãy copy ảnh trước rồi bấm lại.';
+
+                return;
+            }
+
+            hint.textContent = defaultHint;
+            add(files);
+        } catch {
+            hint.textContent = 'Trình duyệt không cho đọc clipboard, hãy bấm Ctrl+V để dán.';
+        }
     });
 }
+
+let pastedCount = 0;
+
+/* Pasted images arrive as "image.png"; give each its own name so several can be added. */
+function namePastedImage(file) {
+    const stamp = new Date().toISOString().replace(/\D/g, '').slice(0, 14);
+    const extension = file.type.split('/')[1]?.replace('jpeg', 'jpg') || 'png';
+
+    pastedCount += 1;
+
+    return new File([file], `anh-dan-${stamp}-${pastedCount}.${extension}`, { type: file.type, lastModified: Date.now() });
+}
+
+/* Ctrl+V anywhere: an image on the clipboard goes to the upload box of the open dialog, the form being edited, or the only one on the page. */
+document.addEventListener('paste', (event) => {
+    const images = [...(event.clipboardData?.files ?? [])].filter((file) => file.type.startsWith('image/'));
+
+    if (images.length === 0) {
+        return;
+    }
+
+    const inputs = $$('input[type=file][data-file-preview]');
+    const visible = inputs.filter((candidate) => candidate.getClientRects().length > 0);
+    const scope = document.activeElement?.closest('dialog, form');
+    const target = $('dialog[open] input[type=file][data-file-preview]')
+        ?? (scope && inputs.find((candidate) => scope.contains(candidate) && visible.includes(candidate)))
+        ?? (visible.length === 1 ? visible[0] : null);
+
+    if (!target) {
+        return;
+    }
+
+    event.preventDefault();
+    target.dispatchEvent(new CustomEvent('files:add', { detail: images.map(namePastedImage) }));
+});
 
 $$('input[type=file][data-file-preview]').forEach(setUpFilePreview);
 
@@ -596,25 +711,29 @@ if (form) {
     const syncKind = () => {
         const outOfWarranty = checkedValue('warranty_status') === 'out_of_warranty';
 
+        /* Out of warranty: only Sang Y's own repair kinds, no vendor warranty. */
         $$('input[name="kind"]', form).forEach((radio) => {
-            radio.disabled = outOfWarranty && radio.value !== 'repair';
+            radio.disabled = outOfWarranty && !['repair', 'repair_onsite'].includes(radio.value);
         });
 
-        if (outOfWarranty) {
+        if (outOfWarranty && (form.querySelector('input[name="kind"]:checked')?.disabled ?? true)) {
             form.querySelector('input[name="kind"][value="repair"]').checked = true;
         }
 
         const kind = checkedValue('kind');
         const radio = form.querySelector(`input[name="kind"][value="${kind}"]`);
-        $('#kind-hint').textContent = (outOfWarranty ? 'Hết bảo hành: chỉ lập phiếu sửa chữa. ' : '') + (radio?.dataset.description ?? '');
+        $('#kind-hint').textContent = (outOfWarranty ? 'Hết bảo hành: chỉ lập phiếu sửa chữa hoặc Sang Y sửa tại khách. ' : '') + (radio?.dataset.description ?? '');
+
+        /* Nobody takes the device in when the vendor, or Sang Y itself, works at the customer's site. */
+        const atCustomer = kind === 'onsite' || kind === 'repair_onsite';
 
         const isOnsite = kind === 'onsite' || kind === 'onsite_sangy';
         $$('[data-onsite-only]', form).forEach((element) => (element.hidden = !isOnsite));
-        $$('[data-takes-device]', form).forEach((element) => (element.hidden = kind === 'onsite'));
-        $('#photos').required = kind !== 'onsite';
-        $$('[data-photo-required]', form).forEach((element) => (element.hidden = kind === 'onsite'));
-        $$('[data-photo-optional]', form).forEach((element) => (element.hidden = kind !== 'onsite'));
-        $$('[data-date-label]', form).forEach((element) => (element.textContent = kind === 'onsite' ? 'Ngày yêu cầu hãng' : 'Ngày nhận máy'));
+        $$('[data-takes-device]', form).forEach((element) => (element.hidden = atCustomer));
+        $('#photos').required = !atCustomer;
+        $$('[data-photo-required]', form).forEach((element) => (element.hidden = atCustomer));
+        $$('[data-photo-optional]', form).forEach((element) => (element.hidden = !atCustomer));
+        $$('[data-date-label]', form).forEach((element) => (element.textContent = kind === 'onsite' ? 'Ngày yêu cầu hãng' : (kind === 'repair_onsite' ? 'Ngày yêu cầu' : 'Ngày nhận máy')));
     };
 
     const contactsByCustomer = JSON.parse(form.dataset.contacts || '{}');

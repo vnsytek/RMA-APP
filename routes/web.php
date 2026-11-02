@@ -45,8 +45,8 @@ Route::middleware('auth')->group(function () {
         Route::post('attachments', [TicketAttachmentController::class, 'store'])->name('attachments.store');
         Route::get('attachments/{attachment}', [TicketAttachmentController::class, 'show'])->name('attachments.show');
         Route::delete('attachments/{attachment}', [TicketAttachmentController::class, 'destroy'])->name('attachments.destroy');
-        Route::get('slips/{type}', [TicketSlipController::class, 'show'])->whereIn('type', ['receipt', 'return'])->name('slips.show');
-        Route::get('slips/{type}/excel', [TicketSlipController::class, 'excel'])->whereIn('type', ['receipt', 'return'])->name('slips.excel');
+        Route::get('slips/{type}', [TicketSlipController::class, 'show'])->whereIn('type', ['receipt', 'return', 'visit'])->name('slips.show');
+        Route::get('slips/{type}/excel', [TicketSlipController::class, 'excel'])->whereIn('type', ['receipt', 'return', 'visit'])->name('slips.excel');
     });
 
     Route::get('devices', [DeviceController::class, 'index'])->name('devices.index');

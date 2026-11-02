@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-#[Fillable(['rma_ticket_id', 'rma_center_shipment_id', 'part_code', 'description', 'quantity'])]
+#[Fillable(['rma_ticket_id', 'rma_center_shipment_id', 'part_code', 'serial_number', 'source', 'description', 'quantity'])]
 class RmaReplacedPart extends Model
 {
     /**

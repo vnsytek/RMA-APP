@@ -14,6 +14,7 @@
         TicketKind::OnsiteSangy => [S::Scheduled, S::Ready, S::Returned],
         TicketKind::CarryIn => [S::Received, S::Inspecting, S::AtCenter, S::Ready, S::Returned],
         TicketKind::Repair => [S::Received, S::Inspecting, S::Quoted, S::Repairing, S::Ready, S::Returned],
+        TicketKind::RepairOnsite => [S::ToVisit, S::Inspecting, S::Quoted, S::Repairing, S::Done],
     };
 
     $current = $ticket->status;

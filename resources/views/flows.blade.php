@@ -10,10 +10,12 @@
             ['IT tự xử lý được thì bỏ qua TTBH.', 'Nhận về mà vẫn lỗi: gửi TTBH lại, mỗi lần gửi được lưu riêng.', 'TTBH từ chối bảo hành: phiếu chuyển sang Sửa chữa, giữ nguyên số phiếu.']],
         [TicketKind::Repair, ['IT nhận máy', 'IT kiểm tra lỗi', 'Miễn phí / Báo giá / Báo phế', 'Trả khách'],
             ['Báo giá một lần: khách đồng ý thì sửa (có phí: số phiếu là V223, nhập thêm V233), không đồng ý thì trả máy không sửa.', 'Bấm "Sửa xong" hoặc "Miễn phí" thì nhập thời gian bảo hành sau sửa (tháng). Hạn tính từ ngày trả và in lên phiếu trả.']],
+        [TicketKind::RepairOnsite, ['Lập phiếu, hẹn đến khách', 'Kiểm tra tại chỗ', 'Miễn phí / Báo giá', 'Sửa xong, khách ký biên bản'],
+            ['Còn hay hết bảo hành đều lập được. Địa điểm là địa chỉ giao của khách.', 'Ghi linh kiện đã thay kèm serial, nguồn là hãng nhập về hoặc công ty mang đi.', 'Không sửa được tại chỗ: bấm "Mang máy về công ty", phiếu chuyển sang Sửa chữa và in phiếu nhận.', 'Có phí: lưu số chứng từ V233 trước khi bấm "Sửa xong".']],
     ];
 @endphp
 
-<x-layouts.app title="Quy trình xử lý" subtitle="4 hình thức xử lý phiếu RMA, từ lúc nhận đến lúc trả khách">
+<x-layouts.app title="Quy trình xử lý" subtitle="5 hình thức xử lý phiếu RMA, từ lúc nhận đến lúc trả khách">
     <div class="grid gap-4 xl:grid-cols-2">
         @foreach ($flows as [$kind, $steps, $notes])
             <section class="card p-5">

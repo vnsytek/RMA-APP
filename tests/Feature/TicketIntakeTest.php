@@ -138,9 +138,32 @@ class TicketIntakeTest extends TestCase
             ...$this->validPayload(),
             'warranty_status' => WarrantyStatus::OutOfWarranty->value,
             'kind' => TicketKind::CarryIn->value,
-        ])->assertSessionHasErrors(['kind' => 'Máy hết bảo hành chỉ lập được phiếu sửa chữa.']);
+        ])->assertSessionHasErrors(['kind' => 'Máy hết bảo hành chỉ lập được phiếu sửa chữa hoặc Sang Y sửa tại khách.']);
 
         $this->assertSame(0, RmaTicket::count());
+    }
+
+    public function test_repair_at_the_customer_site_opens_for_both_warranty_statuses_without_taking_the_device_in(): void
+    {
+        $user = User::factory()->create();
+
+        foreach ([WarrantyStatus::InWarranty, WarrantyStatus::OutOfWarranty] as $warranty) {
+            $this->actingAs($user)->post(route('tickets.store'), [
+                ...$this->validPayload(),
+                'serial_number' => 'SN-'.$warranty->value,
+                'warranty_status' => $warranty->value,
+                'kind' => TicketKind::RepairOnsite->value,
+                'accessories' => 'Sạc',
+            ])->assertSessionHasNoErrors();
+
+            $ticket = RmaTicket::latest('id')->first();
+            $this->assertSame(TicketKind::RepairOnsite, $ticket->kind());
+            $this->assertSame($warranty, $ticket->warranty_status);
+            $this->assertSame(TicketStatus::ToVisit, $ticket->status);
+            $this->assertNull($ticket->accessories);
+            $this->assertSame(0, $ticket->shipments()->count());
+            $this->assertFalse($ticket->printsSlips());
+        }
     }
 
     public function test_vendor_visit_at_sang_y_needs_a_service_center_and_opens_a_pending_visit(): void

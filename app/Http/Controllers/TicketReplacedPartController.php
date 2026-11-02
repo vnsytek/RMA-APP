@@ -7,6 +7,7 @@ use App\Models\RmaReplacedPart;
 use App\Models\RmaTicket;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class TicketReplacedPartController extends Controller
 {
@@ -16,9 +17,11 @@ class TicketReplacedPartController extends Controller
 
         $data = $request->validateWithBag('parts', [
             'part_code' => ['nullable', 'string', 'max:50'],
+            'serial_number' => ['nullable', 'string', 'max:100'],
+            'source' => ['nullable', Rule::in(['vendor', 'company'])],
             'description' => ['required', 'string', 'max:255'],
             'quantity' => ['required', 'integer', 'min:1', 'max:1000'],
-        ], attributes: ['part_code' => 'mã linh kiện', 'description' => 'mô tả', 'quantity' => 'số lượng']);
+        ], attributes: ['part_code' => 'mã linh kiện', 'serial_number' => 'serial linh kiện', 'source' => 'nguồn linh kiện', 'description' => 'mô tả', 'quantity' => 'số lượng']);
 
         $ticket->replacedParts()->create([
             ...$data,
@@ -42,7 +45,7 @@ class TicketReplacedPartController extends Controller
         abort_if(
             $ticket->isClosed() || $ticket->original_service_type === ServiceType::Repair,
             403,
-            'Chỉ ghi linh kiện hãng thay cho phiếu bảo hành chưa đóng.',
+            'Chỉ ghi linh kiện thay cho phiếu bảo hành hoặc phiếu Sang Y sửa tại khách chưa đóng.',
         );
     }
 }

@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Enums\ServiceType;
 use App\Enums\TicketStatus;
 use App\Models\RmaQuoteItem;
 use App\Models\RmaTicket;
@@ -56,7 +55,7 @@ class TicketQuoteItemController extends Controller
     private function ensureEditable(RmaTicket $ticket): void
     {
         abort_unless(
-            $ticket->service_type === ServiceType::Repair && in_array($ticket->status, [TicketStatus::Inspecting, TicketStatus::Quoted], true),
+            $ticket->service_type->isSangyRepair() && in_array($ticket->status, [TicketStatus::Inspecting, TicketStatus::Quoted], true),
             403,
             'Chỉ sửa được báo giá khi phiếu sửa chữa đang ở bước IT kiểm tra hoặc đã gửi báo giá (chưa được khách chốt).',
         );

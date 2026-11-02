@@ -5,6 +5,7 @@ namespace App\Enums;
 enum TicketStatus: string
 {
     case Scheduled = 'scheduled';
+    case ToVisit = 'to_visit';
     case Received = 'received';
     case Inspecting = 'inspecting';
     case AtCenter = 'at_center';
@@ -19,6 +20,7 @@ enum TicketStatus: string
     {
         return match ($this) {
             self::Scheduled => 'Chờ hãng đến',
+            self::ToVisit => 'Chờ đến khách',
             self::Received => 'Đã nhận máy',
             self::Inspecting => 'IT kiểm tra',
             self::AtCenter => 'Đang ở TTBH',
@@ -34,7 +36,7 @@ enum TicketStatus: string
     public function tone(): string
     {
         return match ($this) {
-            self::Scheduled, self::Received => 'blue',
+            self::Scheduled, self::ToVisit, self::Received => 'blue',
             self::Inspecting, self::Repairing => 'amber',
             self::AtCenter => 'violet',
             self::Quoted => 'orange',

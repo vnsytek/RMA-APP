@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Enums\TicketKind;
 use App\Enums\TicketStatus;
+use App\Enums\WarrantyStatus;
 use App\Http\Requests\StoreRmaTicketRequest;
 use App\Models\Brand;
 use App\Models\Customer;
@@ -13,6 +14,7 @@ use App\Models\ProductModel;
 use App\Models\RmaTicket;
 use App\Models\ServiceCenter;
 use App\Models\User;
+use App\Services\CatalogResolver;
 use App\Services\DeviceTracker;
 use App\Services\TicketEditor;
 use App\Services\TicketIntake;
@@ -131,6 +133,8 @@ class RmaTicketController extends Controller
             'timeline' => $timeline,
             'serviceCenters' => ServiceCenter::active()->orderBy('name')->get(),
             'technicians' => User::active()->orderBy('name')->get(),
+            'deviceTypes' => DeviceType::active()->orderBy('name')->get(),
+            'brands' => Brand::active()->orderBy('name')->get(),
             'models' => ProductModel::active()->with('brand', 'deviceType')->get()->sortBy(fn (ProductModel $model) => $model->deviceType->name.' '.$model->shortName()),
         ]);
     }
@@ -169,10 +173,40 @@ class RmaTicketController extends Controller
      * existing ticket, open or closed. Unlike update(), every change here is logged, not silently
      * overwritten — see TicketEditor.
      */
-    public function correct(Request $request, RmaTicket $ticket, TicketEditor $editor): RedirectResponse
+    public function correct(Request $request, RmaTicket $ticket, TicketEditor $editor, CatalogResolver $catalog): RedirectResponse
     {
         $data = $request->validateWithBag('correct', [
+            'product_model_id' => [
+                'nullable',
+                function (string $attribute, mixed $value, Closure $fail) use ($request): void {
+                    $type = $request->input('device_type_id');
+                    $brand = $request->input('brand_id');
+
+                    if ($value === 'new') {
+                        return;
+                    }
+
+                    $model = ProductModel::active()->find($value);
+
+                    if ($model === null) {
+                        $fail('Model không hợp lệ.');
+                    } elseif ((filled($type) && (int) $type !== $model->device_type_id) || (filled($brand) && (int) $brand !== $model->brand_id)) {
+                        $fail('Model này không thuộc loại / hãng đã chọn.');
+                    }
+                },
+            ],
+            'device_type_id' => ['required_if:product_model_id,new', 'nullable', 'integer', Rule::exists('device_types', 'id')],
+            'brand_id' => ['required_if:product_model_id,new', 'nullable', 'integer', Rule::exists('brands', 'id')],
+            'new_model_code' => ['required_if:product_model_id,new', 'nullable', 'string', 'max:100'],
             'serial_number' => ['required', 'string', 'max:100'],
+            'warranty_status' => [
+                'required', Rule::enum(WarrantyStatus::class),
+                function (string $attribute, mixed $value, Closure $fail) use ($ticket): void {
+                    if ($value === WarrantyStatus::OutOfWarranty->value && ! $ticket->kind()->allowsOutOfWarranty()) {
+                        $fail('Phiếu bảo hành hãng không thể là hết bảo hành.');
+                    }
+                },
+            ],
             'fault_description' => ['required', 'string', 'max:2000'],
             'received_date' => [
                 'required', 'date', 'before_or_equal:today',
@@ -183,7 +217,13 @@ class RmaTicketController extends Controller
                 },
             ],
             'note' => ['nullable', 'string', 'max:500'],
-        ], attributes: ['serial_number' => 'serial', 'fault_description' => 'lỗi khách báo', 'received_date' => 'ngày nhận', 'note' => 'lý do sửa']);
+        ], attributes: ['product_model_id' => 'model', 'device_type_id' => 'loại thiết bị', 'brand_id' => 'hãng', 'new_model_code' => 'mã model mới', 'serial_number' => 'serial', 'warranty_status' => 'tình trạng bảo hành', 'fault_description' => 'lỗi khách báo', 'received_date' => 'ngày nhận', 'note' => 'lý do sửa']);
+
+        $data['product_model_id'] = match (true) {
+            blank($data['product_model_id'] ?? null) => $ticket->device->product_model_id,
+            $data['product_model_id'] === 'new' => $catalog->productModel('new', $data['new_model_code'], $catalog->deviceType($data['device_type_id'], null), $catalog->brand($data['brand_id'], null))->id,
+            default => (int) $data['product_model_id'],
+        };
 
         $editor->correct($ticket, $data, $request->user(), $data['note'] ?? null);
 

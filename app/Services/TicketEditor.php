@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\WarrantyStatus;
 use App\Models\Device;
 use App\Models\RmaTicket;
 use App\Models\User;
@@ -17,12 +18,19 @@ use Illuminate\Support\Str;
 class TicketEditor
 {
     /**
-     * @param  array{serial_number: string, fault_description: string, received_date: string}  $data
+     * @param  array{serial_number: string, product_model_id?: ?int, warranty_status: string, fault_description: string, received_date: string}  $data
      */
     public function correct(RmaTicket $ticket, array $data, User $user, ?string $note): void
     {
         DB::transaction(function () use ($ticket, $data, $user, $note): void {
-            $this->correctSerial($ticket, $data['serial_number'], $user, $note);
+            $this->correctDevice($ticket, $data['serial_number'], $data['product_model_id'] ?? null, $user, $note);
+
+            $warranty = WarrantyStatus::from($data['warranty_status']);
+
+            if ($warranty !== $ticket->warranty_status) {
+                $this->log($ticket, $user, 'Tình trạng bảo hành', $ticket->warranty_status->label(), $warranty->label(), $note);
+                $ticket->warranty_status = $warranty;
+            }
 
             if ($data['fault_description'] !== $ticket->fault_description) {
                 $this->log($ticket, $user, 'Lỗi khách báo', $ticket->fault_description, $data['fault_description'], $note);
@@ -30,7 +38,11 @@ class TicketEditor
             }
 
             if ($data['received_date'] !== $ticket->received_date->toDateString()) {
-                $label = $ticket->kind()->isOnsite() ? 'Ngày yêu cầu hãng' : 'Ngày nhận';
+                $label = match (true) {
+                    $ticket->kind()->isOnsite() => 'Ngày yêu cầu hãng',
+                    $ticket->kind()->repairsAtCustomer() => 'Ngày yêu cầu',
+                    default => 'Ngày nhận',
+                };
                 $this->log($ticket, $user, $label, vn_date($ticket->received_date), vn_date(Carbon::parse($data['received_date'])), $note);
                 $ticket->received_date = $data['received_date'];
             }
@@ -39,21 +51,29 @@ class TicketEditor
         });
     }
 
-    private function correctSerial(RmaTicket $ticket, string $serial, User $user, ?string $note): void
+    /**
+     * The device is a model + serial pair, so a correction to either points the ticket at the matching
+     * device (created when it does not exist yet). The log says what changed: just the serial, or the product.
+     */
+    private function correctDevice(RmaTicket $ticket, string $serial, ?int $modelId, User $user, ?string $note): void
     {
         $serial = Str::squish($serial);
         $current = $ticket->device;
+        $modelId ??= $current->product_model_id;
+        $modelChanged = $modelId !== $current->product_model_id;
 
-        if (strcasecmp($serial, $current->serial_number) === 0) {
+        if (! $modelChanged && strcasecmp($serial, $current->serial_number) === 0) {
             return;
         }
 
-        $device = Device::firstOrCreate([
-            'product_model_id' => $current->product_model_id,
-            'serial_number' => $serial,
-        ]);
+        $device = Device::firstOrCreate(['product_model_id' => $modelId, 'serial_number' => $serial]);
 
-        $this->log($ticket, $user, 'Serial / thiết bị', $current->serial_number, $serial, $note);
+        if ($modelChanged) {
+            $this->log($ticket, $user, 'Thiết bị', "{$current->displayName()} · {$current->serial_number}", "{$device->load('productModel')->displayName()} · {$serial}", $note);
+        } else {
+            $this->log($ticket, $user, 'Serial / thiết bị', $current->serial_number, $serial, $note);
+        }
+
         $ticket->device_id = $device->id;
     }
 

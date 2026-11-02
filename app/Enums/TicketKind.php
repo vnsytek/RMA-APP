@@ -11,6 +11,7 @@ enum TicketKind: string
     case OnsiteSangy = 'onsite_sangy';
     case CarryIn = 'carry_in';
     case Repair = 'repair';
+    case RepairOnsite = 'repair_onsite';
 
     public static function of(ServiceType $type, ?OnsiteLocation $location): self
     {
@@ -18,6 +19,7 @@ enum TicketKind: string
             ServiceType::Onsite => $location === OnsiteLocation::Sangy ? self::OnsiteSangy : self::Onsite,
             ServiceType::CarryIn => self::CarryIn,
             ServiceType::Repair => self::Repair,
+            ServiceType::RepairOnsite => self::RepairOnsite,
         };
     }
 
@@ -27,6 +29,7 @@ enum TicketKind: string
             self::Onsite, self::OnsiteSangy => ServiceType::Onsite,
             self::CarryIn => ServiceType::CarryIn,
             self::Repair => ServiceType::Repair,
+            self::RepairOnsite => ServiceType::RepairOnsite,
         };
     }
 
@@ -46,20 +49,40 @@ enum TicketKind: string
 
     public function isWarranty(): bool
     {
-        return $this !== self::Repair;
+        return $this !== self::Repair && $this !== self::RepairOnsite;
     }
 
     /**
-     * Only the vendor-visits-the-customer kind never takes the device in.
+     * Sang Y's own technician goes to the customer's site and repairs there; no vendor is involved.
+     */
+    public function repairsAtCustomer(): bool
+    {
+        return $this === self::RepairOnsite;
+    }
+
+    /**
+     * Kinds where the customer may be out of warranty. A warranty ticket is opened for a vendor to handle.
+     */
+    public function allowsOutOfWarranty(): bool
+    {
+        return $this === self::Repair || $this === self::RepairOnsite;
+    }
+
+    /**
+     * The vendor visiting the customer and Sang Y repairing at the customer never take the device in.
      */
     public function takesDeviceIn(): bool
     {
-        return $this !== self::Onsite;
+        return $this !== self::Onsite && $this !== self::RepairOnsite;
     }
 
     public function initialStatus(): TicketStatus
     {
-        return $this->isOnsite() ? TicketStatus::Scheduled : TicketStatus::Received;
+        return match (true) {
+            $this->isOnsite() => TicketStatus::Scheduled,
+            $this->repairsAtCustomer() => TicketStatus::ToVisit,
+            default => TicketStatus::Received,
+        };
     }
 
     public function label(): string
@@ -69,6 +92,7 @@ enum TicketKind: string
             self::OnsiteSangy => 'Hãng BH tại Sang Y',
             self::CarryIn => 'Nhận về gửi TTBH',
             self::Repair => 'Sửa chữa',
+            self::RepairOnsite => 'Sang Y sửa tại công ty khách',
         };
     }
 
@@ -79,6 +103,7 @@ enum TicketKind: string
             self::OnsiteSangy => 'BH tại Sang Y',
             self::CarryIn => 'BH gửi TTBH',
             self::Repair => 'Sửa chữa',
+            self::RepairOnsite => 'Sang Y sửa tại khách',
         };
     }
 
@@ -89,6 +114,7 @@ enum TicketKind: string
             self::OnsiteSangy => 'Mang máy về Sang Y, hẹn hãng đến Sang Y bảo hành, xong Sang Y trả máy cho khách.',
             self::CarryIn => 'IT mang máy về, kiểm tra, gửi trung tâm bảo hành nếu cần, rồi trả khách.',
             self::Repair => 'IT kiểm tra lỗi: miễn phí, báo giá, hoặc báo phế. Sửa xong nhập thời gian bảo hành sau sửa.',
+            self::RepairOnsite => 'Nhân viên Sang Y đến công ty khách kiểm tra và sửa tại chỗ, không mang máy về. Còn hay hết bảo hành đều lập được. Sửa không được tại chỗ thì mang về công ty, phiếu chuyển sang Sửa chữa.',
         };
     }
 
@@ -99,6 +125,7 @@ enum TicketKind: string
             self::OnsiteSangy => 'fuchsia',
             self::CarryIn => 'blue',
             self::Repair => 'amber',
+            self::RepairOnsite => 'emerald',
         };
     }
 }

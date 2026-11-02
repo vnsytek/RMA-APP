@@ -7,6 +7,7 @@ use App\Enums\ServiceType;
 use App\Enums\ShipmentOutcome;
 use App\Enums\TicketKind;
 use App\Enums\TicketStatus;
+use App\Enums\WarrantyStatus;
 use App\Models\Device;
 use App\Models\RmaCenterShipment;
 use App\Models\RmaTicket;
@@ -73,7 +74,7 @@ class ReportBuilder
                 'open' => $list->filter(fn (RmaTicket $ticket) => ! $ticket->isClosed())->count(),
                 'avg_days' => $durations->isEmpty() ? null : round($durations->avg(), 1),
                 'revenue' => (int) $done->where('is_chargeable', true)->sum('charge_amount'),
-                'converted' => $list->filter(fn (RmaTicket $ticket) => $inRange($ticket->received_date) && $ticket->wasConverted())->count(),
+                'converted' => $list->filter(fn (RmaTicket $ticket) => $inRange($ticket->received_date) && $ticket->wasConverted() && $ticket->original_service_type !== ServiceType::RepairOnsite)->count(),
             ];
         };
 
@@ -131,6 +132,7 @@ class ReportBuilder
             $note = match (true) {
                 $ticket->status === TicketStatus::AtCenter && $pending !== null => 'Ở '.$pending->serviceCenter->name.' '.$days($pending->sent_date, today()).' ngày',
                 $ticket->status === TicketStatus::Scheduled && $pending?->appointment_date !== null => 'Hẹn hãng ngày '.$pending->appointment_date->format('d/m/Y'),
+                $ticket->status === TicketStatus::ToVisit => 'Chờ nhân viên đến khách sửa',
                 $ticket->status === TicketStatus::Quoted => 'Chờ khách duyệt báo giá: '.money_vnd($ticket->quoteTotal()),
                 $ticket->status === TicketStatus::Ready => 'Báo khách đến lấy máy',
                 default => '',
@@ -254,8 +256,8 @@ class ReportBuilder
                     $group->first()->device->productModel->brand->name,
                     $group->first()->device->productModel->deviceType->name,
                     $group->count(),
-                    $group->filter(fn (RmaTicket $ticket) => $ticket->service_type->isWarranty())->count(),
-                    $group->where('service_type', ServiceType::Repair)->count(),
+                    $group->where('warranty_status', WarrantyStatus::InWarranty)->count(),
+                    $group->where('warranty_status', WarrantyStatus::OutOfWarranty)->count(),
                 ]])
                 ->sortByDesc(fn (array $row) => $row['cells'][2])->values()->all(),
         ];

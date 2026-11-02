@@ -11,9 +11,13 @@ enum ServiceType: string
     case Onsite = 'onsite';
     case CarryIn = 'carry_in';
     case Repair = 'repair';
+    case RepairOnsite = 'repair_onsite';
 
-    public function isWarranty(): bool
+    /**
+     * Sang Y's own repair, whether the device is brought in or Sang Y goes to the customer.
+     */
+    public function isSangyRepair(): bool
     {
-        return $this !== self::Repair;
+        return $this === self::Repair || $this === self::RepairOnsite;
     }
 }

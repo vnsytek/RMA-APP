@@ -6,6 +6,7 @@
         'fuchsia' => 'border-fuchsia-400 bg-fuchsia-50 text-fuchsia-800',
         'blue' => 'border-sky-400 text-sky-800',
         'amber' => 'border-amber-500 text-amber-800',
+        'emerald' => 'border-emerald-500 bg-emerald-50 text-emerald-800',
     ];
 @endphp
 

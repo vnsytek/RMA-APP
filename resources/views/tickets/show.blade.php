@@ -6,9 +6,10 @@
     use App\Enums\TicketStatus;
 
     $kind = $ticket->kind();
-    $atCustomer = $ticket->originalKind() === TicketKind::Onsite;
+    $atCustomer = in_array($ticket->originalKind(), [TicketKind::Onsite, TicketKind::RepairOnsite], true);
+    $repairsAtCustomer = $ticket->originalKind()->repairsAtCustomer();
     $isOnsite = $ticket->originalKind()->isOnsite();
-    $quoteEditable = $ticket->service_type === ServiceType::Repair && in_array($ticket->status, [TicketStatus::Inspecting, TicketStatus::Quoted], true) && ! $ticket->claimPending();
+    $quoteEditable = $ticket->service_type->isSangyRepair() && in_array($ticket->status, [TicketStatus::Inspecting, TicketStatus::Quoted], true) && ! $ticket->claimPending();
     $partsEditable = ! $ticket->isClosed() && $ticket->original_service_type !== ServiceType::Repair;
     $openAction = old('_action');
     $modelGroups = $models->groupBy(fn ($model) => $model->deviceType->name);
@@ -39,11 +40,16 @@
                                 Lập bởi {{ $ticket->creator->name }} lúc {{ $ticket->created_at->format('d/m/Y H:i') }}
                             </p>
                         </div>
-                        @if ($ticket->printsSlips() && $ticket->status !== TicketStatus::Cancelled)
+                        @if ($ticket->printsVisitRecord() || ($ticket->printsSlips() && $ticket->status !== TicketStatus::Cancelled))
                             <div class="flex flex-wrap gap-2">
+                                @if ($ticket->printsVisitRecord())
+                                    <a href="{{ route('tickets.slips.show', [$ticket, 'visit']) }}" class="btn btn-secondary" target="_blank"><x-icon name="printer" />Biên bản tại chỗ</a>
+                                @endif
+                                @if ($ticket->printsSlips() && $ticket->status !== TicketStatus::Cancelled)
                                 <a href="{{ route('tickets.slips.show', [$ticket, 'receipt']) }}" class="btn btn-secondary" target="_blank"><x-icon name="printer" />Phiếu nhận</a>
                                 @if (in_array($ticket->status, [TicketStatus::Ready, TicketStatus::Returned], true))
                                     <a href="{{ route('tickets.slips.show', [$ticket, 'return']) }}" class="btn btn-secondary" target="_blank"><x-icon name="printer" />Phiếu trả</a>
+                                @endif
                                 @endif
                             </div>
                         @endif
@@ -96,7 +102,7 @@
     <div class="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_22rem]">
         <div class="min-w-0 space-y-5">
 
-            @if ($ticket->service_type === ServiceType::Repair && ($ticket->quoteItems->isNotEmpty() || $quoteEditable))
+            @if ($ticket->service_type->isSangyRepair() && ($ticket->quoteItems->isNotEmpty() || $quoteEditable))
                 <section class="card overflow-hidden" id="bao-gia">
                     <div class="card-head">
                         <div class="flex flex-wrap items-center gap-2">
@@ -199,7 +205,7 @@
                     @if ($ticket->is_chargeable)
                         <div><dt class="meta-label">Số tiền</dt><dd class="meta-value">{{ money_vnd($ticket->charge_amount) }}</dd></div>
                     @endif
-                    @if ($ticket->service_type === ServiceType::Repair && $ticket->result?->carriesRepairWarranty())
+                    @if ($ticket->service_type->isSangyRepair() && $ticket->result?->carriesRepairWarranty())
                         <div>
                             <dt class="meta-label">BH sau sửa chữa</dt>
                             <dd class="meta-value">
@@ -318,17 +324,23 @@
 
             @if ($ticket->original_service_type !== ServiceType::Repair)
                 <section class="card overflow-hidden" id="linh-kien">
-                    <div class="card-head"><h2>Linh kiện hãng / TTBH thay</h2></div>
+                    <div class="card-head"><h2>{{ $repairsAtCustomer ? 'Linh kiện đã thay' : 'Linh kiện hãng / TTBH thay' }}</h2></div>
                     <div class="overflow-x-auto border-t border-line">
                         <table class="table">
-                            <thead><tr><th>Mã linh kiện</th><th>Mô tả</th><th class="text-right">SL</th><th>Lần gửi</th>@if ($partsEditable)<th><span class="sr-only">Thao tác</span></th>@endif</tr></thead>
+                            <thead><tr><th>Mã linh kiện</th>@if ($repairsAtCustomer)<th>Serial</th><th>Nguồn</th>@endif<th>Mô tả</th><th class="text-right">SL</th>@unless ($repairsAtCustomer)<th>Lần gửi</th>@endunless @if ($partsEditable)<th><span class="sr-only">Thao tác</span></th>@endif</tr></thead>
                             <tbody>
                                 @forelse ($ticket->replacedParts as $part)
                                     <tr>
                                         <td class="font-mono text-xs">{{ $part->part_code ?? '—' }}</td>
+                                        @if ($repairsAtCustomer)
+                                            <td class="font-mono text-xs">{{ $part->serial_number ?? '—' }}</td>
+                                            <td>{{ match ($part->source) { 'vendor' => 'Hãng nhập về', 'company' => 'Công ty mang đi', default => '—' } }}</td>
+                                        @endif
                                         <td>{{ $part->description }}</td>
                                         <td class="text-right">{{ $part->quantity }}</td>
-                                        <td>{{ $part->shipment ? '#'.($ticket->shipments->search(fn ($shipment) => $shipment->is($part->shipment)) + 1) : '—' }}</td>
+                                        @unless ($repairsAtCustomer)
+                                            <td>{{ $part->shipment ? '#'.($ticket->shipments->search(fn ($shipment) => $shipment->is($part->shipment)) + 1) : '—' }}</td>
+                                        @endunless
                                         @if ($partsEditable)
                                             <td class="w-12 text-right">
                                                 <form method="POST" action="{{ route('tickets.replaced-parts.destroy', [$ticket, $part]) }}" data-confirm="Xoá linh kiện &quot;{{ $part->description }}&quot;?">
@@ -339,7 +351,7 @@
                                         @endif
                                     </tr>
                                 @empty
-                                    <tr><td colspan="5" class="text-muted">Chưa có linh kiện nào.</td></tr>
+                                    <tr><td colspan="7" class="text-muted">Chưa có linh kiện nào.</td></tr>
                                 @endforelse
                             </tbody>
                         </table>
@@ -349,6 +361,13 @@
                             <form method="POST" action="{{ route('tickets.replaced-parts.store', $ticket) }}" class="flex flex-wrap gap-2">
                                 @csrf
                                 <input class="input w-40 font-mono" name="part_code" placeholder="Mã, VD: 5JKJK" maxlength="50" aria-label="Mã linh kiện (tuỳ chọn)">
+                                @if ($repairsAtCustomer)
+                                    <input class="input w-44 font-mono" name="serial_number" placeholder="Serial linh kiện" maxlength="100" aria-label="Serial linh kiện (tuỳ chọn)">
+                                    <select class="input w-44" name="source" aria-label="Nguồn linh kiện">
+                                        <option value="company">Công ty mang đi</option>
+                                        <option value="vendor">Hãng nhập về</option>
+                                    </select>
+                                @endif
                                 <input class="input min-w-56 flex-1" name="description" placeholder="Mô tả linh kiện" required maxlength="255" aria-label="Mô tả linh kiện">
                                 <input class="input w-20" type="number" name="quantity" value="1" min="1" required aria-label="Số lượng">
                                 <button class="btn btn-secondary"><x-icon name="plus" />Thêm linh kiện</button>
@@ -469,40 +488,106 @@
                 </ol>
             </section>
 
-            <details class="card group" @if ($correctFailed) open @endif>
-                <summary class="flex cursor-pointer list-none items-start gap-3 p-5 [&::-webkit-details-marker]:hidden">
-                    <x-icon name="pencil" class="mt-0.5 size-4 shrink-0 text-muted" />
-                    <span class="flex-1">
-                        <span class="block font-semibold">Sửa thông tin phiếu</span>
-                        <span class="mt-0.5 block text-xs text-muted">Đính chính serial, lỗi khách báo hoặc ngày nhận bị gõ nhầm.</span>
-                    </span>
-                    <x-icon name="chevron-right" class="mt-0.5 size-4 shrink-0 text-muted transition-transform group-open:rotate-90" />
-                </summary>
-                <form method="POST" action="{{ route('tickets.correct', $ticket) }}" class="space-y-4 border-t border-line p-5">
+            <button type="button" class="card flex w-full cursor-pointer items-start gap-3 p-5 text-left hover:border-brand/50" data-dialog-open="correct-dialog">
+                <x-icon name="pencil" class="mt-0.5 size-4 shrink-0 text-muted" />
+                <span class="flex-1">
+                    <span class="block font-semibold">Sửa thông tin phiếu</span>
+                    <span class="mt-0.5 block text-xs text-muted">Đính chính loại, hãng, model, serial, tình trạng bảo hành, lỗi khách báo hoặc ngày nhận bị gõ nhầm.</span>
+                </span>
+                <x-icon name="chevron-right" class="mt-0.5 size-4 shrink-0 text-muted" />
+            </button>
+
+            @php
+                $currentModel = $ticket->device->productModel;
+                $correctType = (string) old('device_type_id', $currentModel->device_type_id);
+                $correctBrand = (string) old('brand_id', $currentModel->brand_id);
+                $correctModel = (string) old('product_model_id', $currentModel->id);
+            @endphp
+            <dialog id="correct-dialog" class="modal max-w-2xl" aria-labelledby="correct-dialog-title" @if ($correctFailed) data-open @endif>
+                <form method="POST" action="{{ route('tickets.correct', $ticket) }}" class="modal-body" data-correct-device>
                     @csrf @method('PUT')
-                    <p class="text-xs text-muted">Mọi thay đổi ở đây được ghi vào Lịch sử, không bị xoá dấu vết — kể cả khi phiếu đã đóng.</p>
-                    <div>
-                        <label class="label" for="correct-serial">Serial</label>
-                        <input class="input font-mono" name="serial_number" id="correct-serial" required maxlength="100" value="{{ old('serial_number', $ticket->device->serial_number) }}">
-                        <x-field-error name="serial_number" bag="correct" />
+                    <div class="modal-head">
+                        <div>
+                            <h2 id="correct-dialog-title">Sửa thông tin phiếu</h2>
+                            <p class="text-xs text-muted">Phiếu {{ $ticket->ticket_no }} · mọi thay đổi được ghi vào Lịch sử, kể cả khi phiếu đã đóng.</p>
+                        </div>
+                        <button type="button" class="modal-x" data-dialog-close aria-label="Đóng">×</button>
                     </div>
-                    <div>
-                        <label class="label" for="correct-fault">Lỗi khách báo</label>
-                        <textarea class="input min-h-16" name="fault_description" id="correct-fault" required maxlength="2000">{{ old('fault_description', $ticket->fault_description) }}</textarea>
-                        <x-field-error name="fault_description" bag="correct" />
+
+                    <div class="grid gap-x-4 gap-y-3 sm:grid-cols-3">
+                        <div>
+                            <label class="label" for="correct-type">Loại thiết bị</label>
+                            <select class="input" name="device_type_id" id="correct-type" data-correct-type required>
+                                @foreach ($deviceTypes as $type)
+                                    <option value="{{ $type->id }}" @selected($correctType === (string) $type->id)>{{ $type->name }}</option>
+                                @endforeach
+                            </select>
+                            <x-field-error name="device_type_id" bag="correct" />
+                        </div>
+                        <div>
+                            <label class="label" for="correct-brand">Hãng</label>
+                            <select class="input" name="brand_id" id="correct-brand" data-correct-brand required>
+                                @foreach ($brands as $brand)
+                                    <option value="{{ $brand->id }}" @selected($correctBrand === (string) $brand->id)>{{ $brand->name }}</option>
+                                @endforeach
+                            </select>
+                            <x-field-error name="brand_id" bag="correct" />
+                        </div>
+                        <div>
+                            <label class="label" for="correct-model">Model</label>
+                            <select class="input" name="product_model_id" id="correct-model" data-correct-model required>
+                                <option value="">Chọn model…</option>
+                                @foreach ($models as $model)
+                                    <option value="{{ $model->id }}" data-type="{{ $model->device_type_id }}" data-brand="{{ $model->brand_id }}" @selected($correctModel === (string) $model->id)>{{ $model->code }}@if ($model->name) · {{ $model->name }}@endif</option>
+                                @endforeach
+                                <option value="new" @selected($correctModel === 'new')>+ Model mới…</option>
+                            </select>
+                            <x-field-error name="product_model_id" bag="correct" />
+                        </div>
+                        <div class="sm:col-span-3" data-new-model-fields @if ($correctModel !== 'new') hidden @endif>
+                            <label class="label" for="correct-new-model">Mã model mới <span class="label-hint">(thuộc loại và hãng đã chọn ở trên)</span></label>
+                            <input class="input font-mono" name="new_model_code" id="correct-new-model" maxlength="100" value="{{ old('new_model_code') }}" placeholder="VD: U2723QE">
+                            <x-field-error name="new_model_code" bag="correct" />
+                        </div>
+
+                        <div class="sm:col-span-2">
+                            <label class="label" for="correct-serial">Serial</label>
+                            <input class="input font-mono" name="serial_number" id="correct-serial" required maxlength="100" value="{{ old('serial_number', $ticket->device->serial_number) }}">
+                            <x-field-error name="serial_number" bag="correct" />
+                        </div>
+                        <div>
+                            <label class="label" for="correct-warranty">Tình trạng bảo hành</label>
+                            <select class="input" name="warranty_status" id="correct-warranty" required>
+                                @foreach (\App\Enums\WarrantyStatus::cases() as $status)
+                                    <option value="{{ $status->value }}" @selected(old('warranty_status', $ticket->warranty_status->value) === $status->value)>{{ $status->label() }}</option>
+                                @endforeach
+                            </select>
+                            <x-field-error name="warranty_status" bag="correct" />
+                        </div>
+
+                        <div>
+                            <label class="label" for="correct-date">{{ $atCustomer ? 'Ngày yêu cầu' : 'Ngày nhận' }}</label>
+                            <input class="input" type="date" name="received_date" id="correct-date" required max="{{ today()->toDateString() }}" value="{{ old('received_date', $ticket->received_date->toDateString()) }}">
+                            <x-field-error name="received_date" bag="correct" />
+                        </div>
+                        <div class="sm:col-span-2">
+                            <label class="label" for="correct-note">Lý do sửa <span class="label-hint">(tuỳ chọn)</span></label>
+                            <input class="input" name="note" id="correct-note" maxlength="500" placeholder="VD: gõ nhầm số cuối serial">
+                        </div>
+
+                        <div class="sm:col-span-3">
+                            <label class="label" for="correct-fault">Lỗi khách báo</label>
+                            <textarea class="input min-h-16" rows="2" name="fault_description" id="correct-fault" required maxlength="2000">{{ old('fault_description', $ticket->fault_description) }}</textarea>
+                            <x-field-error name="fault_description" bag="correct" />
+                        </div>
                     </div>
-                    <div>
-                        <label class="label" for="correct-date">{{ $atCustomer ? 'Ngày yêu cầu' : 'Ngày nhận' }}</label>
-                        <input class="input" type="date" name="received_date" id="correct-date" required max="{{ today()->toDateString() }}" value="{{ old('received_date', $ticket->received_date->toDateString()) }}">
-                        <x-field-error name="received_date" bag="correct" />
+
+                    <div class="modal-foot">
+                        <button type="button" class="btn btn-secondary" data-dialog-close>Huỷ</button>
+                        <button class="btn btn-primary">Lưu đính chính</button>
                     </div>
-                    <div>
-                        <label class="label" for="correct-note">Lý do sửa <span class="label-hint">(tuỳ chọn)</span></label>
-                        <input class="input" name="note" id="correct-note" maxlength="500" placeholder="VD: gõ nhầm số cuối serial">
-                    </div>
-                    <button class="btn btn-secondary w-full">Lưu đính chính</button>
                 </form>
-            </details>
+            </dialog>
 
             @can('delete', $ticket)
                 <form method="POST" action="{{ route('tickets.destroy', $ticket) }}" class="rounded-xl border border-red-200 p-5" data-confirm="Xoá phiếu {{ $ticket->ticket_no }}? Phiếu sẽ không còn trong danh sách, số phiếu không được dùng lại.">
@@ -579,12 +664,25 @@
                                         <label class="label" for="{{ $id }}">{{ $field['label'] }}@if ($field['required']) <span class="req">*</span>@else <span class="label-hint">(tuỳ chọn)</span>@endif</label>
                                         @switch($field['type'])
                                             @case('service_center')
-                                                <select class="input" name="{{ $name }}" id="{{ $id }}" required>
+                                                <select class="input" name="{{ $name }}" id="{{ $id }}" required data-new-center-select>
                                                     <option value="">Chọn…</option>
                                                     @foreach ($serviceCenters as $center)
                                                         <option value="{{ $center->id }}" @selected((string) $value === (string) $center->id)>{{ $center->name }}</option>
                                                     @endforeach
+                                                    <option value="new" @selected((string) $value === 'new')>+ Thêm trung tâm mới…</option>
                                                 </select>
+                                                @php $newCenter = $openAction === $action->value && (string) $value === 'new'; @endphp
+                                                <div class="mt-2 grid gap-3 rounded-lg border border-line bg-canvas p-3 sm:grid-cols-2" data-new-center-fields @if (! $newCenter) hidden @endif>
+                                                    <div>
+                                                        <label class="label" for="{{ $id }}-new-name">Tên trung tâm <span class="req">*</span></label>
+                                                        <input class="input" name="new_center_name" id="{{ $id }}-new-name" maxlength="255" value="{{ $newCenter ? old('new_center_name') : '' }}" @required($newCenter)>
+                                                    </div>
+                                                    <div>
+                                                        <label class="label" for="{{ $id }}-new-phone">Số điện thoại <span class="label-hint">(tuỳ chọn)</span></label>
+                                                        <input class="input" name="new_center_phone" id="{{ $id }}-new-phone" maxlength="30" value="{{ $newCenter ? old('new_center_phone') : '' }}">
+                                                    </div>
+                                                    <p class="hint sm:col-span-2">Trung tâm được thêm vào danh mục Hãng / TTBH, bổ sung hãng nhận bảo hành và địa chỉ sau ở đó.</p>
+                                                </div>
                                                 @break
                                             @case('product_model')
                                                 <select class="input" name="{{ $name }}" id="{{ $id }}">

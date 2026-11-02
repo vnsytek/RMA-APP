@@ -9,11 +9,11 @@
         ...$extra,
     ], fn ($value) => $value !== null && $value !== '');
 
-    // Categorical slots 1–4 of the validated reference palette, one fixed colour per kind
+    // Categorical slots 1–5 of the reference palette, one fixed colour per kind
     // (colour follows the kind, never its rank or the active filter).
     $kindColors = array_combine(
         array_map(fn (TicketKind $type) => $type->shortLabel(), TicketKind::cases()),
-        ['#2a78d6', '#eb6834', '#1baf7a', '#eda100'],
+        ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#8f63d9'],
     );
 
     // Monthly stacked columns: a round y-axis top and 2–5 recessive gridlines.

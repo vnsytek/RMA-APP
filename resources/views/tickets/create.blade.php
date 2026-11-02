@@ -56,7 +56,7 @@
         </div>
 
         <div class="customer-box mt-7">
-            <h2 class="text-base font-semibold">Khách hàng</h2>
+            <h2 class="text-base font-semibold text-red-600">Khách hàng</h2>
             <div class="mt-3">
             <div class="grid gap-4 sm:grid-cols-2">
                 <div class="sm:col-span-2">
@@ -209,7 +209,7 @@
         <div class="section-title">
             <label for="photos">
                 <span data-photo-required>Ảnh tình trạng máy khi nhận <span class="req">*</span> <span class="font-normal text-muted">· bắt buộc ít nhất 1 ảnh</span></span>
-                <span data-photo-optional hidden>Ảnh / chứng từ <span class="font-normal text-muted">· tuỳ chọn (hãng xử lý tại nhà khách, Sang Y không nhận máy)</span></span>
+                <span data-photo-optional hidden>Ảnh / chứng từ <span class="font-normal text-muted">· tuỳ chọn (xử lý tại công ty khách, Sang Y không nhận máy)</span></span>
             </label>
         </div>
         <input type="file" name="photos[]" id="photos" multiple accept="image/*,application/pdf" class="input py-1.5" data-file-preview="photos-preview" required>

@@ -2,8 +2,11 @@
 
 namespace App\Enums;
 
+use App\Models\ServiceCenter;
+use App\Rules\VietnamesePhoneNumber;
 use App\Services\AttachmentStorage;
 use App\Services\TicketWorkflow;
+use Closure;
 use Illuminate\Validation\Rule;
 
 /**
@@ -27,6 +30,7 @@ enum TicketAction: string
     case FinishRepair = 'finish-repair';
     case VendorDoneAtCustomer = 'vendor-done-at-customer';
     case VendorDoneAtSangy = 'vendor-done-at-sangy';
+    case TakeBackToCompany = 'take-back-to-company';
     case ReturnToCustomer = 'return-to-customer';
     case Cancel = 'cancel';
 
@@ -48,6 +52,7 @@ enum TicketAction: string
             self::RejectQuote => 'Khách không đồng ý',
             self::FinishRepair => 'Sửa xong',
             self::VendorDoneAtCustomer, self::VendorDoneAtSangy => 'Hãng đã xử lý xong',
+            self::TakeBackToCompany => 'Không sửa được tại chỗ → mang máy về công ty',
             self::ReturnToCustomer => 'Trả khách',
             self::Cancel => 'Hủy phiếu',
         };
@@ -59,7 +64,7 @@ enum TicketAction: string
     public function style(): string
     {
         return match ($this) {
-            self::CenterRejected, self::ResendToCenter, self::ClaimRejected, self::Scrap, self::RejectQuote => 'secondary',
+            self::CenterRejected, self::ResendToCenter, self::ClaimRejected, self::Scrap, self::RejectQuote, self::TakeBackToCompany => 'secondary',
             self::Cancel => 'danger',
             default => 'primary',
         };
@@ -71,10 +76,11 @@ enum TicketAction: string
     public function kinds(): array
     {
         return match ($this) {
-            self::Inspect => [TicketKind::CarryIn, TicketKind::Repair],
+            self::Inspect => [TicketKind::CarryIn, TicketKind::Repair, TicketKind::RepairOnsite],
             self::SendToCenter, self::FixInhouse, self::ReceiveFromCenter, self::CenterRejected, self::ResendToCenter => [TicketKind::CarryIn],
-            self::ClaimCovered, self::ClaimRejected, self::MarkFree, self::SendQuote, self::Scrap, self::AcceptQuote,
-            self::RejectQuote, self::FinishRepair => [TicketKind::Repair],
+            self::ClaimCovered, self::ClaimRejected, self::Scrap => [TicketKind::Repair],
+            self::MarkFree, self::SendQuote, self::AcceptQuote, self::RejectQuote, self::FinishRepair => [TicketKind::Repair, TicketKind::RepairOnsite],
+            self::TakeBackToCompany => [TicketKind::RepairOnsite],
             self::VendorDoneAtCustomer => [TicketKind::Onsite],
             self::VendorDoneAtSangy => [TicketKind::OnsiteSangy],
             self::ReturnToCustomer => [TicketKind::OnsiteSangy, TicketKind::CarryIn, TicketKind::Repair],
@@ -88,22 +94,29 @@ enum TicketAction: string
     public function fromStatuses(): array
     {
         return match ($this) {
-            self::Inspect => [TicketStatus::Received],
+            self::Inspect => [TicketStatus::Received, TicketStatus::ToVisit],
             self::SendToCenter, self::FixInhouse, self::ClaimCovered, self::ClaimRejected, self::MarkFree,
-            self::SendQuote, self::Scrap => [TicketStatus::Inspecting],
+            self::SendQuote, self::Scrap, self::TakeBackToCompany => [TicketStatus::Inspecting],
             self::ReceiveFromCenter, self::CenterRejected => [TicketStatus::AtCenter],
             self::ResendToCenter, self::ReturnToCustomer => [TicketStatus::Ready],
             self::AcceptQuote, self::RejectQuote => [TicketStatus::Quoted],
             self::FinishRepair => [TicketStatus::Repairing],
             self::VendorDoneAtCustomer, self::VendorDoneAtSangy => [TicketStatus::Scheduled],
-            self::Cancel => [TicketStatus::Scheduled, TicketStatus::Received, TicketStatus::Inspecting, TicketStatus::Quoted],
+            self::Cancel => [TicketStatus::Scheduled, TicketStatus::ToVisit, TicketStatus::Received, TicketStatus::Inspecting, TicketStatus::Quoted],
         };
     }
 
-    public function targetStatus(): TicketStatus
+    /**
+     * Sang Y repairing at the customer's site has nothing to hand back, so its finishing steps close the ticket.
+     */
+    public function targetStatus(TicketKind $kind): TicketStatus
     {
+        if ($kind->repairsAtCustomer() && in_array($this, [self::MarkFree, self::FinishRepair, self::RejectQuote], true)) {
+            return TicketStatus::Done;
+        }
+
         return match ($this) {
-            self::Inspect, self::CenterRejected, self::ClaimRejected => TicketStatus::Inspecting,
+            self::Inspect, self::CenterRejected, self::ClaimRejected, self::TakeBackToCompany => TicketStatus::Inspecting,
             self::SendToCenter, self::ResendToCenter => TicketStatus::AtCenter,
             self::FixInhouse, self::ReceiveFromCenter, self::ClaimCovered, self::MarkFree, self::Scrap, self::RejectQuote,
             self::FinishRepair, self::VendorDoneAtSangy => TicketStatus::Ready,
@@ -134,6 +147,7 @@ enum TicketAction: string
             self::SendToCenter, self::ResendToCenter => AttachmentStage::SendToCenter,
             self::ReceiveFromCenter, self::CenterRejected => AttachmentStage::BackFromCenter,
             self::VendorDoneAtCustomer, self::VendorDoneAtSangy => AttachmentStage::VendorVisit,
+            self::TakeBackToCompany => AttachmentStage::Intake,
             self::ReturnToCustomer => AttachmentStage::Return,
             self::Cancel => AttachmentStage::Other,
             self::AcceptQuote, self::RejectQuote => null,
@@ -188,6 +202,7 @@ enum TicketAction: string
             self::ReceiveFromCenter => ['back_date' => $date('Ngày nhận về công ty'), 'center_return_no' => $text('Số phiếu trả của TTBH'), ...$swap, 'note' => $note()],
             self::CenterRejected => ['back_date' => $date('Ngày nhận về công ty'), 'note' => $note('Lý do TTBH từ chối', true)],
             self::Scrap => ['note' => $note('Lý do báo phế', true)],
+            self::TakeBackToCompany => ['note' => $note('Lý do không sửa được tại chỗ', true)],
             self::VendorDoneAtCustomer => ['done_date' => $date('Ngày hãng xử lý xong'), 'vendor_case_no' => $text('Mã hồ sơ của hãng'), ...$swap, 'note' => $note('Hãng đã làm gì')],
             self::VendorDoneAtSangy => ['done_date' => $date('Ngày hãng xử lý xong'), 'vendor_case_no' => $text('Mã hồ sơ của hãng'), ...$swap, 'note' => $note('Hãng đã làm gì')],
             self::ReturnToCustomer => ['returned_date' => $date('Ngày trả khách'), 'note' => $note()],
@@ -217,13 +232,23 @@ enum TicketAction: string
 
             $rules[$name] = match ($field['type']) {
                 'date' => ['required', 'date', 'before_or_equal:today'],
-                'service_center' => ['required', 'integer', Rule::exists('service_centers', 'id')->where('is_active', true)],
+                'service_center' => ['required', function (string $attribute, mixed $value, Closure $fail): void {
+                    // "new" means the center is created together with this step, see TicketActionController.
+                    if ($value !== 'new' && ! ServiceCenter::active()->whereKey($value)->exists()) {
+                        $fail('Trung tâm bảo hành không hợp lệ.');
+                    }
+                }],
                 'product_model' => ['nullable', 'integer', Rule::exists('product_models', 'id')],
                 'claim_item' => ['nullable', 'integer'],
                 'lines' => ['nullable', 'string', 'max:2000'],
                 'textarea' => [$field['required'] ? 'required' : 'nullable', 'string', 'max:1000'],
                 default => ['nullable', 'string', $name === 'new_serial' ? 'max:100' : 'max:50'],
             };
+        }
+
+        if (isset($rules['service_center_id'])) {
+            $rules['new_center_name'] = ['required_if:service_center_id,new', 'nullable', 'string', 'max:255'];
+            $rules['new_center_phone'] = ['nullable', 'string', 'max:30', new VietnamesePhoneNumber];
         }
 
         if (isset($rules['new_model_id'])) {
@@ -244,6 +269,8 @@ enum TicketAction: string
     {
         return [
             ...array_map(fn (array $field) => mb_strtolower($field['label']), $this->fields()),
+            'new_center_name' => 'tên trung tâm bảo hành',
+            'new_center_phone' => 'số điện thoại trung tâm',
             'warranty_items.*.description' => 'hạng mục bảo hành',
             'warranty_items.*.months' => 'số tháng bảo hành',
             'photos' => 'ảnh',

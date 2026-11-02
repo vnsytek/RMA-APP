@@ -119,16 +119,16 @@
                     <tr class="total"><td colspan="3" class="r">Tổng cộng</td><td class="r">{{ money_vnd($ticket->charge_amount) }}</td></tr>
                 </tbody>
             </table>
-        @elseif ($isReturn)
+        @elseif ($isReturn || $isVisit)
             <p class="note">Chi phí: <b>Miễn phí</b></p>
         @endif
 
         <div class="sign">
-            <div><b>Khách hàng</b><i>(Ký, ghi rõ họ tên)</i></div>
-            <div><b>{{ $isReturn ? 'Nhân viên trả' : 'Nhân viên nhận' }}</b><i>(Ký, ghi rõ họ tên)</i><div class="name">{{ $staff?->name }}</div></div>
+            <div><b>{{ $isVisit ? 'Khách hàng xác nhận' : 'Khách hàng' }}</b><i>(Ký, ghi rõ họ tên)</i></div>
+            <div><b>{{ $isVisit ? 'Nhân viên Sang Y' : ($isReturn ? 'Nhân viên trả' : 'Nhân viên nhận') }}</b><i>(Ký, ghi rõ họ tên)</i><div class="name">{{ $staff?->name }}</div></div>
         </div>
 
-        @unless ($isReturn)
+        @unless ($isReturn || $isVisit)
             <div class="foot">Quý khách vui lòng giữ phiếu này và mang theo khi nhận lại hàng.</div>
         @endunless
     </div>
