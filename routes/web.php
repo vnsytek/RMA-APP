@@ -27,7 +27,8 @@ Route::middleware('guest')->group(function () {
 
 Route::middleware('auth')->group(function () {
     Route::post('/logout', [LoginController::class, 'destroy'])->name('logout');
-    Route::redirect('/', '/tickets');
+    // Named route, not a bare '/tickets': production lives under /rma and the prefix must be kept.
+    Route::get('/', fn () => redirect()->route('tickets.index'));
 
     Route::resource('tickets', RmaTicketController::class)
         ->only(['index', 'create', 'store', 'show', 'update', 'destroy'])
