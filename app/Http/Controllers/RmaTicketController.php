@@ -12,6 +12,7 @@ use App\Models\CustomerContact;
 use App\Models\DeviceType;
 use App\Models\ProductModel;
 use App\Models\RmaTicket;
+use App\Models\RmaTicketEdit;
 use App\Models\ServiceCenter;
 use App\Models\User;
 use App\Services\CatalogResolver;
@@ -25,6 +26,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
@@ -109,7 +111,7 @@ class RmaTicketController extends Controller
         return redirect()->route('tickets.show', $ticket)->with('status', "Đã lập phiếu {$ticket->ticket_no}.");
     }
 
-    public function show(RmaTicket $ticket, TicketWorkflow $workflow, DeviceTracker $tracker): View
+    public function show(Request $request, RmaTicket $ticket, TicketWorkflow $workflow, DeviceTracker $tracker): View
     {
         $ticket->load([
             'customer', 'device.productModel.brand', 'device.productModel.deviceType', 'returnedDevice.productModel.brand',
@@ -120,14 +122,15 @@ class RmaTicketController extends Controller
 
         $summary = $tracker->for($ticket->currentDevice());
 
-        $timeline = $ticket->statusLogs->map(fn ($log) => ['type' => 'status', 'at' => $log->created_at, 'data' => $log])
+        $timeline = $this->attributeSteps($ticket, $ticket->statusLogs->map(fn ($log) => ['type' => 'status', 'at' => $log->created_at, 'data' => $log])
             ->concat($ticket->edits->map(fn ($edit) => ['type' => 'edit', 'at' => $edit->created_at, 'data' => $edit]))
             ->sortBy('at')
-            ->values();
+            ->values());
 
         return view('tickets.show', [
             'ticket' => $ticket,
-            'actions' => $workflow->availableActions($ticket),
+            // Staff who only worked on an earlier step may read the ticket but not move it on.
+            'actions' => $request->user()->can('update', $ticket) ? $workflow->availableActions($ticket) : [],
             'device' => $summary,
             'history' => $summary->tickets->reject(fn (RmaTicket $other) => $other->is($ticket))->values(),
             'timeline' => $timeline,
@@ -153,9 +156,46 @@ class RmaTicketController extends Controller
             'note' => ['nullable', 'string', 'max:2000'],
         ], attributes: ['technician_id' => 'nhân viên phụ trách', 'note' => 'ghi chú']);
 
+        $previous = $ticket->technician;
         $ticket->update($data);
 
+        // Hand-overs go into the ticket's history, so it shows who held the ticket at each step.
+        if ($ticket->wasChanged('technician_id')) {
+            $ticket->edits()->create([
+                'user_id' => $request->user()->id,
+                'field' => RmaTicketEdit::ASSIGNMENT,
+                'old_value' => $previous?->name ?? 'Chưa phân công',
+                'new_value' => $ticket->technician()->value('name') ?? 'Chưa phân công',
+            ]);
+        }
+
         return back()->with('status', 'Đã lưu thông tin phiếu.');
+    }
+
+    /**
+     * Credit each workflow step to whoever was in charge of the ticket at that moment, so the history
+     * reads "Tâm received it, Huy repaired it" even when an admin clicked the buttons for them.
+     * The person in charge is followed through the hand-over entries; before the first one it is the
+     * technician chosen at intake. Steps of an unassigned ticket go to whoever clicked.
+     *
+     * @param  Collection<int, array{type: string, at: mixed, data: mixed}>  $timeline
+     * @return Collection<int, array{type: string, at: mixed, data: mixed, handler?: string}>
+     */
+    private function attributeSteps(RmaTicket $ticket, Collection $timeline): Collection
+    {
+        $unassigned = 'Chưa phân công';
+        $handOvers = $timeline->filter(fn (array $event) => $event['type'] === 'edit' && $event['data']->field === RmaTicketEdit::ASSIGNMENT);
+        $current = $handOvers->isNotEmpty() ? $handOvers->first()['data']->old_value : $ticket->technician?->name;
+
+        return $timeline->map(function (array $event) use (&$current, $unassigned): array {
+            if ($event['type'] === 'edit' && $event['data']->field === RmaTicketEdit::ASSIGNMENT) {
+                $current = $event['data']->new_value;
+            } elseif ($event['type'] === 'status') {
+                $event['handler'] = $current !== null && $current !== $unassigned ? $current : $event['data']->user->name;
+            }
+
+            return $event;
+        });
     }
 
     /**

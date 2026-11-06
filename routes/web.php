@@ -32,7 +32,8 @@ Route::middleware('auth')->group(function () {
 
     Route::resource('tickets', RmaTicketController::class)
         ->only(['index', 'create', 'store', 'show', 'update', 'destroy'])
-        ->middlewareFor(['show', 'update'], 'can:view,ticket')
+        ->middlewareFor('show', 'can:view,ticket')
+        ->middlewareFor('update', 'can:update,ticket')
         ->middlewareFor('destroy', 'can:delete,ticket');
 
     Route::prefix('tickets/{ticket}')->name('tickets.')->middleware('can:update,ticket')->scopeBindings()->group(function () {
@@ -44,8 +45,12 @@ Route::middleware('auth')->group(function () {
         Route::put('erp', [TicketErpController::class, 'update'])->name('erp.update');
         Route::put('correct', [RmaTicketController::class, 'correct'])->name('correct');
         Route::post('attachments', [TicketAttachmentController::class, 'store'])->name('attachments.store');
-        Route::get('attachments/{attachment}', [TicketAttachmentController::class, 'show'])->name('attachments.show');
         Route::delete('attachments/{attachment}', [TicketAttachmentController::class, 'destroy'])->name('attachments.destroy');
+    });
+
+    // Read-only pages of a ticket: also open to staff who worked on it before it was handed to someone else.
+    Route::prefix('tickets/{ticket}')->name('tickets.')->middleware('can:view,ticket')->scopeBindings()->group(function () {
+        Route::get('attachments/{attachment}', [TicketAttachmentController::class, 'show'])->name('attachments.show');
         Route::get('slips/{type}', [TicketSlipController::class, 'show'])->whereIn('type', ['receipt', 'return', 'visit'])->name('slips.show');
         Route::get('slips/{type}/excel', [TicketSlipController::class, 'excel'])->whereIn('type', ['receipt', 'return', 'visit'])->name('slips.excel');
     });

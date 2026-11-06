@@ -12,6 +12,11 @@ class RmaTicketEdit extends Model
     public const UPDATED_AT = null;
 
     /**
+     * The field name used when an admin hands the ticket to another person.
+     */
+    public const ASSIGNMENT = 'Phân công';
+
+    /**
      * @return BelongsTo<RmaTicket, $this>
      */
     public function ticket(): BelongsTo

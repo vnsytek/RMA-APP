@@ -72,7 +72,13 @@ class CustomerContactTest extends TestCase
         $this->actingAs($this->user)->patch(route('customers.contacts.toggle', [$this->pegatron, $this->nga]));
         $this->assertFalse($this->nga->refresh()->is_active);
         $this->open(['contact_id' => $this->nga->id])->assertSessionHasErrors('contact_id');
-        $this->open([])->assertSessionHasErrors(['contact_name', 'contact_phone']);
+        $this->open([])->assertSessionHasErrors('contact_name')->assertSessionDoesntHaveErrors('contact_phone');
+
+        // The phone is optional; a contact left without one is found again by name.
+        $this->open(['contact_id' => 'new', 'contact_name' => 'Anh Tuấn'])->assertSessionHasNoErrors();
+        $this->open(['contact_id' => 'new', 'contact_name' => 'Anh Tuấn'])->assertSessionHasNoErrors();
+        $this->assertSame(1, $this->pegatron->contacts()->where('name', 'Anh Tuấn')->whereNull('phone')->count());
+        $this->open(['contact_id' => 'new', 'contact_name' => 'Anh Tuấn', 'contact_phone' => '123'])->assertSessionHasErrors('contact_phone');
     }
 
     public function test_the_address_book_is_managed_on_the_customer_page(): void

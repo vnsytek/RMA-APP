@@ -94,7 +94,7 @@
                         <x-field-error name="contact_name" />
                     </div>
                     <div>
-                        <label class="label" for="contact_phone">Số điện thoại <span class="req">*</span></label>
+                        <label class="label" for="contact_phone">Số điện thoại <span class="label-hint">(tuỳ chọn)</span></label>
                         <input class="input" name="contact_phone" id="contact_phone" value="{{ old('contact_phone') }}" maxlength="20" inputmode="tel" placeholder="VD: 0901 234 567">
                         <x-field-error name="contact_phone" />
                     </div>

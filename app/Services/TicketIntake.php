@@ -116,8 +116,12 @@ class TicketIntake
         }
 
         $name = Str::squish($data['contact_name']);
-        $phone = Str::squish($data['contact_phone']);
-        $existing = $customer->contacts()->where('phone', $phone)->first();
+        $phone = Str::squish((string) ($data['contact_phone'] ?? '')) ?: null;
+
+        // Same person = same phone; without a phone, the same name in this customer's contact book.
+        $existing = $phone
+            ? $customer->contacts()->where('phone', $phone)->first()
+            : $customer->contacts()->where('name', $name)->first();
 
         if ($existing) {
             $existing->update(['name' => $name, 'is_active' => true]);

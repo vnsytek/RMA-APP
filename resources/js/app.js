@@ -765,7 +765,6 @@ if (form) {
         const isNew = !contacts.length || contactChoice === 'new';
         $$('[data-new-contact]', form).forEach((element) => (element.hidden = !isNew));
         $('#contact_name').required = isNew;
-        $('#contact_phone').required = isNew;
     };
 
     contactBox.addEventListener('change', (event) => {

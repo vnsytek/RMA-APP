@@ -9,8 +9,9 @@
     $atCustomer = in_array($ticket->originalKind(), [TicketKind::Onsite, TicketKind::RepairOnsite], true);
     $repairsAtCustomer = $ticket->originalKind()->repairsAtCustomer();
     $isOnsite = $ticket->originalKind()->isOnsite();
-    $quoteEditable = $ticket->service_type->isSangyRepair() && in_array($ticket->status, [TicketStatus::Inspecting, TicketStatus::Quoted], true) && ! $ticket->claimPending();
-    $partsEditable = ! $ticket->isClosed() && $ticket->original_service_type !== ServiceType::Repair;
+    $canEdit = auth()->user()->can('update', $ticket);
+    $quoteEditable = $canEdit && $ticket->service_type->isSangyRepair() && in_array($ticket->status, [TicketStatus::Inspecting, TicketStatus::Quoted], true) && ! $ticket->claimPending();
+    $partsEditable = $canEdit && ! $ticket->isClosed() && $ticket->original_service_type !== ServiceType::Repair;
     $openAction = old('_action');
     $modelGroups = $models->groupBy(fn ($model) => $model->deviceType->name);
     $visited = $timeline->where('type', 'status')->map(fn ($event) => $event['data']->to_status)->filter()->values();
@@ -99,6 +100,13 @@
         </div>
     </x-slot:header>
 
+    @unless ($canEdit)
+        <p class="alert alert-info mb-5">
+            <x-icon name="info" />
+            <span>Bạn đã làm một bước trên phiếu này nên vẫn xem được. Phiếu hiện do <b>{{ $ticket->technician?->name ?? 'chưa ai' }}</b> phụ trách, chỉ người phụ trách, người lập phiếu và Admin mới thao tác được.</span>
+        </p>
+    @endunless
+
     <div class="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_22rem]">
         <div class="min-w-0 space-y-5">
 
@@ -172,10 +180,10 @@
                         </div>
                         <div>
                             <label class="label" for="erp_return_no">Số chứng từ V233 <span class="label-hint">(trả hàng)</span></label>
-                            <input class="input font-mono" name="erp_return_no" id="erp_return_no" value="{{ old('erp_return_no', $ticket->erp_return_no) }}" maxlength="50" @disabled($ticket->isClosed())>
+                            <input class="input font-mono" name="erp_return_no" id="erp_return_no" value="{{ old('erp_return_no', $ticket->erp_return_no) }}" maxlength="50" @disabled($ticket->isClosed() || ! $canEdit)>
                             <x-field-error name="erp_return_no" bag="erp" />
                         </div>
-                        @unless ($ticket->isClosed())
+                        @unless ($ticket->isClosed() || ! $canEdit)
                             <button class="btn btn-secondary">Lưu V233</button>
                         @endunless
                     </form>
@@ -396,12 +404,12 @@
 
             <section class="card p-5">
                 <h2 class="card-title mb-4">Ảnh và chứng từ <span class="card-note">(theo giai đoạn)</span></h2>
-                <x-attachments :ticket="$ticket" />
+                <x-attachments :ticket="$ticket" :editable="$canEdit" />
             </section>
         </div>
 
         <aside class="space-y-5" aria-label="Phân công và lịch sử">
-            @if (! $ticket->isClosed() || auth()->user()->isAdmin())
+            @if ($canEdit && (! $ticket->isClosed() || auth()->user()->isAdmin()))
                 <form method="POST" action="{{ route('tickets.update', $ticket) }}" class="card space-y-4 p-5">
                     @csrf @method('PUT')
                     <h2 class="card-title">{{ auth()->user()->can('assign', $ticket) ? 'Phân công & ghi chú' : 'Ghi chú' }}</h2>
@@ -432,6 +440,7 @@
                 <h2 class="card-title mb-4">Lịch sử</h2>
                 <ol class="relative space-y-4 before:absolute before:top-2 before:bottom-2 before:left-[4.5px] before:w-px before:bg-line">
                     @foreach ($timeline as $event)
+                        @continue($event['type'] === 'edit' && $event['data']->field === \App\Models\RmaTicketEdit::ASSIGNMENT)
                         <li class="relative grid grid-cols-[10px_1fr] gap-3">
                             @if ($event['type'] === 'status')
                                 @php $log = $event['data']; @endphp
@@ -443,7 +452,14 @@
                                         @endif
                                         <x-status-pill :status="$log->to_status" />
                                     </div>
-                                    <div class="mt-1 text-xs text-muted">{{ $log->user->name }}, {{ $log->created_at->format('d/m/Y H:i') }}</div>
+                                    <div class="mt-1 text-xs text-muted">
+                                        @if ($event['handler'] !== $log->user->name)
+                                            <b class="cursor-help font-semibold text-ink" tabindex="0" data-tip="Nhập bởi {{ $log->user->name }}">{{ $event['handler'] }}</b>,
+                                        @else
+                                            <b class="font-semibold text-ink">{{ $event['handler'] }}</b>,
+                                        @endif
+                                        {{ $log->created_at->format('d/m/Y H:i') }}
+                                    </div>
                                     @if ($log->note)
                                         <div class="mt-1">{{ $log->note }}</div>
                                     @endif
@@ -488,6 +504,7 @@
                 </ol>
             </section>
 
+            @if ($canEdit)
             <button type="button" class="card flex w-full cursor-pointer items-start gap-3 p-5 text-left hover:border-brand/50" data-dialog-open="correct-dialog">
                 <x-icon name="pencil" class="mt-0.5 size-4 shrink-0 text-muted" />
                 <span class="flex-1">
@@ -588,6 +605,7 @@
                     </div>
                 </form>
             </dialog>
+            @endif
 
             @can('delete', $ticket)
                 <form method="POST" action="{{ route('tickets.destroy', $ticket) }}" class="rounded-xl border border-red-200 p-5" data-confirm="Xoá phiếu {{ $ticket->ticket_no }}? Phiếu sẽ không còn trong danh sách, số phiếu không được dùng lại.">

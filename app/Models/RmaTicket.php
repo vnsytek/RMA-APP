@@ -347,7 +347,7 @@ class RmaTicket extends Model
     }
 
     /**
-     * Tickets the user may see: all of them for an admin, otherwise the ones they opened or are in charge of.
+     * Tickets the user may see: all of them for an admin, otherwise the ones they opened, are in charge of, or did a step on.
      */
     #[Scope]
     protected function visibleTo(Builder $query, User $user): Builder
@@ -356,7 +356,10 @@ class RmaTicket extends Model
             return $query;
         }
 
-        return $query->where(fn (Builder $query) => $query->where('created_by', $user->id)->orWhere('technician_id', $user->id));
+        // Same rule as RmaTicketPolicy::view: opened it, in charge of it, or did a step on it.
+        return $query->where(fn (Builder $query) => $query->where('created_by', $user->id)
+            ->orWhere('technician_id', $user->id)
+            ->orWhereHas('statusLogs', fn (Builder $log) => $log->where('user_id', $user->id)));
     }
 
     #[Scope]

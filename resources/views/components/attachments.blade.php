@@ -1,4 +1,4 @@
-@props(['ticket'])
+@props(['ticket', 'editable' => true])
 
 @php
     use App\Enums\AttachmentStage;
@@ -48,7 +48,7 @@
                             <a href="{{ route('tickets.attachments.show', [$ticket, $attachment, 'download' => 1]) }}" class="block truncate font-mono text-brand hover:underline" title="Tải về {{ $attachment->file_name }}">{{ $attachment->file_name }}</a>
                             <div class="text-muted">{{ $attachment->humanSize() }} · {{ $attachment->uploader->name }} · {{ $attachment->created_at->format('d/m/Y H:i') }}</div>
                         </div>
-                        @if (auth()->user()->isAdmin() || $attachment->uploaded_by === auth()->id())
+                        @if ($editable && (auth()->user()->isAdmin() || $attachment->uploaded_by === auth()->id()))
                             <form method="POST" action="{{ route('tickets.attachments.destroy', [$ticket, $attachment]) }}" data-confirm="Xoá tệp {{ $attachment->file_name }}?">
                                 @csrf
                                 @method('DELETE')
@@ -66,6 +66,7 @@
 
 <x-field-error name="attachment" bag="attachment" class="mt-3" />
 
+@if ($editable)
 <form method="POST" action="{{ route('tickets.attachments.store', $ticket) }}" enctype="multipart/form-data" class="mt-4 grid gap-3 border-t border-line pt-4 sm:grid-cols-[auto_auto_1fr_auto] sm:items-end">
     @csrf
     <div>
@@ -94,3 +95,4 @@
 @foreach (['stage', 'files', 'files.*', 'doc_type'] as $field)
     <x-field-error :name="$field" bag="attachment" />
 @endforeach
+@endif

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\TicketAction;
 use App\Enums\TicketKind;
 use App\Enums\TicketStatus;
 use App\Enums\WarrantyStatus;
@@ -92,6 +93,53 @@ class TicketPermissionTest extends TestCase
 
         $this->actingAs($this->tam)->get(route('tickets.show', $ticket))->assertOk();
         $this->actingAs($this->huy)->get(route('tickets.show', $ticket))->assertOk();
+    }
+
+    public function test_each_step_shows_who_did_it_and_earlier_handlers_keep_read_only_access(): void
+    {
+        $tung = User::factory()->create(['name' => 'Tùng']);
+        $ticket = RmaTicket::factory()->status(TicketStatus::Received)->create(['created_by' => $this->admin->id, 'technician_id' => $this->tam->id, 'service_type' => 'repair', 'original_service_type' => 'repair']);
+
+        $this->actingAs($this->tam)->post(route('tickets.actions.store', [$ticket, TicketAction::Inspect]), ['photos' => [UploadedFile::fake()->image('kiem-tra.jpg')]])
+            ->assertSessionHasNoErrors();
+        $this->actingAs($this->admin)->put(route('tickets.update', $ticket), ['technician_id' => $tung->id])->assertSessionHasNoErrors();
+
+        $this->actingAs($this->admin)->get(route('tickets.show', $ticket))
+            ->assertOk()
+            ->assertSeeText('Tâm')
+            ->assertDontSeeText('Giao phiếu');
+
+        // Tâm inspected it, so she still sees it, but only Tùng moves it on now.
+        $this->actingAs($this->tam)->get(route('tickets.index'))->assertSee(route('tickets.show', $ticket));
+        $this->actingAs($this->tam)->get(route('tickets.show', $ticket))
+            ->assertOk()
+            ->assertSeeText('Phiếu hiện do Tùng phụ trách')
+            ->assertDontSee('data-dialog-open="action-', false);
+        $this->actingAs($this->tam)->put(route('tickets.update', $ticket), ['note' => 'x'])->assertForbidden();
+        $this->actingAs($this->tam)->post(route('tickets.actions.store', [$ticket, TicketAction::Cancel]), ['note' => 'x'])->assertForbidden();
+
+        $this->actingAs($tung)->get(route('tickets.show', $ticket))->assertOk()->assertDontSeeText('Phiếu hiện do');
+        $this->actingAs($this->huy)->get(route('tickets.show', $ticket))->assertForbidden();
+    }
+
+    public function test_history_credits_each_step_to_the_person_in_charge_and_notes_who_clicked(): void
+    {
+        $this->admin->update(['name' => 'Admin dep trai']);
+        $ticket = RmaTicket::factory()->status(TicketStatus::Received)->create(['created_by' => $this->admin->id, 'technician_id' => $this->tam->id, 'service_type' => 'repair', 'original_service_type' => 'repair']);
+        $ticket->statusLogs()->create(['from_status' => null, 'to_status' => TicketStatus::Received, 'user_id' => $this->admin->id]);
+
+        $this->actingAs($this->admin)->put(route('tickets.update', $ticket), ['technician_id' => $this->huy->id]);
+        $this->travel(1)->minutes();
+        $this->actingAs($this->admin)->post(route('tickets.actions.store', [$ticket, TicketAction::Inspect]), ['photos' => [UploadedFile::fake()->image('kiem-tra.jpg')]])
+            ->assertSessionHasNoErrors();
+
+        // Received by Tâm, inspected by Huy; the hand-over itself is not listed and who clicked shows on hover.
+        $this->actingAs($this->admin)->get(route('tickets.show', $ticket))
+            ->assertOk()
+            ->assertSeeInOrder(['Đã nhận máy', '>Tâm</b>', 'IT kiểm tra', '>Huy</b>'], false)
+            ->assertSee('data-tip="Nhập bởi Admin dep trai"', false)
+            ->assertDontSeeText('Giao phiếu')
+            ->assertDontSeeText('Admin dep trai nhập');
     }
 
     public function test_a_colleague_given_a_ticket_waiting_for_return_hands_the_device_back(): void

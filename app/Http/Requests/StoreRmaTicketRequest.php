@@ -69,7 +69,8 @@ class StoreRmaTicketRequest extends FormRequest
                 ? ['required']
                 : ['required', 'integer', Rule::exists('customer_contacts', 'id')->where('customer_id', $this->integer('customer_id'))->where('is_active', true)],
             'contact_name' => [Rule::requiredIf($newContact), 'nullable', 'string', 'max:255'],
-            'contact_phone' => [Rule::requiredIf($newContact), 'nullable', 'string', 'max:20', new VietnamesePhoneNumber],
+            // Optional: some walk-in customers don't leave a number. When given it must be a valid one.
+            'contact_phone' => ['nullable', 'string', 'max:20', new VietnamesePhoneNumber],
             'customer_tax_code' => ['nullable', 'string', 'regex:'.TaxCodeLookup::pattern(), Rule::unique('customers', 'tax_code')],
             'customer_address' => ['nullable', 'string', 'max:500'],
 
